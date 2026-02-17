@@ -6,6 +6,7 @@ import com.atomguard.storage.MySQLStorageProvider;
 import com.atomguard.command.AtomGuardCommand;
 import com.atomguard.command.AtomGuardTabCompleter;
 import com.atomguard.listener.BukkitListener;
+import com.atomguard.listener.CoreMessagingListener;
 import com.atomguard.listener.InventoryListener;
 import com.atomguard.listener.PacketListener;
 import com.atomguard.manager.ConfigManager;
@@ -75,6 +76,7 @@ public final class AtomGuard extends JavaPlugin {
     private PacketListener packetListener;
     private BukkitListener bukkitListener;
     private InventoryListener inventoryListener;
+    private CoreMessagingListener coreMessagingListener;
 
     /**
      * Plugin aktif edildiğinde çağrılır
@@ -114,6 +116,12 @@ public final class AtomGuard extends JavaPlugin {
 
         // Listener'ları kaydet
         registerListeners();
+
+        // Register Plugin Messaging channels for Velocity integration
+        getServer().getMessenger().registerOutgoingPluginChannel(this, "atomguard:main");
+        getServer().getMessenger().registerIncomingPluginChannel(this, "atomguard:main",
+            coreMessagingListener = new CoreMessagingListener(this));
+        getLogger().info("Plugin Messaging kanalı kaydedildi: atomguard:main");
 
         // Komutları kaydet
         registerCommands();
@@ -199,6 +207,10 @@ public final class AtomGuard extends JavaPlugin {
         if (storageProvider != null && storageProvider.isConnected()) {
             storageProvider.disconnect();
         }
+
+        // Unregister messaging channels
+        getServer().getMessenger().unregisterIncomingPluginChannel(this, "atomguard:main");
+        getServer().getMessenger().unregisterOutgoingPluginChannel(this, "atomguard:main");
 
         getLogger().info("AtomGuard başarıyla kapatıldı.");
     }
@@ -626,5 +638,14 @@ public final class AtomGuard extends JavaPlugin {
      */
     public WebPanel getWebPanel() {
         return webPanel;
+    }
+
+    /**
+     * CoreMessagingListener alır
+     *
+     * @return CoreMessagingListener instance
+     */
+    public CoreMessagingListener getCoreMessagingListener() {
+        return coreMessagingListener;
     }
 }

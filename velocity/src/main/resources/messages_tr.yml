@@ -1,0 +1,24 @@
+# AtomGuard Velocity - Türkçe Mesajlar
+kick:
+  ddos: "<red><bold>AtomGuard</bold></red>\n<gray>DDoS saldırısı nedeniyle bağlantınız engellendi.\n<white>Lütfen daha sonra tekrar deneyin."
+  rate-limit: "<red><bold>AtomGuard</bold></red>\n<gray>Çok fazla bağlantı isteği gönderdiniz.\n<white>Lütfen birkaç dakika bekleyin."
+  bot: "<red><bold>AtomGuard</bold></red>\n<gray>Bot aktivitesi tespit edildi.\n<white>Gerçek bir oyuncuysanız, lütfen daha sonra deneyin."
+  vpn: "<gold><bold>AtomGuard</bold></gold>\n<gray>VPN/Proxy kullanımı algılandı.\n<white>VPN'inizi kapatarak bağlanabilirsiniz."
+  yasakli: "<red><bold>AtomGuard</bold></red>\n<gray>IP adresiniz yasaklanmıştır.\n<white>İtiraz: discord.gg/sunucu"
+  genel: "<red><bold>AtomGuard</bold></red>\n<gray>Bağlantınız güvenlik sistemleri tarafından engellendi."
+  protokol: "<red><bold>AtomGuard</bold></red>\n<gray>Geçersiz protokol veya handshake paketi.\n<white>Desteklenen istemci sürümünü kullanın."
+
+mesaj:
+  sunucu-degistirme-limit: "<red>Çok sık sunucu değiştiriyorsunuz. Lütfen bekleyin.</red>"
+  sohbet-spam: "<red>Çok hızlı mesaj gönderiyorsunuz. Yavaşlayın.</red>"
+  komut-spam: "<red>Çok hızlı komut gönderiyorsunuz.</red>"
+  captcha-yanlis: "<red>Yanlış cevap! Tekrar deneyin.</red>"
+  captcha-sure: "<red>Captcha süresi doldu. Bağlantınız kesilecek.</red>"
+  captcha-basarili: "<green>Doğrulama başarılı! İyi oyunlar.</green>"
+
+admin:
+  saldiri-basladi: "<red>[AtomGuard] ⚠ Saldırı tespit edildi! Hız: <rate>/sn</red>"
+  saldiri-bitti: "<green>[AtomGuard] ✓ Saldırı sona erdi. Süre: <sure>, Engellenen: <sayi></green>"
+  bot-tespit: "<yellow>[AtomGuard] Bot tespit edildi! IP: <ip>, Skor: <skor></yellow>"
+  vpn-tespit: "<gold>[AtomGuard] VPN tespit edildi! Oyuncu: <oyuncu>, IP: <ip></gold>"
+  ip-yasaklandi: "<red>[AtomGuard] IP yasaklandı: <ip> - Sebep: <sebep></red>"

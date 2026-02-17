@@ -1,0 +1,8 @@
+{
+  "id": "atomguard-velocity",
+  "name": "AtomGuard Velocity",
+  "version": "1.0.0",
+  "description": "Enterprise-grade Velocity proxy security suite",
+  "authors": ["AtomGuard Team"],
+  "main": "com.atomguard.velocity.AtomGuardVelocity"
+}
