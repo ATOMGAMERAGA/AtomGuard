@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      discussions: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Generate Checksums
+        run: |
+          cd core/target
+          for file in AtomGuard-*.jar; do
+            sha256sum "$file" > "$file.sha256"
+          done
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            core/target/AtomGuard-*.jar
+            core/target/AtomGuard-*.jar.sha256
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          name: Atom Guard ${{ github.ref_name }}
+          body: |
+            ## 🛡️ Atom Guard ${{ github.ref_name }}
+            
+            Advanced Minecraft Server Security & Exploit Protection.
+            
+            ### 📦 Installation
+            1. Stop your server.
+            2. Delete any old `AtomSMPFixer` or `AtomGuard` JARs.
+            3. Upload the new `AtomGuard-${{ github.ref_name }}.jar`.
+            4. Start your server.
+            
+            ### 🔐 Checksums (SHA-256)
+            Check the attached `.sha256` files to verify integrity.
+            
+            ---
+            *Made with ❤️ by AtomGuard Team*

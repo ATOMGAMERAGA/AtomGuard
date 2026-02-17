@@ -1,0 +1,4 @@
+# Atom Guard Velocity Config
+debug: true
+log-connections: true
+kick-message: "<red>AtomGuard: Bağlantınız reddedildi."

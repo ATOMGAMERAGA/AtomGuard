@@ -1,0 +1,38 @@
+name: AtomGuard
+version: '${project.version}'
+main: com.atomguard.AtomGuard
+api-version: '1.21'
+description: "Advanced exploit protection and server security for Minecraft"
+author: AtomGuard Team
+website: "https://atomguard.dev"
+depend:
+  - packetevents
+
+commands:
+  atomguard:
+    description: "Atom Guard ana komutu"
+    usage: "/<command> [reload|status|toggle|info|health]"
+    permission: atomguard.admin
+    aliases: [ag]
+  panic:
+    description: "Sunucuyu bot saldırısı sırasında korumaya alır"
+    usage: "/<command>"
+    permission: atomguard.panic
+    aliases: [panik]
+
+permissions:
+  atomguard.admin:
+    description: "Tüm Atom Guard komutlarına erişim"
+    default: op
+  atomguard.bypass:
+    description: "Tüm exploit kontrollerini atla"
+    default: false
+  atomguard.reload:
+    description: "Config yeniden yükleme izni"
+    default: op
+  atomguard.notify:
+    description: "Exploit bildirimlerini alma izni"
+    default: op
+  atomguard.panic:
+    description: "Panic modu izni"
+    default: op

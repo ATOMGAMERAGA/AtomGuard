@@ -1,0 +1,27 @@
+# Maven build output
+target/
+**/target/
+
+# IDE files
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+.vscode/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Maven
+pom.xml.versionsBackup
+dependency-reduced-pom.xml
+
+# Logs
+*.log
+
+# Runtime data
+*.db
+*.sqlite
