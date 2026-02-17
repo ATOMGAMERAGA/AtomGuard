@@ -62,36 +62,20 @@ public class ConfigManager {
     }
 
     private void checkConfigVersion() {
-        String currentVersion = plugin.getDescription().getVersion();
+        String currentVersion = "1.0.0"; // Sabit v1.0.0 olarak kalacak
         String configVersion = config.getString("config-version", "1.0.0");
 
         if (!configVersion.equals(currentVersion)) {
-            plugin.getLogger().info("Config versiyonu eski (" + configVersion + "), güncelleniyor: " + currentVersion);
+            plugin.getLogger().info("Config versiyonu eski (" + configVersion + "), güncelleniyor...");
             
-            // Migrate logic
-            migrate(configVersion, currentVersion);
+            migrateConfig(configVersion, currentVersion);
             
             config.set("config-version", currentVersion);
             saveConfig();
         }
     }
 
-    private void migrate(String from, String to) {
-        // v3.x'ten v1.0.0'a geçiş iyileştirmeleri
-        if (from.startsWith("3.")) {
-            // Örnek: v4'te yeni eklenen bir ayarı ekle
-            if (!config.contains("web-panel.max-payload-size")) {
-                config.set("web-panel.max-payload-size", 1024 * 512); // 512KB default
-            }
-            
-            // Eski bir anahtarı taşıma veya silme (gerekiyorsa)
-            if (config.contains("moduller.eski-modul")) {
-                Object val = config.get("moduller.eski-modul");
-                config.set("moduller.yeni-modul", val);
-                config.set("moduller.eski-modul", null);
-            }
-        }
-        
+    private void migrateConfig(String from, String target) {
         // Backup oluştur
         File backup = new File(plugin.getDataFolder(), "config.yml.bak-" + from);
         try {
@@ -99,6 +83,20 @@ public class ConfigManager {
         } catch (IOException e) {
             plugin.getLogger().warning("Konfigürasyon yedeği oluşturulamadı.");
         }
+
+        // Zincirleme migration (Örnek yapı)
+        String current = from;
+        
+        if (current.equals("0.9.0")) {
+            // 0.9.0 -> 1.0.0 değişiklikleri
+            if (!config.contains("heuristic.action")) {
+                config.set("heuristic.action", "KICK");
+            }
+            current = "1.0.0";
+        }
+        
+        // Gelecekteki versiyonlar buraya eklenecek
+        // if (current.equals("1.0.0")) { ... current = "1.1.0"; }
     }
 
     /**

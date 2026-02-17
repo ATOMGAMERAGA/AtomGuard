@@ -49,60 +49,39 @@ public class CommandsCrashModule extends AbstractModule implements Listener {
         this.blockedPatterns = new ArrayList<>();
     }
 
-    private PacketListenerAbstract packetListener;
-
     @Override
-
     public void onEnable() {
         super.onEnable();
 
         // Config değerlerini yükle
         loadConfig();
 
-        // Event listener kaydet
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
-        // PacketEvents listener
-        packetListener = new PacketListenerAbstract(PacketListenerPriority.LOWEST) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                if (!isEnabled()) return;
-
-                if (event.getPacketType() == PacketType.Play.Client.UPDATE_JIGSAW_BLOCK || 
-                    event.getPacketType() == PacketType.Play.Client.UPDATE_STRUCTURE_BLOCK) {
-                    
-                    if (!(event.getPlayer() instanceof Player player)) return;
-
-                    // Survival oyuncusu bu paketleri gönderemez!
-                    if (player.getGameMode() != GameMode.CREATIVE || !player.isOp()) {
-                        event.setCancelled(true);
-                        incrementBlockedCount();
-                        logExploit(player.getName(), "Yetkisiz Jigsaw/Structure Block güncelleme girişimi!");
-                    }
-                }
-            }
-        };
-        PacketEvents.getAPI().getEventManager().registerListener(packetListener);
+        // PacketEvents listener - Merkezi Listener üzerinden
+        registerReceiveHandler(PacketType.Play.Client.UPDATE_JIGSAW_BLOCK, this::handleUpdateBlock);
+        registerReceiveHandler(PacketType.Play.Client.UPDATE_STRUCTURE_BLOCK, this::handleUpdateBlock);
 
         debug("Modül aktifleştirildi. Engellenecek pattern sayısı: " + blockedPatterns.size());
     }
 
     @Override
-
     public void onDisable() {
         super.onDisable();
 
         // Pattern'lari temizle
         blockedPatterns.clear();
 
-        if (packetListener != null) {
-            PacketEvents.getAPI().getEventManager().unregisterListener(packetListener);
-        }
-
-        // Event listener'ı kaldır
-        PlayerCommandPreprocessEvent.getHandlerList().unregister(this);
-
         debug("Modül devre dışı bırakıldı.");
+    }
+
+    private void handleUpdateBlock(PacketReceiveEvent event) {
+        if (!isEnabled()) return;
+        if (!(event.getPlayer() instanceof Player player)) return;
+
+        // Survival oyuncusu bu paketleri gönderemez!
+        if (player.getGameMode() != GameMode.CREATIVE || !player.isOp()) {
+            event.setCancelled(true);
+            blockExploit(player, "Yetkisiz Jigsaw/Structure Block güncelleme girişimi!");
+        }
     }
 
     /**
@@ -173,8 +152,7 @@ public class CommandsCrashModule extends AbstractModule implements Listener {
 
         // CR-06: Pre-regex length check to prevent ReDoS on massive strings
         if (command.length() > 500) {
-            incrementBlockedCount();
-            logExploit(player.getName(), String.format("Çok uzun komut: %d karakter (Limit: 500)", command.length()));
+            blockExploit(player, String.format("Çok uzun komut: %d karakter (Limit: 500)", command.length()));
             event.setCancelled(true);
             player.sendMessage(plugin.getMessageManager().getMessage("komut-cok-uzun"));
             return;
@@ -184,9 +162,7 @@ public class CommandsCrashModule extends AbstractModule implements Listener {
         for (Pattern pattern : blockedPatterns) {
             if (pattern.matcher(command).matches()) {
                 // Engellenmesi gereken komut
-                incrementBlockedCount();
-
-                logExploit(player.getName(),
+                blockExploit(player,
                     String.format("Engellenmiş komut kullanımı: %s (Pattern: %s)",
                         command.length() > 100 ? command.substring(0, 100) + "..." : command,
                         pattern.pattern()));

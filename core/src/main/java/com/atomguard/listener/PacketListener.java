@@ -29,6 +29,14 @@ public class PacketListener extends PacketListenerAbstract {
     private final AtomGuard plugin;
     private final Map<PacketTypeCommon, List<Consumer<PacketReceiveEvent>>> receiveHandlers = new ConcurrentHashMap<>();
     private final Map<PacketTypeCommon, List<Consumer<PacketSendEvent>>> sendHandlers = new ConcurrentHashMap<>();
+    
+    // Global handlers
+    private final List<Consumer<PacketReceiveEvent>> globalReceiveHandlers = Collections.synchronizedList(new ArrayList<>());
+    private final List<Consumer<PacketSendEvent>> globalSendHandlers = Collections.synchronizedList(new ArrayList<>());
+
+    // PERF-02: Bypass permission cache
+    private final Map<UUID, Long> bypassCache = new ConcurrentHashMap<>();
+    private static final long BYPASS_CACHE_DURATION = 30_000; // 30 saniye
 
     public PacketListener(@NotNull AtomGuard plugin) {
         super(PacketListenerPriority.NORMAL);
@@ -39,26 +47,69 @@ public class PacketListener extends PacketListenerAbstract {
      * Bir modül için paket alma işleyicisi kaydeder
      */
     public void registerReceiveHandler(PacketTypeCommon type, Consumer<PacketReceiveEvent> handler) {
-        receiveHandlers.computeIfAbsent(type, k -> Collections.synchronizedList(new ArrayList<>())).add(handler);
+        if (type == null) {
+            globalReceiveHandlers.add(handler);
+        } else {
+            receiveHandlers.computeIfAbsent(type, k -> Collections.synchronizedList(new ArrayList<>())).add(handler);
+        }
+    }
+
+    /**
+     * Bir modül için paket alma işleyicisi kaydını kaldırır
+     */
+    public void unregisterReceiveHandler(PacketTypeCommon type, Consumer<PacketReceiveEvent> handler) {
+        if (type == null) {
+            globalReceiveHandlers.remove(handler);
+        } else {
+            List<Consumer<PacketReceiveEvent>> handlers = receiveHandlers.get(type);
+            if (handlers != null) {
+                handlers.remove(handler);
+            }
+        }
     }
 
     /**
      * Bir modül için paket gönderme işleyicisi kaydeder
      */
     public void registerSendHandler(PacketTypeCommon type, Consumer<PacketSendEvent> handler) {
-        sendHandlers.computeIfAbsent(type, k -> Collections.synchronizedList(new ArrayList<>())).add(handler);
+        if (type == null) {
+            globalSendHandlers.add(handler);
+        } else {
+            sendHandlers.computeIfAbsent(type, k -> Collections.synchronizedList(new ArrayList<>())).add(handler);
+        }
+    }
+
+    /**
+     * Bir modül için paket gönderme işleyicisi kaydını kaldırır
+     */
+    public void unregisterSendHandler(PacketTypeCommon type, Consumer<PacketSendEvent> handler) {
+        if (type == null) {
+            globalSendHandlers.remove(handler);
+        } else {
+            List<Consumer<PacketSendEvent>> handlers = sendHandlers.get(type);
+            if (handlers != null) {
+                handlers.remove(handler);
+            }
+        }
     }
 
     @Override
     public void onPacketReceive(@NotNull PacketReceiveEvent event) {
-        // Bypass kontrolü
+        // PERF-02: Bypass kontrolü (Cache-based)
         if (event.getUser() != null && event.getUser().getUUID() != null) {
-            Player player = plugin.getServer().getPlayer(event.getUser().getUUID());
-            if (player != null && player.hasPermission("atomguard.bypass")) return;
+            if (hasBypass(event.getUser().getUUID())) return;
         }
 
         // Heuristic Engine Entegrasyonu (Geleneksel legacy yapı korunuyor)
         handleLegacyIncoming(event);
+
+        // Global Handlers
+        synchronized (globalReceiveHandlers) {
+            for (Consumer<PacketReceiveEvent> handler : globalReceiveHandlers) {
+                if (event.isCancelled()) break;
+                handler.accept(event);
+            }
+        }
 
         // Merkezi Dağıtım (PERF-01)
         List<Consumer<PacketReceiveEvent>> handlers = receiveHandlers.get(event.getPacketType());
@@ -74,6 +125,19 @@ public class PacketListener extends PacketListenerAbstract {
 
     @Override
     public void onPacketSend(@NotNull PacketSendEvent event) {
+        // PERF-02: Bypass kontrolü (Cache-based)
+        if (event.getUser() != null && event.getUser().getUUID() != null) {
+            if (hasBypass(event.getUser().getUUID())) return;
+        }
+
+        // Global Handlers
+        synchronized (globalSendHandlers) {
+            for (Consumer<PacketSendEvent> handler : globalSendHandlers) {
+                if (event.isCancelled()) break;
+                handler.accept(event);
+            }
+        }
+
         List<Consumer<PacketSendEvent>> handlers = sendHandlers.get(event.getPacketType());
         if (handlers != null) {
             synchronized (handlers) {
@@ -82,6 +146,35 @@ public class PacketListener extends PacketListenerAbstract {
                     handler.accept(event);
                 }
             }
+        }
+    }
+
+    /**
+     * Permission cache check for bypass (PERF-02)
+     */
+    private boolean hasBypass(UUID uuid) {
+        Long cachedUntil = bypassCache.get(uuid);
+        if (cachedUntil != null && System.currentTimeMillis() < cachedUntil) {
+            return true;
+        }
+        
+        // Cache miss - asenkron kontrol yapıp cache'e ekle (ana thread'e gitmeden)
+        Player player = plugin.getServer().getPlayer(uuid);
+        if (player != null && player.hasPermission("atomguard.bypass")) {
+            cacheBypassPermission(uuid, true);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * PlayerJoinEvent'te veya hasBypass'ta cache'e ekle
+     */
+    public void cacheBypassPermission(UUID uuid, boolean hasBypass) {
+        if (hasBypass) {
+            bypassCache.put(uuid, System.currentTimeMillis() + BYPASS_CACHE_DURATION);
+        } else {
+            bypassCache.remove(uuid);
         }
     }
 

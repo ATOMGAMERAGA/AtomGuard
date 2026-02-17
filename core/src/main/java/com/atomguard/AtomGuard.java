@@ -121,8 +121,14 @@ public final class AtomGuard extends JavaPlugin {
         // PacketEvents'i başlat
         PacketEvents.getAPI().init();
 
+        // Modülleri etkinleştir (Listener'lar ve PacketEvents hazır olduktan sonra)
+        moduleManager.enableAllModules();
+
         // Periyodik temizlik görevi (bellek sızıntısı önleme) - her 5 dakikada bir
         startCleanupTask();
+
+        // Metrics (bStats)
+        initializeMetrics();
 
         // Başarı mesajı
         long loadTime = System.currentTimeMillis() - startTime;
@@ -269,9 +275,6 @@ public final class AtomGuard extends JavaPlugin {
         // Modülleri kaydet
         registerModules();
 
-        // Modülleri etkinleştir
-        moduleManager.enableAllModules();
-
         // Attack Mode Update Task (Every 5 seconds)
         getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
             if (attackModeManager != null) {
@@ -332,30 +335,18 @@ public final class AtomGuard extends JavaPlugin {
     private void startCleanupTask() {
         // Her 5 dakikada bir (6000 tick) cleanup çalıştır
         getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
-            try {
-                var offlineModule = moduleManager.getModule(com.atomguard.module.OfflinePacketModule.class);
-                if (offlineModule != null) offlineModule.cleanup();
-
-                var exploitModule = moduleManager.getModule(com.atomguard.module.PacketExploitModule.class);
-                if (exploitModule != null) exploitModule.cleanup();
-
-                // FrameCrashModule.cleanup() Bukkit API kullanıyor, sync olmalı
-                getServer().getScheduler().runTask(this, () -> {
-                    var frameModule = moduleManager.getModule(com.atomguard.module.FrameCrashModule.class);
-                    if (frameModule != null) frameModule.cleanup();
-                });
-
-                var invModule = moduleManager.getModule(com.atomguard.module.InventoryDuplicationModule.class);
-                if (invModule != null) invModule.cleanup();
-
-                // TokenBucket oyuncu verisi temizliği (sync gerekli — Bukkit API kullanıyor)
-                getServer().getScheduler().runTask(this, () -> {
-                    var tokenModule = moduleManager.getModule(com.atomguard.module.TokenBucketModule.class);
-                    if (tokenModule != null) tokenModule.cleanup();
-                });
-
-            } catch (Exception e) {
-                getLogger().warning("Cleanup görevi sırasında hata: " + e.getMessage());
+            for (com.atomguard.module.AbstractModule module : moduleManager.getAllModules()) {
+                try {
+                    if (module.isEnabled()) {
+                        module.cleanup();
+                    }
+                } catch (Exception e) {
+                    getLogger().warning("Cleanup hatası [" + module.getName() + "]: " + e.getMessage());
+                }
+            }
+            // HeuristicEngine cleanup
+            if (heuristicEngine != null) {
+                heuristicEngine.cleanupOfflinePlayers();
             }
         }, 6000L, 6000L);
     }
@@ -450,6 +441,23 @@ public final class AtomGuard extends JavaPlugin {
                 BuildInfo.getFullVersion()
         );
         getLogger().info("Atom Guard API v" + BuildInfo.getFullVersion() + " başlatıldı.");
+    }
+
+    /**
+     * bStats metrics entegrasyonu (FEAT-03)
+     */
+    private void initializeMetrics() {
+        int pluginId = 20500; // AtomGuard bStats ID
+        org.bstats.bukkit.Metrics metrics = new org.bstats.bukkit.Metrics(this, pluginId);
+        
+        metrics.addCustomChart(new org.bstats.charts.SimplePie("aktif_modul_sayisi", () -> 
+            String.valueOf(moduleManager.getEnabledModuleCount())));
+            
+        metrics.addCustomChart(new org.bstats.charts.SingleLineChart("toplam_engelleme", () -> 
+            (int) moduleManager.getTotalBlockedCount()));
+            
+        metrics.addCustomChart(new org.bstats.charts.SimplePie("attack_mode", () -> 
+            String.valueOf(attackModeManager.isAttackMode())));
     }
 
     /**

@@ -23,33 +23,22 @@ public class EntityInteractCrashModule extends AbstractModule {
     private final Map<UUID, AtomicInteger> interactCounts = new ConcurrentHashMap<>();
     private double maxDistance;
     private int maxInteractPerSec;
-    private PacketListenerAbstract listener;
 
     public EntityInteractCrashModule(@NotNull AtomGuard plugin) {
         super(plugin, "entity-etkilesim-crash", "Entity etkileşim koruması");
     }
 
     @Override
-
     public void onEnable() {
         super.onEnable();
         this.maxDistance = getConfigDouble("max-etkilesim-mesafesi", 6.0);
         this.maxInteractPerSec = getConfigInt("saniyede-max-etkilesim", 20);
 
-        listener = new PacketListenerAbstract(PacketListenerPriority.NORMAL) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                if (event.getPacketType() == PacketType.Play.Client.INTERACT_ENTITY) {
-                    handleInteract(event);
-                }
-            }
-        };
-        com.github.retrooper.packetevents.PacketEvents.getAPI().getEventManager().registerListener(listener);
-        
-        plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, interactCounts::clear, 20L, 20L);
+        registerReceiveHandler(PacketType.Play.Client.INTERACT_ENTITY, this::handleInteract);
     }
 
     private void handleInteract(PacketReceiveEvent event) {
+        if (!isEnabled()) return;
         if (!(event.getPlayer() instanceof Player player)) return;
         
         UUID uuid = player.getUniqueId();
@@ -66,15 +55,18 @@ public class EntityInteractCrashModule extends AbstractModule {
         // aşırı büyük ID'ler ArrayIndexOutOfBounds tetikleyebilir.
         if (packet.getEntityId() < 0 || packet.getEntityId() > 2000000) {
             event.setCancelled(true);
-            incrementBlockedCount();
-            logExploit(player.getName(), "Geçersiz Entity ID Etkileşimi: " + packet.getEntityId());
+            blockExploit(player, "Geçersiz Entity ID Etkileşimi: " + packet.getEntityId());
         }
     }
 
     @Override
+    public void cleanup() {
+        interactCounts.clear();
+    }
 
+    @Override
     public void onDisable() {
         super.onDisable();
-        if (listener != null) com.github.retrooper.packetevents.PacketEvents.getAPI().getEventManager().unregisterListener(listener);
+        interactCounts.clear();
     }
 }

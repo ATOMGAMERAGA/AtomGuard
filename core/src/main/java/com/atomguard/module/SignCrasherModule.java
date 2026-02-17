@@ -28,8 +28,6 @@ import java.util.regex.Pattern;
  */
 public class SignCrasherModule extends AbstractModule {
 
-    private PacketListenerAbstract listener;
-
     // Config cache
     private int maxLineLength;
     private boolean cleanColorCodes;
@@ -49,40 +47,21 @@ public class SignCrasherModule extends AbstractModule {
     }
 
     @Override
-
     public void onEnable() {
         super.onEnable();
 
         // Config değerlerini yükle
         loadConfig();
 
-        // PacketEvents listener'ı oluştur ve kaydet
-        listener = new PacketListenerAbstract(PacketListenerPriority.NORMAL) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                handlePacketReceive(event);
-            }
-        };
-
-        com.github.retrooper.packetevents.PacketEvents.getAPI()
-            .getEventManager()
-            .registerListener(listener);
+        // PacketEvents listener - Merkezi Listener üzerinden
+        registerReceiveHandler(PacketType.Play.Client.UPDATE_SIGN, this::handlePacketReceive);
 
         debug("Modül aktifleştirildi. Max satır uzunluğu: " + maxLineLength);
     }
 
     @Override
-
     public void onDisable() {
         super.onDisable();
-
-        // PacketEvents listener'ı kaldır
-        if (listener != null) {
-            com.github.retrooper.packetevents.PacketEvents.getAPI()
-                .getEventManager()
-                .unregisterListener(listener);
-        }
-
         debug("Modül devre dışı bırakıldı.");
     }
 
@@ -128,9 +107,8 @@ public class SignCrasherModule extends AbstractModule {
                 
                 // CR-04: Invisible character check
                 if (line.contains("\u200B") || line.contains("\u202E") || line.contains("\u2066")) {
-                    incrementBlockedCount();
                     event.setCancelled(true);
-                    logExploit(player.getName(), "Görünmez karakter içeren tabela: " + i);
+                    blockExploit(player, "Görünmez karakter içeren tabela: " + i);
                     return;
                 }
 
@@ -146,9 +124,7 @@ public class SignCrasherModule extends AbstractModule {
 
                 // Uzunluk kontrolü
                 if (sanitized.length() > maxLineLength) {
-                    incrementBlockedCount();
-
-                    logExploit(player.getName(),
+                    blockExploit(player,
                         String.format("Çok uzun tabela satırı: %d karakter (Limit: %d)",
                             sanitized.length(), maxLineLength));
 

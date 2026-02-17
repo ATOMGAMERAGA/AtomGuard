@@ -30,8 +30,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ViewDistanceMaskModule extends AbstractModule {
 
-    private PacketListenerAbstract listener;
-
     /**
      * ViewDistanceMaskModule constructor
      *
@@ -42,54 +40,25 @@ public class ViewDistanceMaskModule extends AbstractModule {
     }
 
     @Override
-
     public void onEnable() {
         super.onEnable();
 
-        listener = new PacketListenerAbstract(PacketListenerPriority.NORMAL) {
-            @Override
-            public void onPacketSend(PacketSendEvent event) {
-                handleOutgoingPacket(event);
-            }
-        };
-
-        PacketEvents.getAPI().getEventManager().registerListener(listener);
+        registerSendHandler(PacketType.Play.Server.BLOCK_CHANGE, this::handleBlockChange);
+        
         debug("View distance maskeleme modülü başlatıldı.");
     }
 
     @Override
-
     public void onDisable() {
         super.onDisable();
-
-        if (listener != null) {
-            PacketEvents.getAPI().getEventManager().unregisterListener(listener);
-        }
-
         debug("View distance maskeleme modülü durduruldu.");
-    }
-
-    /**
-     * Giden paketleri filtreler
-     */
-    private void handleOutgoingPacket(@NotNull PacketSendEvent event) {
-        if (!isEnabled()) return;
-
-        // BlockChange — en yaygın NoCom vektörü
-        if (event.getPacketType() == PacketType.Play.Server.BLOCK_CHANGE) {
-            handleBlockChange(event);
-        }
-        // MULTI_BLOCK_CHANGE — toplu blok güncellemeleri
-        else if (event.getPacketType() == PacketType.Play.Server.MULTI_BLOCK_CHANGE) {
-            // Multi block change chunk bazlı — PacketEvents wrapper ile chunk pos alınabilir
-            // Ancak doğrudan konum çıkarmak karmaşık, ana koruma BlockChange üzerinden sağlanır
-        }
     }
 
     /**
      * BlockChange paketini filtreler
      */
     private void handleBlockChange(@NotNull PacketSendEvent event) {
+        if (!isEnabled()) return;
         if (!(event.getPlayer() instanceof Player player)) return;
 
         try {

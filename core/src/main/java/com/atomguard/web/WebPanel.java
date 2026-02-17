@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
 
@@ -41,6 +42,8 @@ public class WebPanel {
 
     // Rate Limiting
     private final java.util.Map<String, RateLimitTracker> rateLimits = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<String, Integer> loginAttempts = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Set<String> validTokens = ConcurrentHashMap.newKeySet();
 
     public WebPanel(AtomGuard plugin) {
         this.plugin = plugin;
@@ -48,11 +51,33 @@ public class WebPanel {
         this.enabled = plugin.getConfig().getBoolean("web-panel.enabled", false);
         this.authEnabled = plugin.getConfig().getBoolean("web-panel.kimlik-dogrulama.aktif", true);
         this.authUser = plugin.getConfig().getString("web-panel.kimlik-dogrulama.kullanici-adi", "admin");
-        this.authPass = plugin.getConfig().getString("web-panel.kimlik-dogrulama.sifre", "atomguard2024");
+        
+        String pass = plugin.getConfig().getString("web-panel.kimlik-dogrulama.sifre", "atomguard2024");
+        if ("atomguard2024".equals(pass) && enabled) {
+            pass = generateRandomPassword();
+            plugin.getConfig().set("web-panel.kimlik-dogrulama.sifre", pass);
+            plugin.saveConfig();
+            plugin.getLogger().warning("Web Panel için varsayılan şifre değiştirildi: " + pass);
+        }
+        this.authPass = pass;
+        
         this.maxEvents = plugin.getConfig().getInt("web-panel.max-olay-sayisi", 100);
         
-        // Cleanup task for rate limits
-        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> rateLimits.clear(), 1, 1, java.util.concurrent.TimeUnit.HOURS);
+        // Cleanup task for rate limits and login attempts
+        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+            rateLimits.clear();
+            loginAttempts.clear();
+        }, 1, 1, java.util.concurrent.TimeUnit.HOURS);
+    }
+
+    private String generateRandomPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder sb = new StringBuilder();
+        Random rnd = new Random();
+        for (int i = 0; i < 12; i++) {
+            sb.append(chars.charAt(rnd.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 
     public void start() {
@@ -61,6 +86,7 @@ public class WebPanel {
         try {
             server = HttpServer.create(new InetSocketAddress(port), 0);
             server.createContext("/", new ProtectedHandler(new DashboardHandler()));
+            server.createContext("/login", new LoginHandler());
             server.createContext("/modules", new ProtectedHandler(new ModulesPageHandler()));
             server.createContext("/api/stats", new ProtectedHandler(new StatsHandler()));
             server.createContext("/api/modules", new ProtectedHandler(new ModulesApiHandler()));
@@ -88,6 +114,16 @@ public class WebPanel {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            // CORS Headers
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+
             // 1. Rate Limiting
             if (!checkRateLimit(exchange)) {
                 exchange.sendResponseHeaders(429, -1);
@@ -95,12 +131,49 @@ public class WebPanel {
                 return;
             }
 
-            // 2. Authentication
+            // 2. Authentication (Token or Basic)
             if (!checkAuth(exchange)) {
                 return;
             }
 
             delegate.handle(exchange);
+        }
+    }
+
+    private class LoginHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendResponse(exchange, 405, "application/json", "{\"error\":\"Method not allowed\"}");
+                return;
+            }
+
+            String ip = exchange.getRemoteAddress().getAddress().getHostAddress();
+            int attempts = loginAttempts.getOrDefault(ip, 0);
+            if (attempts > 5) {
+                sendResponse(exchange, 429, "application/json", "{\"error\":\"Too many login attempts\"}");
+                return;
+            }
+
+            String body = readBodyWithLimit(exchange, 1024);
+            String user = null, pass = null;
+            for (String param : body.split("&")) {
+                String[] kv = param.split("=", 2);
+                if (kv.length == 2) {
+                    if ("user".equals(kv[0])) user = java.net.URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
+                    if ("pass".equals(kv[0])) pass = java.net.URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
+                }
+            }
+
+            if (authUser.equals(user) && authPass.equals(pass)) {
+                String token = UUID.randomUUID().toString();
+                validTokens.add(token);
+                loginAttempts.remove(ip);
+                sendResponse(exchange, 200, "application/json", "{\"token\":\"" + token + "\"}");
+            } else {
+                loginAttempts.put(ip, attempts + 1);
+                sendResponse(exchange, 401, "application/json", "{\"error\":\"Invalid credentials\"}");
+            }
         }
     }
 
@@ -172,21 +245,37 @@ public class WebPanel {
         if (!authEnabled) return true;
 
         String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Basic ")) {
+        if (authHeader == null) {
+            // Check for cookie or query param token as fallback
+            String query = exchange.getRequestURI().getQuery();
+            if (query != null && query.contains("token=")) {
+                String token = query.split("token=")[1].split("&")[0];
+                if (validTokens.contains(token)) return true;
+            }
+            
             exchange.getResponseHeaders().set("WWW-Authenticate", "Basic realm=\"AtomGuard\"");
             exchange.sendResponseHeaders(401, -1);
             return false;
         }
 
-        String decoded = new String(Base64.getDecoder().decode(authHeader.substring(6)), StandardCharsets.UTF_8);
-        String[] parts = decoded.split(":", 2);
-        if (parts.length != 2 || !parts[0].equals(authUser) || !parts[1].equals(authPass)) {
-            exchange.getResponseHeaders().set("WWW-Authenticate", "Basic realm=\"AtomGuard\"");
+        if (authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (validTokens.contains(token)) return true;
             exchange.sendResponseHeaders(401, -1);
             return false;
         }
 
-        return true;
+        if (authHeader.startsWith("Basic ")) {
+            String decoded = new String(Base64.getDecoder().decode(authHeader.substring(6)), StandardCharsets.UTF_8);
+            String[] parts = decoded.split(":", 2);
+            if (parts.length == 2 && parts[0].equals(authUser) && parts[1].equals(authPass)) {
+                return true;
+            }
+        }
+
+        exchange.getResponseHeaders().set("WWW-Authenticate", "Basic realm=\"AtomGuard\"");
+        exchange.sendResponseHeaders(401, -1);
+        return false;
     }
 
     private void sendResponse(HttpExchange exchange, int code, String contentType, String body) throws IOException {

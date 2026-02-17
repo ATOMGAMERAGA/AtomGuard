@@ -24,6 +24,8 @@ public class HeuristicProfile {
 
     // Suspicion System
     private double suspicionLevel; // 0.0 to 100.0
+    private long lastSuspicionUpdate;
+    private static final double DECAY_RATE_PER_SECOND = 0.5;
     private final AtomicInteger violationCount;
     private int rotationSpikes = 0;
 
@@ -31,6 +33,7 @@ public class HeuristicProfile {
         this.uuid = uuid;
         this.clickIntervals = new LinkedList<>();
         this.lastRotationTime = System.currentTimeMillis();
+        this.lastSuspicionUpdate = System.currentTimeMillis();
         this.violationCount = new AtomicInteger(0);
         this.suspicionLevel = 0.0;
     }
@@ -95,15 +98,23 @@ public class HeuristicProfile {
     }
 
     public double getSuspicionLevel() {
+        long now = System.currentTimeMillis();
+        long elapsed = now - lastSuspicionUpdate;
+        double decay = (elapsed / 1000.0) * DECAY_RATE_PER_SECOND;
+        suspicionLevel = Math.max(0.0, suspicionLevel - decay);
+        lastSuspicionUpdate = now;
         return suspicionLevel;
     }
 
     public void addSuspicion(double amount) {
+        getSuspicionLevel(); // Update with decay first
         this.suspicionLevel = Math.min(100.0, this.suspicionLevel + amount);
+        this.lastSuspicionUpdate = System.currentTimeMillis();
     }
     
     public void reduceSuspicion(double amount) {
         this.suspicionLevel = Math.max(0.0, this.suspicionLevel - amount);
+        this.lastSuspicionUpdate = System.currentTimeMillis();
     }
 
     public int getViolationCount() {

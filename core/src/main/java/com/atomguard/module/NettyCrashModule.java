@@ -43,8 +43,6 @@ public class NettyCrashModule extends AbstractModule implements Listener {
     /** Enjekte edilen handler'ları takip eden set */
     private final Set<UUID> injectedPlayers = ConcurrentHashMap.newKeySet();
 
-    private PacketListenerAbstract packetListener;
-
     // Config cache
     private double maxPositionValue;
     private double maxYValue;
@@ -59,22 +57,13 @@ public class NettyCrashModule extends AbstractModule implements Listener {
     }
 
     @Override
-
     public void onEnable() {
         super.onEnable();
         loadConfig();
 
-        // Bukkit event listener olarak kaydet
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
-        // PacketEvents ile konum doğrulama
-        packetListener = new PacketListenerAbstract(PacketListenerPriority.LOW) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                handlePositionPacket(event);
-            }
-        };
-        PacketEvents.getAPI().getEventManager().registerListener(packetListener);
+        // PacketEvents ile konum doğrulama - Merkezi Listener üzerinden
+        registerReceiveHandler(PacketType.Play.Client.PLAYER_POSITION, this::handlePlayerPosition);
+        registerReceiveHandler(PacketType.Play.Client.PLAYER_POSITION_AND_ROTATION, this::handlePlayerPositionAndRotation);
 
         // Zaten online olan oyuncular için handler enjekte et
         for (Player player : plugin.getServer().getOnlinePlayers()) {
@@ -85,15 +74,8 @@ public class NettyCrashModule extends AbstractModule implements Listener {
     }
 
     @Override
-
     public void onDisable() {
         super.onDisable();
-
-        HandlerList.unregisterAll(this);
-
-        if (packetListener != null) {
-            PacketEvents.getAPI().getEventManager().unregisterListener(packetListener);
-        }
 
         // Tüm enjekte edilmiş handler'ları kaldır
         for (Player player : plugin.getServer().getOnlinePlayers()) {
@@ -193,22 +175,10 @@ public class NettyCrashModule extends AbstractModule implements Listener {
     }
 
     /**
-     * Konum paketlerini NaN/Infinity/sınır dışı değerler için kontrol eder
-     */
-    private void handlePositionPacket(@NotNull PacketReceiveEvent event) {
-        if (!isEnabled()) return;
-
-        if (event.getPacketType() == PacketType.Play.Client.PLAYER_POSITION) {
-            handlePlayerPosition(event);
-        } else if (event.getPacketType() == PacketType.Play.Client.PLAYER_POSITION_AND_ROTATION) {
-            handlePlayerPositionAndRotation(event);
-        }
-    }
-
-    /**
      * Position paketi kontrolü
      */
     private void handlePlayerPosition(@NotNull PacketReceiveEvent event) {
+        if (!isEnabled()) return;
         if (!(event.getPlayer() instanceof Player player)) return;
 
         try {
@@ -229,6 +199,7 @@ public class NettyCrashModule extends AbstractModule implements Listener {
      * PositionAndRotation paketi kontrolü
      */
     private void handlePlayerPositionAndRotation(@NotNull PacketReceiveEvent event) {
+        if (!isEnabled()) return;
         if (!(event.getPlayer() instanceof Player player)) return;
 
         try {
@@ -250,9 +221,7 @@ public class NettyCrashModule extends AbstractModule implements Listener {
             if (Float.isNaN(yaw) || Float.isInfinite(yaw)
                     || Float.isNaN(pitch) || Float.isInfinite(pitch)) {
                 event.setCancelled(true);
-                incrementBlockedCount();
-                logExploit(player.getName(),
-                        String.format("Geçersiz rotation: yaw=%.2f, pitch=%.2f", yaw, pitch));
+                blockExploit(player, String.format("Geçersiz rotation: yaw=%.2f, pitch=%.2f", yaw, pitch));
             }
         } catch (Exception e) {
             error("PositionAndRotation paketi işlenirken hata: " + e.getMessage());
@@ -281,10 +250,7 @@ public class NettyCrashModule extends AbstractModule implements Listener {
     private void blockAndKick(@NotNull PacketReceiveEvent event, @NotNull Player player,
                               double x, double y, double z) {
         event.setCancelled(true);
-        incrementBlockedCount();
-
-        logExploit(player.getName(),
-                String.format("Geçersiz konum tespit edildi! X=%.2f, Y=%.2f, Z=%.2f", x, y, z));
+        blockExploit(player, String.format("Geçersiz konum tespit edildi! X=%.2f, Y=%.2f, Z=%.2f", x, y, z));
 
         // Async kick — ana thread'de
         plugin.getServer().getScheduler().runTask(plugin, () -> {

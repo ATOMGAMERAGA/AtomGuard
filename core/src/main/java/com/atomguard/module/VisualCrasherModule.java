@@ -34,52 +34,44 @@ public class VisualCrasherModule extends AbstractModule implements Listener {
     private int maxFireworkEffects;
     private int maxParticlePackets;
     private final Map<UUID, AtomicInteger> particleCounts = new ConcurrentHashMap<>();
-    private PacketListenerAbstract packetListener;
 
     public VisualCrasherModule(@NotNull AtomGuard plugin) {
         super(plugin, "gorsel-crasher", "Havai fişek ve partikül koruması");
     }
 
     @Override
-
     public void onEnable() {
         super.onEnable();
         this.maxFireworkEffects = getConfigInt("max-havai-fiseke-efekt", 15);
         this.maxParticlePackets = getConfigInt("max-partikul-paketi-saniye", 100);
 
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        // PacketEvents listener for particles - Merkezi Listener üzerinden
+        registerSendHandler(PacketType.Play.Server.PARTICLE, this::handleParticlePacket);
+        
+        debug("Görsel crasher koruması başlatıldı.");
+    }
 
-        // PacketEvents listener for particles
-        packetListener = new PacketListenerAbstract(PacketListenerPriority.NORMAL) {
-            @Override
-            public void onPacketSend(PacketSendEvent event) {
-                if (event.getPacketType() == PacketType.Play.Server.PARTICLE) {
-                    if (event.getUser() == null || event.getUser().getUUID() == null) return;
-                    
-                    UUID uuid = event.getUser().getUUID();
-                    AtomicInteger count = particleCounts.computeIfAbsent(uuid, k -> new AtomicInteger(0));
-                    
-                    if (count.incrementAndGet() > maxParticlePackets) {
-                        event.setCancelled(true);
-                        incrementBlockedCount();
-                    }
-                }
-            }
-        };
-        com.github.retrooper.packetevents.PacketEvents.getAPI().getEventManager().registerListener(packetListener);
-
-        // CR-09: Race condition fix - Reset counts by clearing map safely or using expiration
-        // For simplicity and performance, we just clear it, but we use a new map to avoid iteration issues if concurrent.
-        plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, particleCounts::clear, 20L, 20L);
+    private void handleParticlePacket(PacketSendEvent event) {
+        if (!isEnabled()) return;
+        if (event.getUser() == null || event.getUser().getUUID() == null) return;
+        
+        UUID uuid = event.getUser().getUUID();
+        int count = particleCounts.computeIfAbsent(uuid, k -> new AtomicInteger(0)).incrementAndGet();
+        
+        if (count > maxParticlePackets) {
+            event.setCancelled(true);
+            incrementBlockedCount();
+        }
     }
 
     @Override
+    public void cleanup() {
+        particleCounts.clear();
+    }
 
+    @Override
     public void onDisable() {
         super.onDisable();
-        if (packetListener != null) {
-            com.github.retrooper.packetevents.PacketEvents.getAPI().getEventManager().unregisterListener(packetListener);
-        }
         particleCounts.clear();
     }
 

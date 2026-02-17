@@ -15,28 +15,18 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ContainerCrashModule extends AbstractModule {
 
-    private PacketListenerAbstract listener;
-
     public ContainerCrashModule(@NotNull AtomGuard plugin) {
         super(plugin, "container-crash", "Envanter ve Container koruması");
     }
 
     @Override
-
     public void onEnable() {
         super.onEnable();
-        listener = new PacketListenerAbstract(PacketListenerPriority.NORMAL) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                if (event.getPacketType() == PacketType.Play.Client.CLICK_WINDOW) {
-                    handleClick(event);
-                }
-            }
-        };
-        com.github.retrooper.packetevents.PacketEvents.getAPI().getEventManager().registerListener(listener);
+        registerReceiveHandler(PacketType.Play.Client.CLICK_WINDOW, this::handleClick);
     }
 
     private void handleClick(PacketReceiveEvent event) {
+        if (!isEnabled()) return;
         if (!(event.getPlayer() instanceof Player player)) return;
 
         WrapperPlayClientClickWindow packet = new WrapperPlayClientClickWindow(event);
@@ -47,8 +37,7 @@ public class ContainerCrashModule extends AbstractModule {
         if (slot < -1 || slot > 127) { // Standart dışı slotlar
              if (slot != -999) { // -999 item drop için geçerlidir
                  event.setCancelled(true);
-                 incrementBlockedCount();
-                 logExploit(player.getName(), "Geçersiz slot ID: " + slot);
+                 blockExploit(player, "Geçersiz slot ID: " + slot);
                  return;
              }
         }
@@ -57,9 +46,7 @@ public class ContainerCrashModule extends AbstractModule {
     }
 
     @Override
-
     public void onDisable() {
         super.onDisable();
-        if (listener != null) com.github.retrooper.packetevents.PacketEvents.getAPI().getEventManager().unregisterListener(listener);
     }
 }

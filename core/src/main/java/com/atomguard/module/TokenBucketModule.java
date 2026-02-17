@@ -62,8 +62,6 @@ public class TokenBucketModule extends AbstractModule {
     /** Oyuncu başına 4 kova — ConcurrentHashMap[UUID → BucketType → TokenBucket] */
     private final Map<UUID, Map<BucketType, TokenBucket>> playerBuckets = new ConcurrentHashMap<>();
 
-    private PacketListenerAbstract listener;
-
     // Config cache
     private long hareketKapasite;
     private long hareketDolum;
@@ -85,31 +83,19 @@ public class TokenBucketModule extends AbstractModule {
     }
 
     @Override
-
     public void onEnable() {
         super.onEnable();
         loadConfig();
 
-        listener = new PacketListenerAbstract(PacketListenerPriority.LOW) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                handlePacketReceive(event);
-            }
-        };
+        // Tüm paketleri dinlemek için null type kullanıyoruz (Merkezi Listener)
+        registerReceiveHandler(null, this::handlePacketReceive);
 
-        PacketEvents.getAPI().getEventManager().registerListener(listener);
         debug("Token bucket modülü başlatıldı. Kick eşiği: " + floodKickThreshold);
     }
 
     @Override
-
     public void onDisable() {
         super.onDisable();
-
-        if (listener != null) {
-            PacketEvents.getAPI().getEventManager().unregisterListener(listener);
-        }
-
         playerBuckets.clear();
         debug("Token bucket modülü durduruldu.");
     }
@@ -162,8 +148,7 @@ public class TokenBucketModule extends AbstractModule {
                     }
                 });
 
-                logExploit(player.getName(),
-                        String.format("Flood tespiti! Kova: %s, Token: %d, Eşik: %d",
+                blockExploit(player, String.format("Flood tespiti! Kova: %s, Token: %d, Eşik: %d",
                                 bucketType.name(), remaining, floodKickThreshold));
 
                 // Oyuncu verisini temizle

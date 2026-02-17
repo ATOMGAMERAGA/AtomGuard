@@ -28,6 +28,11 @@ import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * BotProtectionModule - Bot algılama ve koruma modülü
+ * @deprecated Use {@link com.atomguard.module.antibot.AntiBotModule} for advanced protection.
+ */
+@Deprecated
 public class BotProtectionModule extends AbstractModule implements Listener {
 
     private final Set<UUID> pendingVerification = ConcurrentHashMap.newKeySet();
@@ -39,20 +44,23 @@ public class BotProtectionModule extends AbstractModule implements Listener {
     private final Map<User, Long> handshakeTimestamps = new ConcurrentHashMap<>();
     private final Map<User, Long> encryptionRequestTimestamps = new ConcurrentHashMap<>();
     private final Map<UUID, RotationData> playerRotations = new ConcurrentHashMap<>();
-    private PacketListenerAbstract packetListener;
 
     public BotProtectionModule(AtomGuard plugin) {
-        super(plugin, "bot-korumasi", "Bot algılama ve koruma modülü");
+        super(plugin, "bot-korumasi", "Bot algılama ve koruma modülü (Legacy)");
     }
 
     @Override
-
     public void onEnable() {
         super.onEnable();
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
         
-        // PacketEvents listener for AtomShield
-        registerPacketListener();
+        // PacketEvents listeners - Merkezi Listener üzerinden
+        registerReceiveHandler(PacketType.Handshaking.Client.HANDSHAKE, this::handleHandshake);
+        registerReceiveHandler(PacketType.Login.Client.LOGIN_START, this::handleLoginStart);
+        registerReceiveHandler(PacketType.Login.Client.ENCRYPTION_RESPONSE, this::handleEncryptionResponse);
+        registerReceiveHandler(PacketType.Play.Client.PLAYER_ROTATION, this::handleRotation);
+        registerReceiveHandler(PacketType.Play.Client.PLAYER_POSITION_AND_ROTATION, this::handleRotation);
+        
+        registerSendHandler(PacketType.Login.Server.ENCRYPTION_REQUEST, this::handleEncryptionRequest);
 
         // Populate initially
         for (Player p : Bukkit.getOnlinePlayers()) {
@@ -61,13 +69,8 @@ public class BotProtectionModule extends AbstractModule implements Listener {
     }
 
     @Override
-
     public void onDisable() {
         super.onDisable();
-        HandlerList.unregisterAll(this);
-        if (packetListener != null) {
-            PacketEvents.getAPI().getEventManager().unregisterListener(packetListener);
-        }
         pendingVerification.clear();
         onlinePlayerNames.clear();
         ipOffenseCount.clear();
@@ -75,34 +78,9 @@ public class BotProtectionModule extends AbstractModule implements Listener {
         encryptionRequestTimestamps.clear();
     }
 
-    private void registerPacketListener() {
-        packetListener = new PacketListenerAbstract(PacketListenerPriority.LOWEST) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                if (!isEnabled()) return;
-
-                if (event.getPacketType() == PacketType.Handshaking.Client.HANDSHAKE) {
-                    handleHandshake(event);
-                } else if (event.getPacketType() == PacketType.Login.Client.LOGIN_START) {
-                    handleLoginStart(event);
-                } else if (event.getPacketType() == PacketType.Login.Client.ENCRYPTION_RESPONSE) {
-                    handleEncryptionResponse(event);
-                } else if (event.getPacketType() == PacketType.Play.Client.PLAYER_ROTATION || 
-                           event.getPacketType() == PacketType.Play.Client.PLAYER_POSITION_AND_ROTATION) {
-                    handleRotation(event);
-                }
-            }
-
-            @Override
-            public void onPacketSend(com.github.retrooper.packetevents.event.PacketSendEvent event) {
-                if (!isEnabled()) return;
-
-                if (event.getPacketType() == PacketType.Login.Server.ENCRYPTION_REQUEST) {
-                    handleEncryptionRequest(event);
-                }
-            }
-        };
-        PacketEvents.getAPI().getEventManager().registerListener(packetListener);
+    @Override
+    public void cleanup() {
+        // No-op, uses maps that are cleared on disable or managed by events
     }
 
     private void handleEncryptionRequest(com.github.retrooper.packetevents.event.PacketSendEvent event) {

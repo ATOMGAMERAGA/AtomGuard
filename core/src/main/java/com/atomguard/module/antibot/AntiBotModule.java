@@ -43,15 +43,12 @@ public class AntiBotModule extends AbstractModule implements Listener {
     private BlacklistManager blacklistManager;
     private WhitelistManager whitelistManager;
     private VerificationManager verificationManager;
-    
-    private PacketListenerAbstract packetListener;
 
     public AntiBotModule(@NotNull AtomGuard plugin) {
         super(plugin, "bot-koruma", "Çok katmanlı gelişmiş bot algılama sistemi");
     }
 
     @Override
-
     public void onEnable() {
         super.onEnable();
         
@@ -62,8 +59,9 @@ public class AntiBotModule extends AbstractModule implements Listener {
         this.threatScoreCalculator = new ThreatScoreCalculator(this);
         this.actionExecutor = new ActionExecutor(this);
         
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        registerPacketListener();
+        // PacketEvents global handlers - Merkezi Listener üzerinden
+        registerReceiveHandler(null, this::handleIncomingPacket);
+        registerSendHandler(null, this::handleOutgoingPacket);
         
         // Attack evaluation task
         Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
@@ -71,23 +69,11 @@ public class AntiBotModule extends AbstractModule implements Listener {
                 attackTracker.evaluateAttackStatus();
             }
         }, 100L, 100L); // Every 5 seconds
-        
-        // Profiles cleanup task
-        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
-            if (isEnabled()) {
-                cleanupProfiles();
-            }
-        }, 1200L, 1200L); // Every 1 minute
     }
 
     @Override
-
     public void onDisable() {
         super.onDisable();
-        HandlerList.unregisterAll(this);
-        if (packetListener != null) {
-            PacketEvents.getAPI().getEventManager().unregisterListener(packetListener);
-        }
         
         if (blacklistManager != null) blacklistManager.saveAsync();
         if (whitelistManager != null) whitelistManager.saveAsync();
@@ -96,21 +82,9 @@ public class AntiBotModule extends AbstractModule implements Listener {
         ipProfiles.clear();
     }
 
-    private void registerPacketListener() {
-        packetListener = new PacketListenerAbstract(PacketListenerPriority.LOWEST) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                if (!isEnabled()) return;
-                handleIncomingPacket(event);
-            }
-
-            @Override
-            public void onPacketSend(PacketSendEvent event) {
-                if (!isEnabled()) return;
-                handleOutgoingPacket(event);
-            }
-        };
-        PacketEvents.getAPI().getEventManager().registerListener(packetListener);
+    @Override
+    public void cleanup() {
+        cleanupProfiles();
     }
 
     private void handleIncomingPacket(PacketReceiveEvent event) {

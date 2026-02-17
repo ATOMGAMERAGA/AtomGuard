@@ -147,7 +147,13 @@ public class AdvancedPayloadModule extends AbstractModule {
                 analyzeBrand(player, data);
             }
             
-            // 6. CR-07: Register/Unregister kanal sayısı ve uzunluk kontrolü
+            // 6. Zararlı içerik kontrolü (CustomPayloadModule'den taşındı)
+            if (data != null && containsMaliciousContent(data)) {
+                blockPacket(event, player, "Zararlı payload içeriği tespit edildi! (Anormal null byte oranı)");
+                return;
+            }
+            
+            // 7. CR-07: Register/Unregister kanal sayısı ve uzunluk kontrolü
             if (channel.equals("minecraft:register") || channel.equals("minecraft:unregister")) {
                 if (data == null) return;
                 String channels = new String(data, StandardCharsets.UTF_8);
@@ -167,6 +173,22 @@ public class AdvancedPayloadModule extends AbstractModule {
         } catch (Exception e) {
             error("Payload paketi işlenirken hata: " + e.getMessage());
         }
+    }
+
+    /**
+     * Zararlı içerik kontrolü yapar
+     */
+    private boolean containsMaliciousContent(byte[] data) {
+        if (data.length < 10) return false;
+        
+        // Null byte kontrolü - %80'den fazlası null ise zararlı sayılır
+        int nullCount = 0;
+        for (byte b : data) {
+            if (b == 0x00) {
+                nullCount++;
+            }
+        }
+        return nullCount > data.length * 0.8;
     }
 
     /**

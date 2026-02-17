@@ -17,18 +17,9 @@ import java.util.Set;
 /**
  * Özel Payload Modülü
  *
- * Custom payload paketlerini kontrol eder ve zararlı kanalları engeller.
- * Plugin messaging exploit'lerini önlemek için tasarlanmıştır.
- *
- * Özellikler:
- * - İzinli kanal kontrolü
- * - Maksimum payload boyutu kontrolü
- * - Bilinmeyen kanal engelleme
- * - Kanal whitelist/blacklist sistemi
- *
- * @author AtomGuard Team
- * @version 1.0.0
+ * @deprecated Use {@link com.atomguard.module.AdvancedPayloadModule} instead.
  */
+@Deprecated
 public class CustomPayloadModule extends AbstractModule {
 
     private PacketListenerAbstract listener;

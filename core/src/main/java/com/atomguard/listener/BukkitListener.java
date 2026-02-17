@@ -181,5 +181,10 @@ public class BukkitListener implements Listener {
         if (payloadModule != null) {
             payloadModule.removePlayerData(player.getUniqueId());
         }
+
+        // Heuristic Profile Temizliği
+        if (plugin.getHeuristicEngine() != null) {
+            plugin.getHeuristicEngine().removeProfile(player.getUniqueId());
+        }
     }
 }
