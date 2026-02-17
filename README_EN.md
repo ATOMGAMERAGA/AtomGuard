@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://r.resimlink.com/pTtW512LDN9.png" alt="AtomGuard Logo" width="250">
+</p>
+
 # 🛡️ Atom Guard — Advanced Server Security
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/ATOMGAMERAGA/AtomGuard/build.yml?branch=main)](https://github.com/ATOMGAMERAGA/AtomGuard/actions)
