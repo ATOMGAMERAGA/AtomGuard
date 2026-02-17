@@ -13,7 +13,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Modern SubCommand architecture for AtomGuard v4.0.0
+ * Modern SubCommand architecture for AtomGuard v1.0.0
  */
 public class AtomGuardCommand implements CommandExecutor, TabCompleter {
 

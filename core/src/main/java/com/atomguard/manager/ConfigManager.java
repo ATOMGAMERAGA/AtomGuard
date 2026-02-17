@@ -77,7 +77,7 @@ public class ConfigManager {
     }
 
     private void migrate(String from, String to) {
-        // v3.x'ten v4.0.0'a geçiş iyileştirmeleri
+        // v3.x'ten v1.0.0'a geçiş iyileştirmeleri
         if (from.startsWith("3.")) {
             // Örnek: v4'te yeni eklenen bir ayarı ekle
             if (!config.contains("web-panel.max-payload-size")) {

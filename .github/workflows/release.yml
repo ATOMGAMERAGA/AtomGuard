@@ -50,7 +50,7 @@ jobs:
             
             ### 📦 Installation
             1. Stop your server.
-            2. Delete any old `AtomSMPFixer` or `AtomGuard` JARs.
+            2. Delete any old `AtomGuard` or `AtomSMPFixer` JARs from the plugins folder.
             3. Upload the new `AtomGuard-${{ github.ref_name }}.jar`.
             4. Start your server.
             
