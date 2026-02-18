@@ -66,6 +66,15 @@ public class DDoSProtectionModule extends VelocityModule {
         if (!enabled) return new ConnectionCheckResult(true, "disabled", null);
         synFloodDetector.recordConnection();
 
+        // Slowloris kontrolü
+        String connId = ip + ":" + System.nanoTime();
+        slowlorisDetector.onConnectionStarted(ip, connId);
+        if (slowlorisDetector.isSlowlorisIP(ip)) {
+            incrementBlocked();
+            plugin.getStatisticsManager().increment("ddos_blocked");
+            return new ConnectionCheckResult(false, "slowloris", "kick.ddos");
+        }
+
         if (!throttleEngine.shouldAllow(ip, isVerified)) {
             incrementBlocked();
             plugin.getStatisticsManager().increment("ddos_blocked");
@@ -108,6 +117,13 @@ public class DDoSProtectionModule extends VelocityModule {
             return new HandshakeCheckResult(false, "Tekrarlayan geçersiz handshake");
         }
         return new HandshakeCheckResult(true, "ok");
+    }
+
+    public void onHandshakeComplete(String ip, String connId) {
+        if (slowlorisDetector != null) slowlorisDetector.onHandshakeComplete(ip, connId);
+    }
+    public void onConnectionClosed(String ip, String connId) {
+        if (slowlorisDetector != null) slowlorisDetector.onConnectionClosed(ip, connId);
     }
 
     private void periodicCleanup() {

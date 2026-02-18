@@ -78,12 +78,16 @@ public class RedisManager {
         String data = parts[1];
 
         switch (action) {
-            case "IP_BLOCK":
-                plugin.getReputationManager().addToManualBlocklist(data);
+            case "IP_BLOCK": {
+                String ip = data.contains(":") ? data.substring(0, data.indexOf(':')) : data;
+                addToBlocklistWithoutRepublish(ip);
                 break;
-            case "IP_UNBLOCK":
-                plugin.getReputationManager().removeFromManualBlocklist(data);
+            }
+            case "IP_UNBLOCK": {
+                String ip = data.contains(":") ? data.substring(0, data.indexOf(':')) : data;
+                removeFromBlocklistWithoutRepublish(ip);
                 break;
+            }
             case "ATTACK_MODE":
                 boolean active = Boolean.parseBoolean(data);
                 if (active) {
@@ -93,6 +97,17 @@ public class RedisManager {
                 }
                 break;
         }
+    }
+
+    /**
+     * Redis'ten gelen IP engellemelerini işler (re-publish yapmadan).
+     */
+    public void addToBlocklistWithoutRepublish(String ip) {
+        plugin.getReputationManager().addToBlocklistInternal(ip);
+    }
+
+    public void removeFromBlocklistWithoutRepublish(String ip) {
+        plugin.getReputationManager().removeFromBlocklistInternal(ip);
     }
 
     public void publish(String action, String data) {

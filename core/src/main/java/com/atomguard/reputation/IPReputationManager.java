@@ -457,12 +457,20 @@ public class IPReputationManager implements IReputationService {
      * @return true ise eklendi, false ise zaten vardı
      */
     public boolean addToManualBlocklist(@NotNull String ip) {
+        boolean added = addToBlocklistInternal(ip);
+        if (added && plugin.getRedisManager() != null) {
+            plugin.getRedisManager().publish("IP_BLOCK", ip);
+        }
+        return added;
+    }
+
+    /**
+     * Manuel kara listeye ekler - Redis'e yayınlamadan (sync döngüsünü önler).
+     */
+    public boolean addToBlocklistInternal(@NotNull String ip) {
         boolean added = manualBlocklist.add(ip);
         if (added) {
             saveManualBlocklist();
-            if (plugin.getRedisManager() != null) {
-                plugin.getRedisManager().publish("IP_BLOCK", ip);
-            }
         }
         return added;
     }
@@ -472,12 +480,20 @@ public class IPReputationManager implements IReputationService {
      * @return true ise kaldırıldı, false ise yoktu
      */
     public boolean removeFromManualBlocklist(@NotNull String ip) {
+        boolean removed = removeFromBlocklistInternal(ip);
+        if (removed && plugin.getRedisManager() != null) {
+            plugin.getRedisManager().publish("IP_UNBLOCK", ip);
+        }
+        return removed;
+    }
+
+    /**
+     * Manuel kara listeden kaldırır - Redis'e yayınlamadan.
+     */
+    public boolean removeFromBlocklistInternal(@NotNull String ip) {
         boolean removed = manualBlocklist.remove(ip);
         if (removed) {
             saveManualBlocklist();
-            if (plugin.getRedisManager() != null) {
-                plugin.getRedisManager().publish("IP_UNBLOCK", ip);
-            }
         }
         return removed;
     }

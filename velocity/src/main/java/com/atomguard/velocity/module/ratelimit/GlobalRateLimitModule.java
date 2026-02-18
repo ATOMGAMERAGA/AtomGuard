@@ -6,7 +6,7 @@ import com.atomguard.velocity.module.VelocityModule;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Global hız sınırlaması modülü. Config key: "hiz-sinirlamasi"
+ * Global hız sınırlaması modülü. Config key: "hiz-siniri"
  */
 public class GlobalRateLimitModule extends VelocityModule {
 
@@ -16,7 +16,7 @@ public class GlobalRateLimitModule extends VelocityModule {
     private PingRateLimiter pingLimiter;
 
     public GlobalRateLimitModule(AtomGuardVelocity plugin) {
-        super(plugin, "hiz-sinirlamasi");
+        super(plugin, "hiz-siniri");
     }
 
     @Override

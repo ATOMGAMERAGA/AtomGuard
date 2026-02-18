@@ -32,6 +32,7 @@ public class PluginMessageListener {
 
     private void handleMessage(SyncProtocol.MessageType type, String payload) {
         switch (type) {
+            case PLAYER_DATA_RESPONSE -> plugin.getLogManager().log("Oyuncu verisi yanıtı alındı: " + payload);
             case ATTACK_MODE_SYNC -> plugin.setAttackMode(Boolean.parseBoolean(payload));
             case CONFIG_RELOAD -> plugin.getConfigManager().reload();
             case IP_BLOCK_SYNC -> {

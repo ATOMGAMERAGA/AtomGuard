@@ -8,7 +8,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * VPN/proxy tespit modülü. Config key: "vpn-engelleme"
+ * VPN/proxy tespit modülü. Config key: "vpn-proxy-engelleme"
  */
 public class VPNDetectionModule extends VelocityModule {
 
@@ -23,7 +23,7 @@ public class VPNDetectionModule extends VelocityModule {
     private boolean allowPremium;
 
     public VPNDetectionModule(AtomGuardVelocity plugin) {
-        super(plugin, "vpn-engelleme");
+        super(plugin, "vpn-proxy-engelleme");
     }
 
     @Override
@@ -91,19 +91,29 @@ public class VPNDetectionModule extends VelocityModule {
     }
 
     private CompletableFuture<DetectionResult> runApiChecks(String ip) {
+        CompletableFuture<Boolean> dnsblCheck = dnsblChecker.isListed(ip);
         CompletableFuture<Boolean> ipApiCheck = ipApi.isAvailable() ? ipApi.isVPN(ip) : CompletableFuture.completedFuture(false);
         CompletableFuture<Boolean> proxyCheckCheck = proxyCheck.isAvailable() ? proxyCheck.isVPN(ip) : CompletableFuture.completedFuture(false);
+        CompletableFuture<Boolean> ipHubCheck = ipHub.isAvailable() ? ipHub.isVPN(ip) : CompletableFuture.completedFuture(false);
 
-        return CompletableFuture.allOf(ipApiCheck, proxyCheckCheck).thenApply(v -> {
+        return CompletableFuture.allOf(dnsblCheck, ipApiCheck, proxyCheckCheck, ipHubCheck).thenApply(v -> {
             boolean isVPN = false;
             String provider = "none";
 
             try {
-                if (ipApiCheck.get()) { isVPN = true; provider = "ip-api"; }
+                if (dnsblCheck.get()) { isVPN = true; provider = "dnsbl"; }
+            } catch (Exception ignored) {}
+
+            try {
+                if (!isVPN && ipApiCheck.get()) { isVPN = true; provider = "ip-api"; }
             } catch (Exception ignored) {}
 
             try {
                 if (!isVPN && proxyCheckCheck.get()) { isVPN = true; provider = "proxycheck"; }
+            } catch (Exception ignored) {}
+
+            try {
+                if (!isVPN && ipHubCheck.get()) { isVPN = true; provider = "iphub"; }
             } catch (Exception ignored) {}
 
             cache.put(ip, isVPN, provider);

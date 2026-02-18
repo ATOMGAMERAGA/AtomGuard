@@ -16,7 +16,7 @@ import java.util.function.BiConsumer;
  */
 public class RedisBridge {
 
-    private static final String CHANNEL = "atomguard-sync";
+    private static final String CHANNEL = "atomguard:sync";
 
     private final AtomGuardVelocity plugin;
     private final Logger logger;

@@ -18,7 +18,7 @@ import java.util.logging.Level;
  */
 public class CoreMessagingListener implements PluginMessageListener {
     private static final String CHANNEL = "atomguard:main";
-    private static final byte PROTOCOL_VERSION = 2;
+    private static final byte PROTOCOL_VERSION = 1;
 
     private final AtomGuard plugin;
 
@@ -39,18 +39,18 @@ public class CoreMessagingListener implements PluginMessageListener {
             in.readFully(payloadBytes);
             String payload = new String(payloadBytes, java.nio.charset.StandardCharsets.UTF_8);
 
-            // Process based on type ordinal (matches VelocityToBackend enum order):
-            // 0=PLAYER_VERIFIED, 1=ATTACK_MODE_SYNC, 2=IP_BLOCK_SYNC, 3=IP_UNBLOCK_SYNC
-            // 4=THREAT_SCORE, 5=PLAYER_DATA_REQUEST, 6=STATS_SYNC, 7=CONFIG_RELOAD
+            // Process based on type ordinal (matches Velocity MessageType ID):
+            // 1=PLAYER_VERIFIED, 2=ATTACK_MODE_SYNC, 3=IP_BLOCK_SYNC, 4=IP_UNBLOCK_SYNC
+            // 5=THREAT_SCORE, 6=PLAYER_DATA_REQUEST, 7=STATS_SYNC, 8=CONFIG_RELOAD
             switch (typeOrdinal) {
-                case 0 -> handlePlayerVerified(payload);
-                case 1 -> handleAttackModeSync(payload);
-                case 2 -> handleIPBlockSync(payload);
-                case 3 -> handleIPUnblockSync(payload);
-                case 4 -> handleThreatScore(payload);
-                case 5 -> handlePlayerDataRequest(payload, player);
-                case 6 -> handleStatsSync(payload);
-                case 7 -> handleConfigReload(payload);
+                case 1 -> handlePlayerVerified(payload);
+                case 2 -> handleAttackModeSync(payload);
+                case 3 -> handleIPBlockSync(payload);
+                case 4 -> handleIPUnblockSync(payload);
+                case 5 -> handleThreatScore(payload);
+                case 6 -> handlePlayerDataRequest(payload, player);
+                case 7 -> handleStatsSync(payload);
+                case 8 -> handleConfigReload(payload);
                 default -> plugin.getLogger().warning("CoreMessagingListener: Bilinmeyen mesaj tipi: " + typeOrdinal);
             }
         } catch (IOException e) {
@@ -60,23 +60,20 @@ public class CoreMessagingListener implements PluginMessageListener {
 
     /**
      * Oyuncu Velocity'de doğrulandı - VerifiedPlayerCache'e ekle.
-     * Payload: uuid:ip:timestamp
+     * Payload: playerName:ip
      */
     private void handlePlayerVerified(String payload) {
         try {
-            String[] parts = payload.split(":", 3);
+            String[] parts = payload.split(":", 2);
             if (parts.length < 2) return;
 
-            UUID uuid = UUID.fromString(parts[0]);
+            String playerName = parts[0];
             String ip = parts[1];
 
             VerifiedPlayerCache cache = plugin.getVerifiedPlayerCache();
             if (cache != null) {
-                // Resolve player name from online players first; fall back to UUID string
-                Player onlinePlayer = plugin.getServer().getPlayer(uuid);
-                String playerName = onlinePlayer != null ? onlinePlayer.getName() : uuid.toString();
                 cache.addVerified(playerName, ip);
-                plugin.getLogger().fine("CoreMessagingListener: Oyuncu doğrulandı - " + uuid + " [" + ip + "]");
+                plugin.getLogger().fine("CoreMessagingListener: Oyuncu doğrulandı - " + playerName + " [" + ip + "]");
             }
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "PLAYER_VERIFIED işleme hatası: " + e.getMessage());
@@ -95,8 +92,10 @@ public class CoreMessagingListener implements PluginMessageListener {
             AttackModeManager attackManager = plugin.getAttackModeManager();
             if (attackManager != null) {
                 if (active) {
+                    attackManager.forceEnable();
                     plugin.getLogger().info("CoreMessagingListener: Velocity'den saldırı modu aktifleştirildi.");
                 } else {
+                    attackManager.forceDisable();
                     plugin.getLogger().info("CoreMessagingListener: Velocity'den saldırı modu devre dışı bırakıldı.");
                 }
             }

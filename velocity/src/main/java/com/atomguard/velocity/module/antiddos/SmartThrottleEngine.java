@@ -1,6 +1,9 @@
 package com.atomguard.velocity.module.antiddos;
 
 import com.atomguard.velocity.AtomGuardVelocity;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Adaptif throttling motoru - saldırı yoğunluğuna göre limitler otomatik ayarlanır.
@@ -11,6 +14,10 @@ public class SmartThrottleEngine {
 
     private volatile ThrottleMode currentMode = ThrottleMode.NORMAL;
     private final int normalLimit;
+    private final int carefulLimit;
+    private final int aggressiveLimit;
+    private final int lockdownLimit;
+    private final Map<String, AtomicInteger> connectionCounts = new ConcurrentHashMap<>();
     private final AtomGuardVelocity plugin;
     private volatile long lastModeChange = System.currentTimeMillis();
 
@@ -18,6 +25,9 @@ public class SmartThrottleEngine {
                                 int carefulLimit, int aggressiveLimit, int lockdownLimit) {
         this.plugin = plugin;
         this.normalLimit = normalLimit;
+        this.carefulLimit = carefulLimit;
+        this.aggressiveLimit = aggressiveLimit;
+        this.lockdownLimit = lockdownLimit;
     }
 
     public void update(int currentRate) {
@@ -35,8 +45,15 @@ public class SmartThrottleEngine {
     }
 
     public boolean shouldAllow(String ip, boolean isVerified) {
-        if (currentMode == ThrottleMode.LOCKDOWN) return isVerified;
-        return true;
+        int count = connectionCounts.computeIfAbsent(ip, k -> new AtomicInteger(0)).incrementAndGet();
+        int limit = switch (currentMode) {
+            case NORMAL -> normalLimit;
+            case CAREFUL -> carefulLimit;
+            case AGGRESSIVE -> isVerified ? aggressiveLimit : aggressiveLimit / 2;
+            case LOCKDOWN -> isVerified ? lockdownLimit : 0;
+        };
+        if (limit <= 0) return isVerified;
+        return count <= limit;
     }
 
     public ThrottleMode getCurrentMode() { return currentMode; }
@@ -44,6 +61,7 @@ public class SmartThrottleEngine {
     public void relax() {
         long elapsed = System.currentTimeMillis() - lastModeChange;
         if (elapsed > 30_000 && currentMode != ThrottleMode.NORMAL) {
+            connectionCounts.clear();
             ThrottleMode prev = currentMode;
             currentMode = switch (currentMode) {
                 case LOCKDOWN -> ThrottleMode.AGGRESSIVE;

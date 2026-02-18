@@ -15,6 +15,7 @@ public final class SyncProtocol {
     public static final byte VERSION = 1;
 
     public enum MessageType {
+        PLAYER_DATA_RESPONSE(0),
         PLAYER_VERIFIED(1),
         ATTACK_MODE_SYNC(2),
         IP_BLOCK_SYNC(3),

@@ -112,8 +112,8 @@ public class AtomGuardVelocity {
         statisticsManager.load();
 
         alertManager = new VelocityAlertManager(server, logger);
-        String webhookUrl = configManager.getString("discord.webhook-url", "");
-        boolean discordEnabled = configManager.getBoolean("discord.aktif", false);
+        String webhookUrl = configManager.getString("discord-webhook.webhook-url", "");
+        boolean discordEnabled = configManager.getBoolean("discord-webhook.aktif", false);
         alertManager.configure(webhookUrl, discordEnabled);
 
         moduleManager = new VelocityModuleManager(logger);

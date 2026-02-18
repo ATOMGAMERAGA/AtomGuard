@@ -140,6 +140,23 @@ public class AtomGuardVelocityCommand implements SimpleCommand {
     }
 
     @Override
+    public List<String> suggest(Invocation invocation) {
+        String[] args = invocation.arguments();
+        if (args.length <= 1) {
+            String prefix = args.length == 1 ? args[0].toLowerCase() : "";
+            return List.of("durum", "yenile", "modul", "yasak", "af", "istatistik", "saldiri")
+                .stream().filter(s -> s.startsWith(prefix))
+                .collect(java.util.stream.Collectors.toList());
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("modul")) {
+            return plugin.getModuleManager().getAll().stream()
+                .map(m -> m.getName()).filter(n -> n.startsWith(args[1].toLowerCase()))
+                .collect(java.util.stream.Collectors.toList());
+        }
+        return List.of();
+    }
+
+    @Override
     public boolean hasPermission(Invocation invocation) {
         return invocation.source().hasPermission("atomguard.admin");
     }

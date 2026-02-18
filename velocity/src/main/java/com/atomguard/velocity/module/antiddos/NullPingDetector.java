@@ -12,7 +12,9 @@ public class NullPingDetector {
 
     private final Set<String> blocked = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final ConcurrentHashMap<String, AtomicInteger> invalidCounts = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> blockTimes = new ConcurrentHashMap<>();
     private static final int BLOCK_THRESHOLD = 5;
+    private static final long BLOCK_DURATION_MS = 300_000L;
 
     public boolean isValidHandshake(String hostname, int port, int protocolVersion) {
         if (hostname == null || hostname.isBlank()) return false;
@@ -24,7 +26,10 @@ public class NullPingDetector {
 
     public void recordInvalid(String ip) {
         int count = invalidCounts.computeIfAbsent(ip, k -> new AtomicInteger(0)).incrementAndGet();
-        if (count >= BLOCK_THRESHOLD) blocked.add(ip);
+        if (count >= BLOCK_THRESHOLD) {
+            blocked.add(ip);
+            blockTimes.put(ip, System.currentTimeMillis());
+        }
     }
 
     public boolean isBlocked(String ip) { return blocked.contains(ip); }
@@ -35,10 +40,14 @@ public class NullPingDetector {
     }
 
     public void cleanup() {
-        // Periyodik temizlik: her ~100 kontrolde bir
-        if (Math.random() < 0.01) {
-            blocked.clear();
-            invalidCounts.clear();
-        }
+        long now = System.currentTimeMillis();
+        blockTimes.entrySet().removeIf(e -> {
+            if (now - e.getValue() > BLOCK_DURATION_MS) {
+                blocked.remove(e.getKey());
+                invalidCounts.remove(e.getKey());
+                return true;
+            }
+            return false;
+        });
     }
 }

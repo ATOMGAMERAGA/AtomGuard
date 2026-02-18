@@ -6,7 +6,7 @@ import com.atomguard.velocity.module.VelocityModule;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Protokol doğrulama modülü. Config key: "protokol-koruma"
+ * Protokol doğrulama modülü. Config key: "protokol-dogrulama"
  */
 public class ProtocolValidationModule extends VelocityModule {
 
@@ -16,7 +16,7 @@ public class ProtocolValidationModule extends VelocityModule {
     private LargePacketBlocker largePacketBlocker;
 
     public ProtocolValidationModule(AtomGuardVelocity plugin) {
-        super(plugin, "protokol-koruma");
+        super(plugin, "protokol-dogrulama");
     }
 
     @Override
