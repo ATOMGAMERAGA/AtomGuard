@@ -29,7 +29,7 @@ public class FirewallModule extends VelocityModule {
         reputationEngine = new IPReputationEngine(autoBanThreshold);
         tempBanManager = new TempBanManager(plugin.getDataDirectory(), logger);
         blacklistManager = new BlacklistManager(plugin.getDataDirectory(), logger);
-        whitelistManager = new WhitelistManager(plugin.getDataDirectory(), logger);
+        whitelistManager = new WhitelistManager(plugin);
         autoBanEngine = new AutoBanEngine(plugin, reputationEngine, tempBanManager, blacklistManager,
                 autoBanDurationMs, permanentBanThreshold);
 

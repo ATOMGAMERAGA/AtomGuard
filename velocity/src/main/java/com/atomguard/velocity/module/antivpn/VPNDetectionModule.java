@@ -3,127 +3,58 @@ package com.atomguard.velocity.module.antivpn;
 import com.atomguard.velocity.AtomGuardVelocity;
 import com.atomguard.velocity.module.VelocityModule;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
-/**
- * VPN/proxy tespit modülü. Config key: "vpn-proxy-engelleme"
- */
 public class VPNDetectionModule extends VelocityModule {
 
-    private VPNResultCache cache;
-    private LocalProxyListChecker localChecker;
-    private CIDRBlocker cidrBlocker;
-    private ASNBlocker asnBlocker;
-    private DNSBLChecker dnsblChecker;
-    private ProxyCheckProvider proxyCheck;
-    private IPApiProvider ipApi;
-    private IPHubProvider ipHub;
-    private boolean allowPremium;
+    private final VPNProviderChain providerChain;
 
     public VPNDetectionModule(AtomGuardVelocity plugin) {
         super(plugin, "vpn-proxy-engelleme");
+        this.providerChain = new VPNProviderChain(plugin);
     }
 
     @Override
     public void onEnable() {
-        long cacheTtlMs = getConfigLong("onbellek-sure", 3600) * 1000L;
-        allowPremium = getConfigBoolean("premium-izin", true);
-
-        cache = new VPNResultCache(cacheTtlMs);
-        localChecker = new LocalProxyListChecker(plugin.getDataDirectory(), logger);
-        localChecker.load();
-
-        cidrBlocker = new CIDRBlocker();
-        cidrBlocker.addRanges(getConfigStringList("engelli-cidr"));
-
-        asnBlocker = new ASNBlocker();
-        getConfigStringList("engelli-asn").forEach(asnBlocker::addASN);
-
-        List<String> dnsbls = getConfigStringList("dnsbl-listesi");
-        dnsblChecker = new DNSBLChecker(dnsbls);
-
-        proxyCheck = new ProxyCheckProvider(getConfigString("proxycheck-api-key", ""));
-        ipApi = new IPApiProvider();
-        ipHub = new IPHubProvider(getConfigString("iphub-api-key", ""));
-
-        plugin.getProxyServer().getScheduler()
-            .buildTask(plugin, cache::cleanup)
-            .repeat(10, TimeUnit.MINUTES)
-            .schedule();
+        logger.info("VPN Detection module enabled.");
     }
 
     @Override
-    public void onDisable() {}
-
-    public CompletableFuture<DetectionResult> check(String ip, boolean isPremium) {
-        if (!enabled) return CompletableFuture.completedFuture(new DetectionResult(false, "disabled"));
-
-        if (allowPremium && isPremium)
-            return CompletableFuture.completedFuture(new DetectionResult(false, "premium-exempt"));
-
-        // Önbellekte var mı?
-        VPNResultCache.CacheResult cached = cache.get(ip);
-        if (cached != null) {
-            if (cached.isVPN()) incrementBlocked();
-            return CompletableFuture.completedFuture(
-                new DetectionResult(cached.isVPN(), "cache:" + cached.provider()));
-        }
-
-        // Yerel kontroller (hızlı)
-        if (localChecker.isProxy(ip)) {
-            cache.put(ip, true, "local-list");
-            incrementBlocked();
-            plugin.getStatisticsManager().increment("vpn_blocked");
-            return CompletableFuture.completedFuture(new DetectionResult(true, "local-list"));
-        }
-
-        if (cidrBlocker.isBlocked(ip)) {
-            cache.put(ip, true, "cidr");
-            incrementBlocked();
-            plugin.getStatisticsManager().increment("vpn_blocked");
-            return CompletableFuture.completedFuture(new DetectionResult(true, "cidr"));
-        }
-
-        // Asenkron API kontrolleri
-        return runApiChecks(ip);
+    public void onDisable() {
+        providerChain.close();
+        logger.info("VPN Detection module disabled.");
     }
+    
+    public CompletableFuture<DetectionResult> check(String ip, boolean isPremium) {
+        if (!isEnabled()) return CompletableFuture.completedFuture(new DetectionResult(false, 0, ""));
+        
+        // Premium Bypass Check
+        String premiumPolicy = getConfigString("premium-vpn-politikasi", "izin-ver");
+        if (isPremium && "izin-ver".equalsIgnoreCase(premiumPolicy)) {
+             return CompletableFuture.completedFuture(new DetectionResult(false, 0, "Premium Bypass"));
+        }
 
-    private CompletableFuture<DetectionResult> runApiChecks(String ip) {
-        CompletableFuture<Boolean> dnsblCheck = dnsblChecker.isListed(ip);
-        CompletableFuture<Boolean> ipApiCheck = ipApi.isAvailable() ? ipApi.isVPN(ip) : CompletableFuture.completedFuture(false);
-        CompletableFuture<Boolean> proxyCheckCheck = proxyCheck.isAvailable() ? proxyCheck.isVPN(ip) : CompletableFuture.completedFuture(false);
-        CompletableFuture<Boolean> ipHubCheck = ipHub.isAvailable() ? ipHub.isVPN(ip) : CompletableFuture.completedFuture(false);
-
-        return CompletableFuture.allOf(dnsblCheck, ipApiCheck, proxyCheckCheck, ipHubCheck).thenApply(v -> {
-            boolean isVPN = false;
-            String provider = "none";
-
-            try {
-                if (dnsblCheck.get()) { isVPN = true; provider = "dnsbl"; }
-            } catch (Exception ignored) {}
-
-            try {
-                if (!isVPN && ipApiCheck.get()) { isVPN = true; provider = "ip-api"; }
-            } catch (Exception ignored) {}
-
-            try {
-                if (!isVPN && proxyCheckCheck.get()) { isVPN = true; provider = "proxycheck"; }
-            } catch (Exception ignored) {}
-
-            try {
-                if (!isVPN && ipHubCheck.get()) { isVPN = true; provider = "iphub"; }
-            } catch (Exception ignored) {}
-
-            cache.put(ip, isVPN, provider);
-            if (isVPN) {
-                incrementBlocked();
-                plugin.getStatisticsManager().increment("vpn_blocked");
+        return providerChain.check(ip).thenApply(isVpn -> {
+            if (isVpn) {
+                return new DetectionResult(true, 100, "VPN Detected");
             }
-            return new DetectionResult(isVPN, provider);
+            return new DetectionResult(false, 0, "");
         });
     }
 
-    public record DetectionResult(boolean isVPN, String provider) {}
+    public static class DetectionResult {
+        private final boolean isVPN;
+        private final int score;
+        private final String reason;
+
+        public DetectionResult(boolean isVPN, int score, String reason) {
+            this.isVPN = isVPN;
+            this.score = score;
+            this.reason = reason;
+        }
+
+        public boolean isVPN() {
+            return isVPN;
+        }
+    }
 }

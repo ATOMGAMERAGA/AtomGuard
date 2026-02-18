@@ -13,6 +13,16 @@ import com.atomguard.velocity.module.firewall.FirewallModule;
 import com.atomguard.velocity.module.ratelimit.GlobalRateLimitModule;
 import com.atomguard.velocity.module.protocol.ProtocolValidationModule;
 import com.atomguard.velocity.module.exploit.ProxyExploitModule;
+
+// New Modules
+import com.atomguard.velocity.module.iptables.IPTablesModule;
+import com.atomguard.velocity.module.firewall.AccountFirewallModule;
+import com.atomguard.velocity.module.geo.CountryFilterModule;
+import com.atomguard.velocity.module.fastchat.FastChatModule;
+import com.atomguard.velocity.module.reconnect.ReconnectControlModule;
+import com.atomguard.velocity.module.auth.PasswordCheckModule;
+import com.atomguard.velocity.module.latency.LatencyCheckModule;
+
 import com.google.inject.Inject;
 import com.velocitypowered.api.command.CommandMeta;
 import com.velocitypowered.api.event.Subscribe;
@@ -55,6 +65,15 @@ public class AtomGuardVelocity {
     private GlobalRateLimitModule rateLimitModule;
     private ProtocolValidationModule protocolModule;
     private ProxyExploitModule exploitModule;
+    
+    // New Modules
+    private IPTablesModule ipTablesModule;
+    private AccountFirewallModule accountFirewallModule;
+    private CountryFilterModule countryFilterModule;
+    private FastChatModule fastChatModule;
+    private ReconnectControlModule reconnectControlModule;
+    private PasswordCheckModule passwordCheckModule;
+    private LatencyCheckModule latencyCheckModule;
 
     private volatile boolean attackMode = false;
     private volatile long attackModeStartTime = 0;
@@ -127,6 +146,15 @@ public class AtomGuardVelocity {
         rateLimitModule = new GlobalRateLimitModule(this);
         protocolModule = new ProtocolValidationModule(this);
         exploitModule = new ProxyExploitModule(this);
+        
+        // Initialize New Modules
+        ipTablesModule = new IPTablesModule(this);
+        accountFirewallModule = new AccountFirewallModule(this);
+        countryFilterModule = new CountryFilterModule(this);
+        fastChatModule = new FastChatModule(this);
+        reconnectControlModule = new ReconnectControlModule(this);
+        passwordCheckModule = new PasswordCheckModule(this);
+        latencyCheckModule = new LatencyCheckModule(this);
 
         moduleManager.register(firewallModule);    // Önce güvenlik duvarı
         moduleManager.register(rateLimitModule);
@@ -135,6 +163,15 @@ public class AtomGuardVelocity {
         moduleManager.register(antiBotModule);
         moduleManager.register(vpnModule);
         moduleManager.register(exploitModule);
+        
+        // Register New Modules
+        moduleManager.register(ipTablesModule);
+        moduleManager.register(accountFirewallModule);
+        moduleManager.register(countryFilterModule);
+        moduleManager.register(fastChatModule);
+        moduleManager.register(reconnectControlModule);
+        moduleManager.register(passwordCheckModule);
+        moduleManager.register(latencyCheckModule);
     }
 
     private void registerListeners() {
@@ -195,4 +232,13 @@ public class AtomGuardVelocity {
     public GlobalRateLimitModule getRateLimitModule() { return rateLimitModule; }
     public ProtocolValidationModule getProtocolModule() { return protocolModule; }
     public ProxyExploitModule getExploitModule() { return exploitModule; }
+    
+    // New Module Getters
+    public IPTablesModule getIpTablesModule() { return ipTablesModule; }
+    public AccountFirewallModule getAccountFirewallModule() { return accountFirewallModule; }
+    public CountryFilterModule getCountryFilterModule() { return countryFilterModule; }
+    public FastChatModule getFastChatModule() { return fastChatModule; }
+    public ReconnectControlModule getReconnectControlModule() { return reconnectControlModule; }
+    public PasswordCheckModule getPasswordCheckModule() { return passwordCheckModule; }
+    public LatencyCheckModule getLatencyCheckModule() { return latencyCheckModule; }
 }

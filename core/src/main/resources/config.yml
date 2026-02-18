@@ -467,12 +467,30 @@ moduller:
   # Gelişmiş Sohbet ve Tab-Complete
   gelismis-sohbet:
     aktif: true
-    # Unicode crash karakterlerini filtrele
     unicode-filtre: true
-    # Saniyede maksimum tab-complete isteği
     max-tab-istegi-saniye: 5
-    # Komutlarda özel karakter kontrolü
     komut-karakter-kontrol: true
+    
+    # Hız Limiti (Flood)
+    hiz-limiti:
+      aktif: true
+      saniyede-max: 3
+      
+    # Aynı Mesaj Kontrolü
+    ayni-mesaj:
+      aktif: true
+      hatirlama-sayisi: 5
+      
+    # Büyük Harf Spam
+    buyuk-harf-spam:
+      aktif: true
+      esik-yuzde: 80
+      minimum-uzunluk: 10
+
+  # Şifre Kontrol Modülü (Auth Entegrasyonu)
+  sifre-kontrol:
+    aktif: true
+    # Velocity'ye gönderilecek şifre hash'leri için
 
   # Piston Sınırlandırıcı
   piston-sinirlandirici:

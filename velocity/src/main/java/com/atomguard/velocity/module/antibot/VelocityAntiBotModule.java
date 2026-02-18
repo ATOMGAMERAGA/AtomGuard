@@ -16,6 +16,7 @@ public class VelocityAntiBotModule extends VelocityModule {
     private BotDetectionEngine engine;
     private CaptchaVerification captcha;
     private boolean captchaEnabled;
+    private NicknameBlocker nicknameBlocker;
 
     public VelocityAntiBotModule(AtomGuardVelocity plugin) {
         super(plugin, "bot-koruma");
@@ -33,6 +34,8 @@ public class VelocityAntiBotModule extends VelocityModule {
 
         captchaEnabled = getConfigBoolean("captcha.aktif", false);
         int captchaTimeout = getConfigInt("captcha.sure", 60);
+
+        nicknameBlocker = new NicknameBlocker(plugin);
 
         ConnectionAnalyzer connAnalyzer = new ConnectionAnalyzer(windowSec, suspiciousThreshold);
         HandshakeValidator hsValidator = new HandshakeValidator(enforceProtocols);
@@ -52,6 +55,20 @@ public class VelocityAntiBotModule extends VelocityModule {
     public void onDisable() {}
 
     public ThreatScore analyzePreLogin(String ip, String username, String hostname, int port, int protocol) {
+        NicknameBlocker.NicknameCheckResult nickResult = nicknameBlocker.check(username);
+        if (nickResult.isBlocked()) {
+            ThreatScore score = new ThreatScore();
+            score.setUsernameScore(100);
+            score.setConnectionRateScore(100);
+            score.setHandshakeScore(100);
+            score.setBrandScore(100);
+            score.setJoinPatternScore(100);
+            score.setGeoScore(100);
+            score.setProtocolScore(100);
+            score.calculate(); // Should result in 100
+            return score;
+        }
+        
         engine.recordConnection(ip);
         return engine.analyze(ip, username, null, hostname, port, protocol);
     }

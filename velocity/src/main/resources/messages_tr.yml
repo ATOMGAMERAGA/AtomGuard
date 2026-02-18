@@ -1,24 +1,54 @@
-# AtomGuard Velocity - Türkçe Mesajlar
+# ╔══════════════════════════════════════════════════════════╗
+# ║           AtomGuard Velocity Mesaj Dosyası              ║
+# ║                  Türkçe (TR)                             ║
+# ╚══════════════════════════════════════════════════════════╝
+
+prefix: "<gradient:#00d4ff:#00ff88>AtomGuard</gradient> <dark_gray>»</dark_gray> "
+
 kick:
-  ddos: "<red><bold>AtomGuard</bold></red>\n<gray>DDoS saldırısı nedeniyle bağlantınız engellendi.\n<white>Lütfen daha sonra tekrar deneyin."
-  rate-limit: "<red><bold>AtomGuard</bold></red>\n<gray>Çok fazla bağlantı isteği gönderdiniz.\n<white>Lütfen birkaç dakika bekleyin."
-  bot: "<red><bold>AtomGuard</bold></red>\n<gray>Bot aktivitesi tespit edildi.\n<white>Gerçek bir oyuncuysanız, lütfen daha sonra deneyin."
-  vpn: "<gold><bold>AtomGuard</bold></gold>\n<gray>VPN/Proxy kullanımı algılandı.\n<white>VPN'inizi kapatarak bağlanabilirsiniz."
-  yasakli: "<red><bold>AtomGuard</bold></red>\n<gray>IP adresiniz yasaklanmıştır.\n<white>İtiraz: discord.gg/sunucu"
-  genel: "<red><bold>AtomGuard</bold></red>\n<gray>Bağlantınız güvenlik sistemleri tarafından engellendi."
-  protokol: "<red><bold>AtomGuard</bold></red>\n<gray>Geçersiz protokol veya handshake paketi.\n<white>Desteklenen istemci sürümünü kullanın."
+  ddos: "<red>Sunucumuz şu anda saldırı altında. Lütfen daha sonra tekrar deneyin.</red>"
+  bot: "<red>Bot olarak algılandınız. Lütfen daha sonra tekrar deneyin.</red>"
+  vpn: "<red>VPN veya Proxy kullanımı bu sunucuda yasaktır.<br><gray>Hata ise yöneticiye başvurun.</gray>"
+  rate-limit: "<red>Çok fazla bağlantı isteği! <gray>Lütfen bir süre bekleyin.</gray>"
+  yasakli: "<red>IP adresiniz kara listede.<br><gray>Sebep: <white>{sebep}</white></gray>"
+  tempban: "<red>Geçici olarak engellendiniz.<br><gray>Kalan süre: <white>{sure}</white></gray>"
+  protocol: "<red>Desteklenmeyen oyun sürümü.<br><gray>İzin verilen: <white>{min} - {max}</white></gray>"
 
-mesaj:
-  sunucu-degistirme-limit: "<red>Çok sık sunucu değiştiriyorsunuz. Lütfen bekleyin.</red>"
-  sohbet-spam: "<red>Çok hızlı mesaj gönderiyorsunuz. Yavaşlayın.</red>"
-  komut-spam: "<red>Çok hızlı komut gönderiyorsunuz.</red>"
-  captcha-yanlis: "<red>Yanlış cevap! Tekrar deneyin.</red>"
-  captcha-sure: "<red>Captcha süresi doldu. Bağlantınız kesilecek.</red>"
-  captcha-basarili: "<green>Doğrulama başarılı! İyi oyunlar.</green>"
+# IPTables Entegrasyonu
+iptables:
+  ban-eklendi: "IPTables: {ip} adresi {sure} saniye için engellendi."
+  ban-kaldirildi: "IPTables: {ip} engeli kaldırıldı."
+  kullanilemiyor: "IPTables entegrasyonu kullanılamıyor (root yetkisi gerekli)."
+  hata: "IPTables komutu başarısız: {hata}"
 
-admin:
-  saldiri-basladi: "<red>[AtomGuard] ⚠ Saldırı tespit edildi! Hız: <rate>/sn</red>"
-  saldiri-bitti: "<green>[AtomGuard] ✓ Saldırı sona erdi. Süre: <sure>, Engellenen: <sayi></green>"
-  bot-tespit: "<yellow>[AtomGuard] Bot tespit edildi! IP: <ip>, Skor: <skor></yellow>"
-  vpn-tespit: "<gold>[AtomGuard] VPN tespit edildi! Oyuncu: <oyuncu>, IP: <ip></gold>"
-  ip-yasaklandi: "<red>[AtomGuard] IP yasaklandı: <ip> - Sebep: <sebep></red>"
+# Hesap Güvenlik Duvarı
+hesap-guvenlik-duvari:
+  hesap-yasakli: "Hesabınız yasaklandı. Sebep: {sebep}"
+  hesap-cok-yeni: "Hesabınız çok yeni. Minimum {gun} günlük hesap gerekli."
+  cracked-engel: "Bu sunucu yalnızca lisanslı hesaplara açıktır."
+
+# Hızlı Sohbet
+hizli-sohbet:
+  rate-limit: "<red>Çok hızlı mesaj gönderiyorsunuz!"
+  tekrar-mesaj: "<red>Aynı mesajı tekrar gönderemezsiniz!"
+  buyuk-harf: "<red>Lütfen büyük harf kullanmayın."
+  tekrar-karakter: "<red>Lütfen harfleri tekrarlamayın."
+  link-engel: "<red>Link paylaşımı yasaktır."
+
+# Yeniden Bağlantı
+yeniden-baglanti:
+  delay: "<gray>Bağlantı kurulmadan önce {sure} saniye bekleniyor..."
+  kick: "<red>Çok fazla bağlantı denemesi. Lütfen bekleyin."
+  kisa-oturum: "<red>Çok sık giriş-çıkış yapıyorsunuz."
+
+# Gecikme Kontrol
+gecikme-kontrol:
+  hizli-login: "<red>Giriş işleminiz anormal derecede hızlı (Bot şüphesi)."
+  yavas-login: "<red>Giriş işlemi zaman aşımına uğradı."
+
+# Diğer Mesajlar
+genel:
+  yetki-yok: "<red>Bu komutu kullanmak için yetkiniz yok."
+  reload-basarili: "<green>Ayarlar başarıyla yenilendi."
+  bilinmeyen-ulke: "<red>Bilinmeyen ülke erişimi engellendi."
+  ulke-yasakli: "<red>Bulunduğunuz ülkeden erişim kapalıdır."

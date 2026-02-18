@@ -1,9 +1,9 @@
 # ╔══════════════════════════════════════════════════════════╗
-# ║       AtomGuard Velocity Yapılandırma v1.0.0            ║
+# ║       AtomGuard Velocity Yapılandırma v1.1.0            ║
 # ║       Enterprise Proxy Güvenlik Sistemi                  ║
 # ╚══════════════════════════════════════════════════════════╝
 
-config-versiyon: "1.0.0"
+config-versiyon: "1.1.0"
 
 # ═══════════════════════════════════════
 # Genel Ayarlar
@@ -88,12 +88,6 @@ moduller:
       esik: 30
       sure-saniye: 120
       sadece-dogrulanmis: true
-    geo-engelleme:
-      aktif: false
-      engelli-ulkeler: []
-      izinli-ulkeler: []
-      izinli-ulkeler-modu: false
-      maxmind-lisans-anahtari: ""
     akilli-throttle:
       aktif: true
       normal-limit: 10
@@ -151,64 +145,65 @@ moduller:
         - "attack"
         - "flood"
         - "ddos"
-    username-filtresi:
-      min-entropi: 2.0
-      max-uzunluk: 16
-      min-uzunluk: 3
-      engelli-patternler:
-        - "^[a-zA-Z]+[0-9]{4,}$"
-        - "^bot[0-9]+"
-        - "^[A-Z]{16}$"
-        - "^[a-z]{3}[0-9]{4}$"
+    nick-engelleme:
+      aktif: true
+      tam-eslesme: []
+      prefix-listesi: ["Bot_", "Rbot", "RBOT"]
+      suffix-listesi: ["_bot", "_BOT", "xd", "Hack"]
+      regex-listesi:
+        - "Bot\\d+"
+        - "[A-Z]{10,}"
+        - "\\d{8,}"
+      minimum-uzunluk: 3
+      maksimum-uzunluk: 16
+      sadece-sayi-engel: true
+      ozel-karakter-engel: true
+      buyuk-harf-esik: 10
 
   # ─────────────────────────────────────
-  # VPN/Proxy Engelleme Modülü
+  # VPN/Proxy Engelleme Modülü (Enhanced)
   # ─────────────────────────────────────
   vpn-proxy-engelleme:
     aktif: true
     kick-mesaji: "<red>VPN veya Proxy kullandığınız tespit edildi.<br><gray>Hata ise yöneticiye başvurun."
-    onbellek:
-      sure-saat: 24
-      max-boyut: 50000
-    beyaz-liste:
-      ipler: []
-      oyuncular: []
-    kara-liste:
-      ipler: []
-    proxy-listesi:
-      aktif: true
-      guncelleme-saat: 6
-      url-listesi:
-        - "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt"
-        - "https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list-raw.txt"
-    cidr-engelleme:
-      aktif: true
-      araliklar:
-        - "198.51.100.0/24"
-        - "203.0.113.0/24"
-    asn-engelleme:
+    onbellek-sure: 3600
+    guven-skoru-esigi: 60
+    premium-vpn-politikasi: "izin-ver" # izin-ver, uyar, engelle
+    
+    provider-zinciri:
+      - "local"
+      - "cidr"
+      - "dnsbl"
+      - "iphub"
+      - "proxycheck"
+      - "abuseipdb"
+      - "ipapi"
+
+    abuseipdb:
       aktif: false
-      engelli-asnler:
-        - "AS14061"
-        - "AS16276"
-        - "AS24940"
-    dnsbl:
+      api-anahtari: ""
+      guven-esigi: 50
+
+    ip2proxy:
       aktif: false
-      sunucular:
-        - "dnsbl.dronebl.org"
-        - "zen.spamhaus.org"
+      veritabani-yolu: "IP2PROXY-LITE-PX2.BIN"
+      otomatik-guncelle: true
+
+    dnsbl-listesi:
+      - "dnsbl.dronebl.org"
+      - "zen.spamhaus.org"
+
+    engelli-cidr:
+      - "198.51.100.0/24"
+      - "203.0.113.0/24"
+    engelli-asn:
+      - "AS14061"
+
     api:
       proxycheck:
-        aktif: false
         api-key: ""
-        risk-esigi: 60
-      ip-api:
-        aktif: true
       iphub:
-        aktif: false
         api-key: ""
-    hosting-engelle: false
-    engelli-ulkeler: []
 
   # ─────────────────────────────────────
   # Güvenlik Duvarı Modülü
@@ -231,36 +226,184 @@ moduller:
           sayi: 3
           sure: "1h"
           sebep: "Tekrarlayan bot tespiti"
-        - tetikleyici: "rate-limit-asimi"
-          sayi: 5
-          sure: "30m"
-          sebep: "Tekrarlayan rate limit aşımı"
-        - tetikleyici: "vpn-yuksek-skor"
-          sayi: 1
-          sure: "24h"
-          sebep: "VPN + yüksek tehdit skoru"
+    whitelist:
+      beyaz-liste:
+        dosya: "whitelist.json"
+      ip-listesi: []
+      cidr-listesi:
+        - "127.0.0.1/32"
+      asn-listesi: []
+      ulke-listesi: []
+      tum-modullere-uygula: true
+    istisnalar:
+      dosya: "firewall_exceptions.json"
 
   # ─────────────────────────────────────
-  # Hız Sınırı Modülü
+  # IPTables Entegrasyonu
+  # ─────────────────────────────────────
+  iptables-entegrasyon:
+    aktif: false
+    iptables-yolu: "/usr/sbin/iptables"
+    ip6tables-yolu: "/usr/sbin/ip6tables"
+    nftables-yolu: "/usr/sbin/nft"
+    nftables-mod: false
+    otomatik-ban:
+      aktif: true
+      tetikleyici-esik: 200
+      ban-sure-saniye: 3600
+      kalici-ban-esik: 1000
+    subnet-ban-aktif: false
+    subnet-ban-esik: 5
+    kural-temizleme:
+      baslangic-temizle: true
+      kapatma-temizle: true
+    loglama:
+      komut-logla: true
+      hata-logla: true
+
+  # ─────────────────────────────────────
+  # Hesap Güvenlik Duvarı
+  # ─────────────────────────────────────
+  hesap-guvenlik-duvari:
+    aktif: true
+    kick-mesaji: "Hesabınız bu sunucudan yasaklandı.\nSebep: {sebep}"
+    mojang-api:
+      aktif: true
+      onbellek-saat: 24
+      zaman-asimi-ms: 3000
+    hesap-yas-kontrolu:
+      aktif: false
+      minimum-gun: 7
+      aksiyon: "kick"
+    cracked-hesap:
+      politika: "izin-ver" # izin-ver, engelle, challenge
+    kara-liste-dosya: "account_blacklist.json"
+
+  # ─────────────────────────────────────
+  # Ülke Filtreleme
+  # ─────────────────────────────────────
+  ulke-filtreleme:
+    aktif: false
+    mod: "blacklist" # blacklist veya whitelist
+    engelli-ulkeler: []
+    izinli-ulkeler: []
+    bilinmeyen-ulke: "izin-ver"
+    kick-mesaji: "Bu sunucuya ülkenizden bağlanma izniniz yok."
+    maxmind:
+      lisans-anahtari: ""
+      otomatik-guncelle: true
+      guncelleme-gunu: "THURSDAY"
+    beyaz-liste-muafiyeti: true
+    loglama:
+      engellenen-ulkeleri-logla: false
+
+  # ─────────────────────────────────────
+  # Hızlı Sohbet Kontrol (Velocity)
+  # ─────────────────────────────────────
+  hizli-sohbet-kontrol:
+    aktif: true
+    mesaj-hizi:
+      saniyede-max: 3.0
+      burst-izin: 5.0
+    tekrar-mesaj:
+      aktif: true
+      hatirlama-sayisi: 5
+    pattern-analiz:
+      aktif: true
+      buyuk-harf-yuzde: 80
+      tekrar-karakter-esik: 5
+      link-engel: false
+    mesajlar:
+      rate-limit: "<red>Çok hızlı mesaj gönderiyorsunuz!"
+      tekrar-mesaj: "<red>Aynı mesajı tekrar gönderemezsiniz!"
+
+  # ─────────────────────────────────────
+  # Şifre Kontrol
+  # ─────────────────────────────────────
+  sifre-kontrol:
+    aktif: false
+    auth-plugin: "AuthMe"
+    brute-force:
+      aktif: true
+      max-deneme: 5
+      pencere-saniye: 60
+      aksiyon: "tempban"
+      tempban-sure-sn: 600
+    ortak-sifre:
+      aktif: true
+      aksiyon: "uyar" # uyar, kick
+    benzer-sifre:
+      aktif: true
+      ip-basina-max-ayni-sifre: 3
+      aksiyon: "flag" # flag, kick
+
+  # ─────────────────────────────────────
+  # Hız Sınırı (Enhanced)
   # ─────────────────────────────────────
   hiz-siniri:
     aktif: true
-    subnet-limit: 20
-    login:
-      kapasite: 3
-      dolum-saniye: 10.0
-    ping:
-      kapasite: 5
-      dolum-saniye: 5.0
-    chat:
-      kapasite: 5
-      dolum-saniye: 3.0
-    komut:
-      kapasite: 10
-      dolum-saniye: 5.0
-    sunucu-degistir:
-      kapasite: 3
-      dolum-saniye: 10.0
+    baglanti-saniye:
+      ip-basina-max: 3
+      global-max: 50
+    ping-saniye:
+      ip-basina-max: 5
+      global-max: 200
+    yeni-hesap:
+      ip-basina-saat: 3
+    saldiri-modu-carpan: 0.3
+    sliding-window: true
+
+  # ─────────────────────────────────────
+  # Yeniden Bağlantı Kontrol
+  # ─────────────────────────────────────
+  yeniden-baglanti-kontrol:
+    aktif: true
+    hizli-yeniden-baglanti:
+      aktif: true
+      cooldown-saniye: 10
+    crash-dongu-tespit:
+      aktif: true
+      esik-sayisi: 3
+      pencere-saniye: 30
+      aksiyon: "challenge"
+    kisa-oturum-tespit:
+      aktif: true
+      esik-sayisi: 5
+      min-oturum-saniye: 3
+      aksiyon: "kick"
+    aksiyon-mesaji:
+      delay: "<gray>Bağlantı kurulmadan önce {sure} saniye bekleniyor..."
+      kick: "<red>Çok fazla bağlantı denemesi. Lütfen bekleyin."
+
+  # ─────────────────────────────────────
+  # Harici Listeler
+  # ─────────────────────────────────────
+  harici-listeler:
+    aktif: false
+    listeler:
+      - isim: "spamhaus-drop"
+        aktif: false
+        url: "https://www.spamhaus.org/drop/drop.txt"
+        format: "plaintext"
+      - isim: "tor-exit-nodes"
+        aktif: false
+        url: "https://check.torproject.org/torbulkexitlist"
+        format: "plaintext"
+
+  # ─────────────────────────────────────
+  # Gecikme Kontrol
+  # ─────────────────────────────────────
+  gecikme-kontrol:
+    aktif: true
+    handshake-login-suresi:
+      aktif: true
+      minimum-ms: 15
+      maksimum-ms: 30000
+      aksiyon-hizli: "flag"
+      aksiyon-yavas: "kick"
+    istatistiksel-analiz:
+      aktif: false
+      pencere-baglanti-sayisi: 10
 
   # ─────────────────────────────────────
   # Protokol Doğrulama Modülü
@@ -301,38 +444,3 @@ mesajlar:
     captcha-fail: "<red>CAPTCHA doğrulaması başarısız. Lütfen tekrar deneyin.</red>"
     panic: "<red>Sunucu şu anda bakım modunda.<br><gray>Lütfen daha sonra tekrar deneyin.</gray>"
     genel: "<red>Bağlantınız güvenlik sistemi tarafından reddedildi.</red>"
-  captcha:
-    soru: "<yellow>Güvenlik doğrulaması: <white>{soru} = ?</white> <gray>(Chat'e yazın)</gray>"
-    basarili: "<green>Doğrulama başarılı! Yönlendiriliyorsunuz...</green>"
-    basarisiz: "<red>Yanlış cevap! Kalan deneme: <white>{kalan}</white>"
-    zaman-asimi: "<red>Doğrulama süresi doldu!</red>"
-    hosgeldin: "<yellow>Lütfen aşağıdaki soruyu cevaplayın:</yellow>"
-  admin:
-    saldiri-basladi: "<red>SALDIRI TESPIT EDILDI! <gray>Hız: <white>{hiz}/s</white> | Kaynak: <white>{kaynak}</white></gray>"
-    saldiri-bitti: "<green>Saldırı sona erdi. <gray>Süre: <white>{sure}</white> | Engellenen: <white>{engellenen}</white></gray>"
-    bot-engellendi: "<yellow>Bot engellendi: <white>{ip}</white> <gray>| Skor: <white>{skor}</white> | Modül: <white>{modul}</white></gray>"
-    vpn-engellendi: "<yellow>VPN engellendi: <white>{ip}</white> <gray>| Sağlayıcı: <white>{saglayici}</white></gray>"
-    ip-kara-liste: "<red>IP kara listeye eklendi: <white>{ip}</white> <gray>| Sebep: <white>{sebep}</white></gray>"
-    panik-modu-acik: "<red>PANIK MODU AKTIF — Tüm yeni bağlantılar reddediliyor!</red>"
-    panik-modu-kapali: "<green>Panik modu devre dışı bırakıldı.</green>"
-    saldiri-modu-acik: "<red>SALDIRI MODU AKTIF</red>"
-    saldiri-modu-kapali: "<green>Saldırı modu devre dışı</green>"
-  komut:
-    reload: "<green>Yapılandırma başarıyla yenilendi. <gray>({sure}ms)</gray>"
-    durum-baslik: "<aqua>Modül Durumu</aqua>"
-    modul-acik: "<green>  {modul}</green> <gray>— <white>{engellenen}</white> engellendi</gray>"
-    modul-kapali: "<red>  {modul}</red> <gray>— Devre Dışı</gray>"
-    yetki-yok: "<red>Bu komutu kullanma yetkiniz yok!</red>"
-    gecersiz-kullanim: "<red>Geçersiz kullanım! <gray>{kullanim}</gray>"
-    ip-eklendi: "<green>{ip} başarıyla {liste} listesine eklendi.</green>"
-    ip-cikarildi: "<green>{ip} {liste} listesinden çıkarıldı.</green>"
-    ip-bulunamadi: "<red>{ip} adresi {liste} listesinde bulunamadı.</red>"
-    ban-eklendi: "<green>{ip} {sure} süreyle yasaklandı. Sebep: {sebep}</green>"
-    ban-kaldirildi: "<green>{ip} yasağı kaldırıldı.</green>"
-    senkronize-edildi: "<green>Tüm backend sunucularla senkronizasyon tamamlandı.</green>"
-    istatistikler: "<aqua>İstatistikler</aqua>"
-    lookup-sonuc: "<aqua>IP Bilgisi: {ip}</aqua>"
-    hata: "<red>Bir hata oluştu: {hata}</red>"
-    modul-acildi: "<green>{modul} modülü etkinleştirildi.</green>"
-    modul-kapandi: "<yellow>{modul} modülü devre dışı bırakıldı.</yellow>"
-    test-bildirim: "<green>Test bildirimi gönderildi.</green>"
