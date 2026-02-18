@@ -7,6 +7,9 @@ author: AtomGuard Team
 website: "https://atomguard.dev"
 depend:
   - packetevents
+softdepend:
+  - AuthMe
+  - nLogin
 
 commands:
   atomguard:

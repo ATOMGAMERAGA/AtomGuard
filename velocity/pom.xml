@@ -69,7 +69,7 @@
     </dependencies>
 
     <build>
-        <finalName>AtomGuard-Velocity-${project.version}</finalName>
+        <finalName>AtomGuard-velocity-${project.version}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

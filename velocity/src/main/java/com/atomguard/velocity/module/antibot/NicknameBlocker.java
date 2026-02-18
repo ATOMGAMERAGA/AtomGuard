@@ -75,7 +75,7 @@ public class NicknameBlocker {
             if (pattern.matcher(username).find()) return NicknameCheckResult.blocked("Yasaklı pattern");
         }
 
-        if (blockNumbersOnly && username.matches("\d+")) {
+        if (blockNumbersOnly && username.matches("\\d+")) {
             return NicknameCheckResult.blocked("Sadece sayı içeremez");
         }
 

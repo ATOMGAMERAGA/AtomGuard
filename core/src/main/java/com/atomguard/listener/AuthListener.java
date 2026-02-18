@@ -4,10 +4,8 @@ import com.atomguard.AtomGuard;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import fr.xephi.authme.events.LoginEvent;
-import fr.xephi.authme.events.RegisterEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.charset.StandardCharsets;
@@ -21,26 +19,14 @@ public class AuthListener implements Listener {
         this.plugin = plugin;
     }
 
-    // We assume AuthMe is used. If nLogin, we would need another listener.
-    // Since we can't easily detect which one and reflection is complex, we'll assume AuthMe for now as per config default.
-    
-    // Note: We need the RAW password to hash it ourselves to SHA-256 for Velocity to check against its list.
-    // AuthMe LoginEvent does NOT provide raw password.
-    // AuthMe RegisterEvent DOES provide raw password? 
-    // Checking AuthMe API: RegisterEvent has getPassword(). LoginEvent does NOT.
-    // So we can only check on Register.
-    // For Login, we can't check unless we hook into the command pre-process?
-    // /login <password>
+    // AuthMe LoginEvent and RegisterEvent do NOT easily provide raw password in 5.6+
+    // CorePasswordCheckModule uses PlayerCommandPreprocessEvent as a fallback.
+    // This listener can be used for other AuthMe specific checks if needed.
     
     @EventHandler
-    public void onRegister(RegisterEvent event) {
-        sendHash(event.getPlayer(), event.getPassword());
+    public void onLogin(LoginEvent event) {
+        // Can be used for logging or other integrations
     }
-    
-    // For login, we might need to listen to PlayerCommandPreprocessEvent if AuthMe doesn't expose raw password in event.
-    // But that's risky and invasive.
-    // Let's stick to Register check for "Common Password" detection which is most critical for new accounts.
-    // For "Same Password" (Similarity), Register is also the main vector for bots creating mass accounts.
     
     private void sendHash(org.bukkit.entity.Player player, String password) {
         try {

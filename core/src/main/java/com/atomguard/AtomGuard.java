@@ -2,13 +2,19 @@ package com.atomguard;
 
 import com.atomguard.command.AtomGuardCommand;
 import com.atomguard.command.AtomGuardTabCompleter;
-import com.atomguard.listener.BukkitListener;
-import com.atomguard.listener.CoreMessagingListener;
-import com.atomguard.listener.InventoryListener;
-import com.atomguard.listener.PacketListener;
+import com.atomguard.command.PanicCommand;
+import com.atomguard.data.VerifiedPlayerCache;
+import com.atomguard.heuristic.HeuristicEngine;
+import com.atomguard.listener.*;
 import com.atomguard.manager.*;
-import com.atomguard.listener.AuthListener;
+import com.atomguard.module.*;
+import com.atomguard.module.antibot.AntiBotModule;
+import com.atomguard.reputation.IPReputationManager;
+import com.atomguard.web.WebPanel;
+import com.github.retrooper.packetevents.PacketEvents;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.logging.Level;
 
 public class AtomGuard extends JavaPlugin {
 
@@ -21,6 +27,11 @@ public class AtomGuard extends JavaPlugin {
     private RedisManager redisManager;
     private AttackModeManager attackModeManager;
     private DiscordWebhookManager discordWebhookManager;
+    private IPReputationManager reputationManager;
+    private HeuristicEngine heuristicEngine;
+    private VerifiedPlayerCache verifiedPlayerCache;
+    private PacketListener packetListener;
+    private com.atomguard.web.WebPanel webPanel;
 
     @Override
     public void onLoad() {
@@ -29,7 +40,6 @@ public class AtomGuard extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        // ... (Initialization code) ...
         try {
             // Managers
             this.configManager = new ConfigManager(this);
@@ -40,53 +50,122 @@ public class AtomGuard extends JavaPlugin {
             this.attackModeManager = new AttackModeManager(this);
             this.discordWebhookManager = new DiscordWebhookManager(this);
             this.moduleManager = new ModuleManager(this);
+            this.reputationManager = new IPReputationManager(this);
+            this.heuristicEngine = new HeuristicEngine(this);
+            this.verifiedPlayerCache = new VerifiedPlayerCache(this);
 
             // Initialize Managers
-            configManager.loadConfig();
-            messageManager.loadMessages();
-            logManager.initialize();
-            statisticsManager.load();
-            moduleManager.registerModules();
-            moduleManager.enableModules(); // Enable modules based on config
+            configManager.load();
+            logManager.start();
+            redisManager.start();
+            statisticsManager.start();
+            verifiedPlayerCache.start();
+            
+            // Register Modules BEFORE enabling them
+            registerModules();
+            moduleManager.enableAllModules();
 
             // Listeners
+            this.packetListener = new PacketListener(this);
+            PacketEvents.getAPI().getEventManager().registerListener(packetListener);
+            
             getServer().getPluginManager().registerEvents(new BukkitListener(this), this);
             getServer().getPluginManager().registerEvents(new InventoryListener(this), this);
-            getServer().getPluginManager().registerEvents(new PacketListener(this), this); // PacketEvents hook inside
+
+            if (getServer().getPluginManager().getPlugin("AuthMe") != null) {
+                getServer().getPluginManager().registerEvents(new AuthListener(this), this);
+                getLogger().info("AuthMe entegrasyonu aktif.");
+            } else {
+                getLogger().info("AuthMe bulunamadı, auth entegrasyonu devre dışı.");
+            }
 
             // Messaging
             if (getConfig().getBoolean("mesajlasma.aktif", true)) {
                 getServer().getMessenger().registerOutgoingPluginChannel(this, "atomguard:main");
                 getServer().getMessenger().registerIncomingPluginChannel(this, "atomguard:main", new CoreMessagingListener(this));
-                
-                // Auth channel
                 getServer().getMessenger().registerOutgoingPluginChannel(this, "atomguard:auth");
+            }
+
+            // Web Panel
+            if (getConfig().getBoolean("web-panel.aktif", false)) {
+                this.webPanel = new com.atomguard.web.WebPanel(this);
+                webPanel.start();
+                getLogger().info("Web Panel başlatıldı: port " + getConfig().getInt("web-panel.port", 8080));
             }
 
             // Commands
             getCommand("atomguard").setExecutor(new AtomGuardCommand(this));
             getCommand("atomguard").setTabCompleter(new AtomGuardTabCompleter(this));
+            getCommand("panic").setExecutor(new PanicCommand(this));
 
             getLogger().info("AtomGuard (Core) has been enabled!");
-            
-            // Send startup info to Velocity if connected? 
-            // Usually Velocity pulls info or we send heartbeat.
 
         } catch (Exception e) {
-            getLogger().severe("Failed to enable AtomGuard: " + e.getMessage());
-            e.printStackTrace();
+            getLogger().log(java.util.logging.Level.SEVERE, "AtomGuard başlatılamadı", e);
             getServer().getPluginManager().disablePlugin(this);
         }
     }
 
     @Override
     public void onDisable() {
-        if (moduleManager != null) moduleManager.disableModules();
-        if (redisManager != null) redisManager.close();
-        if (statisticsManager != null) statisticsManager.save();
-        if (logManager != null) logManager.shutdown();
+        if (webPanel != null) webPanel.stop();
+        if (moduleManager != null) moduleManager.disableAllModules();
+        if (reputationManager != null) reputationManager.shutdown();
+        if (verifiedPlayerCache != null) verifiedPlayerCache.stop();
+        if (redisManager != null) redisManager.stop();
+        if (statisticsManager != null) statisticsManager.stop();
+        if (logManager != null) logManager.stop();
         
         getLogger().info("AtomGuard (Core) has been disabled.");
+    }
+
+    private void registerModules() {
+        moduleManager.registerModule(new NBTCrasherModule(this));
+        moduleManager.registerModule(new AntiBotModule(this));
+        moduleManager.registerModule(new SmartLagModule(this));
+        moduleManager.registerModule(new PacketExploitModule(this));
+        moduleManager.registerModule(new NettyCrashModule(this));
+        moduleManager.registerModule(new InvalidSlotModule(this));
+        moduleManager.registerModule(new ShulkerByteModule(this));
+        moduleManager.registerModule(new ConnectionThrottleModule(this));
+        moduleManager.registerModule(new PortalBreakModule(this));
+        moduleManager.registerModule(new ComponentCrashModule(this));
+        moduleManager.registerModule(new PistonLimiterModule(this));
+        moduleManager.registerModule(new AdvancedPayloadModule(this));
+        moduleManager.registerModule(new BundleLockModule(this));
+        moduleManager.registerModule(new CommandsCrashModule(this));
+        moduleManager.registerModule(new BotProtectionModule(this));
+        moduleManager.registerModule(new StorageEntityLockModule(this));
+        moduleManager.registerModule(new TooManyBooksModule(this));
+        moduleManager.registerModule(new ContainerCrashModule(this));
+        moduleManager.registerModule(new DispenserCrasherModule(this));
+        moduleManager.registerModule(new TokenBucketModule(this));
+        moduleManager.registerModule(new LecternCrasherModule(this));
+        moduleManager.registerModule(new AnvilCraftCrashModule(this));
+        moduleManager.registerModule(new NormalizeCoordinatesModule(this));
+        moduleManager.registerModule(new InventoryDuplicationModule(this));
+        moduleManager.registerModule(new PacketDelayModule(this));
+        moduleManager.registerModule(new CowDuplicationModule(this));
+        moduleManager.registerModule(new MovementSecurityModule(this));
+        moduleManager.registerModule(new SignCrasherModule(this));
+        moduleManager.registerModule(new VisualCrasherModule(this));
+        moduleManager.registerModule(new ChunkCrashModule(this));
+        moduleManager.registerModule(new CustomPayloadModule(this));
+        moduleManager.registerModule(new AdvancedChatModule(this));
+        moduleManager.registerModule(new OfflinePacketModule(this));
+        moduleManager.registerModule(new CreativeItemsModule(this));
+        moduleManager.registerModule(new DuplicationFixModule(this));
+        moduleManager.registerModule(new FallingBlockLimiterModule(this));
+        moduleManager.registerModule(new ExplosionLimiterModule(this));
+        moduleManager.registerModule(new FrameCrashModule(this));
+        moduleManager.registerModule(new BundleDuplicationModule(this));
+        moduleManager.registerModule(new ViewDistanceMaskModule(this));
+        moduleManager.registerModule(new EntityInteractCrashModule(this));
+        moduleManager.registerModule(new ItemSanitizerModule(this));
+        moduleManager.registerModule(new RedstoneLimiterModule(this));
+        moduleManager.registerModule(new MuleDuplicationModule(this));
+        moduleManager.registerModule(new BookCrasherModule(this));
+        moduleManager.registerModule(new MapLabelCrasherModule(this));
     }
 
     public static AtomGuard getInstance() { return instance; }
@@ -98,4 +177,9 @@ public class AtomGuard extends JavaPlugin {
     public RedisManager getRedisManager() { return redisManager; }
     public AttackModeManager getAttackModeManager() { return attackModeManager; }
     public DiscordWebhookManager getDiscordWebhookManager() { return discordWebhookManager; }
+    public IPReputationManager getReputationManager() { return reputationManager; }
+    public HeuristicEngine getHeuristicEngine() { return heuristicEngine; }
+    public VerifiedPlayerCache getVerifiedPlayerCache() { return verifiedPlayerCache; }
+    public PacketListener getPacketListener() { return packetListener; }
+    public com.atomguard.web.WebPanel getWebPanel() { return webPanel; }
 }

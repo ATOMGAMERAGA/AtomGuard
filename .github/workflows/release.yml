@@ -28,17 +28,15 @@ jobs:
 
       - name: Generate Checksums
         run: |
-          cd core/target
-          for file in AtomGuard-*.jar; do
-            sha256sum "$file" > "$file.sha256"
-          done
+          find core/target velocity/target -name "AtomGuard-*.jar" -not -name "*-sources*" -exec sha256sum {} + > SHA256SUMS
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            core/target/AtomGuard-*.jar
-            core/target/AtomGuard-*.jar.sha256
+            core/target/AtomGuard-core-*.jar
+            velocity/target/AtomGuard-velocity-*.jar
+            SHA256SUMS
           generate_release_notes: true
           draft: false
           prerelease: false
@@ -55,7 +53,7 @@ jobs:
             4. Start your server.
             
             ### 🔐 Checksums (SHA-256)
-            Check the attached `.sha256` files to verify integrity.
+            See `SHA256SUMS` file for verification.
             
             ---
-            *Made with ❤️ by AtomGuard Team*
+            *Made with ❤️ by AtomGuard Team Team*

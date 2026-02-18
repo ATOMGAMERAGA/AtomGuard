@@ -25,18 +25,20 @@ jobs:
 
       - name: Verify build output
         run: |
-          JAR=$(find core/target -name "AtomGuard-*.jar" -not -name "*-sources*" | head -1)
-          if [ -n "$JAR" ]; then
-            echo "✅ Build successful: $JAR"
-            ls -lh "$JAR"
+          CORE_JAR=$(find core/target -name "AtomGuard-core-*.jar" -not -name "*-sources*" | head -1)
+          VELOCITY_JAR=$(find velocity/target -name "AtomGuard-velocity-*.jar" -not -name "*-sources*" | head -1)
+          if [ -n "$CORE_JAR" ] && [ -n "$VELOCITY_JAR" ]; then
+            echo "✅ Build successful: $CORE_JAR and $VELOCITY_JAR"
           else
-            echo "❌ Build failed — JAR not found"
+            echo "❌ Build failed — JARs not found"
             exit 1
           fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AtomGuard-SNAPSHOT
-          path: core/target/AtomGuard-*.jar
+          name: AtomGuard-${{ github.ref_name }}-SNAPSHOT
+          path: |
+            core/target/AtomGuard-core-*.jar
+            velocity/target/AtomGuard-velocity-*.jar
           retention-days: 7
