@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -40,10 +41,20 @@ public class WebPanel {
     private final ConcurrentLinkedDeque<EventRecord> recentEvents = new ConcurrentLinkedDeque<>();
     private final int maxEvents;
 
-    // Rate Limiting
-    private final java.util.Map<String, RateLimitTracker> rateLimits = new java.util.concurrent.ConcurrentHashMap<>();
-    private final java.util.Map<String, Integer> loginAttempts = new java.util.concurrent.ConcurrentHashMap<>();
-    private final Set<String> validTokens = ConcurrentHashMap.newKeySet();
+    // Rate Limiting (Bounded LRU)
+    private final java.util.Map<String, RateLimitTracker> rateLimits = Collections.synchronizedMap(new LinkedHashMap<>(128, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, RateLimitTracker> eldest) {
+            return size() > 2000;
+        }
+    });
+    private final java.util.Map<String, Integer> loginAttempts = Collections.synchronizedMap(new LinkedHashMap<>(128, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
+            return size() > 1000;
+        }
+    });
+    private final java.util.Map<String, Long> validTokens = new java.util.concurrent.ConcurrentHashMap<>();
 
     public WebPanel(AtomGuard plugin) {
         this.plugin = plugin;
@@ -63,17 +74,17 @@ public class WebPanel {
         
         this.maxEvents = plugin.getConfig().getInt("web-panel.max-olay-sayisi", 100);
         
-        // Cleanup task for rate limits and login attempts
+        // Cleanup task for expired tokens
         Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
-            rateLimits.clear();
-            loginAttempts.clear();
+            long now = System.currentTimeMillis();
+            validTokens.entrySet().removeIf(entry -> entry.getValue() < now);
         }, 1, 1, java.util.concurrent.TimeUnit.HOURS);
     }
 
     private String generateRandomPassword() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         StringBuilder sb = new StringBuilder();
-        Random rnd = new Random();
+        SecureRandom rnd = new SecureRandom();
         for (int i = 0; i < 12; i++) {
             sb.append(chars.charAt(rnd.nextInt(chars.length())));
         }
@@ -96,6 +107,7 @@ public class WebPanel {
             server.setExecutor(Executors.newFixedThreadPool(4));
             server.start();
             plugin.getLogger().info("Web Panel started on port " + port);
+            plugin.getLogger().warning("UYARI: Web Panel HTTP üzerinden çalışıyor. Güvenlik için bir reverse proxy (Nginx, Caddy vb.) ile HTTPS kullanılması önerilir.");
         } catch (IOException e) {
             plugin.getLogger().severe("Failed to start Web Panel: " + e.getMessage());
         }
@@ -131,7 +143,22 @@ public class WebPanel {
                 return;
             }
 
-            // 2. Authentication (Token or Basic)
+            // 2. CSRF Protection for POST requests
+            if ("POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                String origin = exchange.getRequestHeaders().getFirst("Origin");
+                String referer = exchange.getRequestHeaders().getFirst("Referer");
+                String host = exchange.getRequestHeaders().getFirst("Host");
+
+                boolean originOk = origin != null && (origin.contains(host) || origin.contains("localhost") || origin.contains("127.0.0.1"));
+                boolean refererOk = referer != null && (referer.contains(host) || referer.contains("localhost") || referer.contains("127.0.0.1"));
+
+                if (!originOk && !refererOk) {
+                    sendResponse(exchange, 403, "application/json", "{\"error\":\"CSRF detected\"}");
+                    return;
+                }
+            }
+
+            // 3. Authentication (Token or Basic)
             if (!checkAuth(exchange)) {
                 return;
             }
@@ -149,7 +176,11 @@ public class WebPanel {
             }
 
             String ip = exchange.getRemoteAddress().getAddress().getHostAddress();
-            int attempts = loginAttempts.getOrDefault(ip, 0);
+            int attempts;
+            synchronized (loginAttempts) {
+                attempts = loginAttempts.getOrDefault(ip, 0);
+            }
+
             if (attempts > 5) {
                 sendResponse(exchange, 429, "application/json", "{\"error\":\"Too many login attempts\"}");
                 return;
@@ -167,11 +198,15 @@ public class WebPanel {
 
             if (authUser.equals(user) && authPass.equals(pass)) {
                 String token = UUID.randomUUID().toString();
-                validTokens.add(token);
-                loginAttempts.remove(ip);
+                validTokens.put(token, System.currentTimeMillis() + (2 * 3600 * 1000L)); // 2 hour expiry
+                synchronized (loginAttempts) {
+                    loginAttempts.remove(ip);
+                }
                 sendResponse(exchange, 200, "application/json", "{\"token\":\"" + token + "\"}");
             } else {
-                loginAttempts.put(ip, attempts + 1);
+                synchronized (loginAttempts) {
+                    loginAttempts.put(ip, attempts + 1);
+                }
                 sendResponse(exchange, 401, "application/json", "{\"error\":\"Invalid credentials\"}");
             }
         }
@@ -179,7 +214,14 @@ public class WebPanel {
 
     private boolean checkRateLimit(HttpExchange exchange) {
         String ip = exchange.getRemoteAddress().getAddress().getHostAddress();
-        RateLimitTracker tracker = rateLimits.computeIfAbsent(ip, k -> new RateLimitTracker());
+        RateLimitTracker tracker;
+        synchronized (rateLimits) {
+            tracker = rateLimits.get(ip);
+            if (tracker == null) {
+                tracker = new RateLimitTracker();
+                rateLimits.put(ip, tracker);
+            }
+        }
         return tracker.tryAcquire();
     }
 
@@ -246,13 +288,6 @@ public class WebPanel {
 
         String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
         if (authHeader == null) {
-            // Check for cookie or query param token as fallback
-            String query = exchange.getRequestURI().getQuery();
-            if (query != null && query.contains("token=")) {
-                String token = query.split("token=")[1].split("&")[0];
-                if (validTokens.contains(token)) return true;
-            }
-            
             exchange.getResponseHeaders().set("WWW-Authenticate", "Basic realm=\"AtomGuard\"");
             exchange.sendResponseHeaders(401, -1);
             return false;
@@ -260,7 +295,7 @@ public class WebPanel {
 
         if (authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            if (validTokens.contains(token)) return true;
+            if (isTokenValid(token)) return true;
             exchange.sendResponseHeaders(401, -1);
             return false;
         }
@@ -276,6 +311,16 @@ public class WebPanel {
         exchange.getResponseHeaders().set("WWW-Authenticate", "Basic realm=\"AtomGuard\"");
         exchange.sendResponseHeaders(401, -1);
         return false;
+    }
+
+    private boolean isTokenValid(String token) {
+        Long expiry = validTokens.get(token);
+        if (expiry == null) return false;
+        if (expiry < System.currentTimeMillis()) {
+            validTokens.remove(token);
+            return false;
+        }
+        return true;
     }
 
     private void sendResponse(HttpExchange exchange, int code, String contentType, String body) throws IOException {

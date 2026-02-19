@@ -26,7 +26,7 @@ public class WhitelistManager {
     public WhitelistManager(AtomGuardVelocity plugin) {
         this.plugin = plugin;
         this.logger = plugin.getSlf4jLogger();
-        this.whitelistFile = new File(plugin.getDataFolder(), plugin.getConfigManager().getString("guvenlik-duvari.whitelist.beyaz-liste.dosya", "whitelist.json"));
+        this.whitelistFile = new File(plugin.getDataDirectory().toFile(), plugin.getConfigManager().getString("guvenlik-duvari.whitelist.beyaz-liste.dosya", "whitelist.json"));
     }
 
     public void load() {

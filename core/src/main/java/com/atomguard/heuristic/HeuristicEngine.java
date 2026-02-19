@@ -72,7 +72,13 @@ public class HeuristicEngine {
         if (speed > maxSpeed) {
             profile.incrementRotationSpikes();
             if (profile.getRotationSpikes() >= maxSpikes) {
+                double oldScore = profile.getSuspicionLevel();
                 profile.addSuspicion(5.0);
+                double newScore = profile.getSuspicionLevel();
+                
+                // Trigger Event
+                Bukkit.getPluginManager().callEvent(new com.atomguard.api.event.ThreatScoreChangedEvent(player, oldScore, newScore, "Rotation Spike"));
+                
                 plugin.getLogManager().debug("High rotation speed (Burst): " + speed + " (User: " + player.getName() + ")");
                 checkSuspicionLevel(player, profile);
                 profile.resetRotationSpikes();
@@ -117,7 +123,13 @@ public class HeuristicEngine {
             // Check 2: Zero Variance (Macro/Bot)
             // If variance is extremely low (e.g. < 5.0), it's likely a macro
             if (variance < minVariance && getAverage(samples) < maxAvgInterval) { // Fast clicking with no variance
+                double oldScore = profile.getSuspicionLevel();
                 profile.addSuspicion(15.0);
+                double newScore = profile.getSuspicionLevel();
+                
+                // Trigger Event
+                Bukkit.getPluginManager().callEvent(new com.atomguard.api.event.ThreatScoreChangedEvent(player, oldScore, newScore, "Low Click Variance"));
+                
                 plugin.getLogManager().debug("Low click variance: " + variance + " (User: " + player.getName() + ")");
                 checkSuspicionLevel(player, profile);
             }

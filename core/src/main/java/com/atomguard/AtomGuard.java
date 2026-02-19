@@ -33,6 +33,8 @@ public class AtomGuard extends JavaPlugin {
     private PacketListener packetListener;
     private com.atomguard.web.WebPanel webPanel;
 
+    private com.atomguard.api.storage.IStorageProvider storageProvider;
+
     @Override
     public void onLoad() {
         instance = this;
@@ -44,6 +46,10 @@ public class AtomGuard extends JavaPlugin {
             // Managers
             this.configManager = new ConfigManager(this);
             this.messageManager = new MessageManager(this);
+            
+            // Initialize Storage Provider
+            initializeStorage();
+            
             this.logManager = new LogManager(this);
             this.statisticsManager = new StatisticsManager(this);
             this.redisManager = new RedisManager(this);
@@ -86,6 +92,12 @@ public class AtomGuard extends JavaPlugin {
                 getServer().getMessenger().registerOutgoingPluginChannel(this, "atomguard:auth");
             }
 
+            // PlaceholderAPI
+            if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+                new com.atomguard.util.AtomGuardPlaceholderExpansion(this).register();
+                getLogger().info("PlaceholderAPI entegrasyonu aktif.");
+            }
+
             // Web Panel
             if (getConfig().getBoolean("web-panel.aktif", false)) {
                 this.webPanel = new com.atomguard.web.WebPanel(this);
@@ -106,8 +118,38 @@ public class AtomGuard extends JavaPlugin {
         }
     }
 
+    private void initializeStorage() throws Exception {
+        String type = getConfig().getString("database.type", "FLATFILE").toUpperCase();
+        
+        switch (type) {
+            case "MYSQL":
+                this.storageProvider = new com.atomguard.storage.MySQLStorageProvider(this,
+                    getConfig().getString("database.mysql.host", "localhost"),
+                    getConfig().getInt("database.mysql.port", 3306),
+                    getConfig().getString("database.mysql.database", "atomguard"),
+                    getConfig().getString("database.mysql.username", "root"),
+                    getConfig().getString("database.mysql.password", ""),
+                    getConfig().getBoolean("database.mysql.use-ssl", false)
+                );
+                break;
+            case "SQLITE":
+                this.storageProvider = new com.atomguard.storage.SQLiteStorageProvider(this);
+                break;
+            default:
+                // FLATFILE implementation (JSON) - already handled by individual managers
+                // but we might want a unified one later.
+                break;
+        }
+
+        if (storageProvider != null) {
+            storageProvider.connect();
+            getLogger().info("Depolama sağlayıcısı başlatıldı: " + storageProvider.getTypeName());
+        }
+    }
+
     @Override
     public void onDisable() {
+        if (storageProvider != null) storageProvider.disconnect();
         if (webPanel != null) webPanel.stop();
         if (moduleManager != null) moduleManager.disableAllModules();
         if (reputationManager != null) reputationManager.shutdown();

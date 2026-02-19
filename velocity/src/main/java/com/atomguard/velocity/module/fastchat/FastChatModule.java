@@ -5,6 +5,7 @@ import com.atomguard.velocity.module.VelocityModule;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.scheduler.ScheduledTask;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
@@ -16,6 +17,7 @@ public class FastChatModule extends VelocityModule {
     private ChatRateLimiter rateLimiter;
     private DuplicateMessageDetector duplicateDetector;
     private ChatPatternAnalyzer patternAnalyzer;
+    private ScheduledTask cleanupTask;
 
     public FastChatModule(AtomGuardVelocity plugin) {
         super(plugin, "hizli-sohbet-kontrol");
@@ -31,7 +33,7 @@ public class FastChatModule extends VelocityModule {
         int historySize = getConfigInt("tekrar-mesaj.hatirlama-sayisi", 5);
         this.duplicateDetector = new DuplicateMessageDetector(historySize);
 
-        plugin.getProxyServer().getScheduler().buildTask(plugin, () -> {
+        this.cleanupTask = plugin.getProxyServer().getScheduler().buildTask(plugin, () -> {
             if (rateLimiter != null) rateLimiter.cleanup();
             if (duplicateDetector != null) duplicateDetector.cleanup();
         }).repeat(1, TimeUnit.MINUTES).schedule();
@@ -43,7 +45,9 @@ public class FastChatModule extends VelocityModule {
     @Override
     protected void onDisable() {
         plugin.getProxyServer().getEventManager().unregisterListener(plugin, this);
-        scheduler.shutdownNow();
+        if (cleanupTask != null) {
+            cleanupTask.cancel();
+        }
         logger.info("FastChat module disabled.");
     }
 

@@ -53,7 +53,19 @@ public class ThreatScoreCalculator {
             totalScore += score;
         }
 
+        int oldScore = profile.getCurrentThreatScore();
+        profile.setCurrentThreatScore(totalScore);
         profile.updateMaxThreatScore(totalScore);
+
+        // Trigger Event if score changed significantly or reached threshold
+        if (oldScore != totalScore && profile.getUuid() != null) {
+            org.bukkit.entity.Player player = org.bukkit.Bukkit.getPlayer(profile.getUuid());
+            if (player != null) {
+                org.bukkit.Bukkit.getPluginManager().callEvent(
+                    new com.atomguard.api.event.ThreatScoreChangedEvent(player, oldScore, totalScore, "AntiBot Analysis")
+                );
+            }
+        }
 
         // Action thresholds
         ActionType action;

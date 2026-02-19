@@ -7,54 +7,42 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 
-public class MySQLStorageProvider implements IStorageProvider {
+public class SQLiteStorageProvider implements IStorageProvider {
 
     private final AtomGuard plugin;
-    private final String host;
-    private final int port;
-    private final String database;
-    private final String username;
-    private final String password;
-    private final boolean useSSL;
-
+    private final File dbFile;
     private HikariDataSource dataSource;
     private final ExecutorService executor;
 
-    public MySQLStorageProvider(AtomGuard plugin, String host, int port, String database, String username, String password, boolean useSSL) {
+    public SQLiteStorageProvider(AtomGuard plugin) {
         this.plugin = plugin;
-        this.host = host;
-        this.port = port;
-        this.database = database;
-        this.username = username;
-        this.password = password;
-        this.useSSL = useSSL;
-        this.executor = Executors.newFixedThreadPool(2);
+        this.dbFile = new File(plugin.getDataFolder(), "atomguard.db");
+        this.executor = Executors.newFixedThreadPool(1); // SQLite handles better with 1 thread for writing
     }
 
     @Override
     public void connect() throws Exception {
+        if (!dbFile.getParentFile().exists()) {
+            dbFile.getParentFile().mkdirs();
+        }
+
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + database + "?useSSL=" + useSSL);
-        config.setUsername(username);
-        config.setPassword(password);
-        config.addDataSourceProperty("cachePrepStmts", "true");
-        config.addDataSourceProperty("prepStmtCacheSize", "250");
-        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-        config.setMaximumPoolSize(10);
+        config.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
+        config.setDriverClassName("org.sqlite.JDBC");
+        config.setPoolName("AtomGuard-SQLite-Pool");
+        config.setMaximumPoolSize(1); // Recommended for SQLite to avoid lock issues
+        config.setConnectionTestQuery("SELECT 1");
 
         this.dataSource = new HikariDataSource(config);
         
@@ -67,8 +55,8 @@ public class MySQLStorageProvider implements IStorageProvider {
             try (PreparedStatement ps = connection.prepareStatement(
                     "CREATE TABLE IF NOT EXISTS atomguard_player_data (" +
                             "uuid VARCHAR(36) PRIMARY KEY, " +
-                            "data JSON NOT NULL, " +
-                            "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
+                            "data TEXT NOT NULL, " +
+                            "last_updated DATETIME DEFAULT CURRENT_TIMESTAMP" +
                             ")")) {
                 ps.executeUpdate();
             }
@@ -88,7 +76,7 @@ public class MySQLStorageProvider implements IStorageProvider {
                             "ip_address VARCHAR(45) PRIMARY KEY, " +
                             "reason VARCHAR(255), " +
                             "expiry BIGINT, " +
-                            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP" +
                             ")")) {
                 ps.executeUpdate();
             }
@@ -110,7 +98,7 @@ public class MySQLStorageProvider implements IStorageProvider {
 
     @Override
     public @NotNull String getTypeName() {
-        return "MySQL";
+        return "SQLite";
     }
 
     @Override
@@ -118,16 +106,17 @@ public class MySQLStorageProvider implements IStorageProvider {
         return CompletableFuture.runAsync(() -> {
             try (Connection connection = dataSource.getConnection();
                  PreparedStatement ps = connection.prepareStatement(
-                         "INSERT INTO atomguard_player_data (uuid, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = ?")) {
+                         "INSERT INTO atomguard_player_data (uuid, data) VALUES (?, ?) " +
+                                 "ON CONFLICT(uuid) DO UPDATE SET data = ?, last_updated = CURRENT_TIMESTAMP")) {
                 
                 String jsonData = new JSONObject(data).toString();
                 
                 ps.setString(1, uuid.toString());
-                ps.setString(2, jsonData); 
+                ps.setString(2, jsonData);
                 ps.setString(3, jsonData);
                 ps.executeUpdate();
             } catch (SQLException e) {
-                plugin.getLogger().log(Level.SEVERE, "MySQL error", e);
+                plugin.getLogger().log(Level.SEVERE, "SQLite error", e);
             }
         }, executor);
     }
@@ -149,7 +138,7 @@ public class MySQLStorageProvider implements IStorageProvider {
                     }
                 }
             } catch (SQLException e) {
-                plugin.getLogger().log(Level.SEVERE, "MySQL error", e);
+                plugin.getLogger().log(Level.SEVERE, "SQLite error", e);
             }
             return data;
         }, executor);
@@ -159,8 +148,9 @@ public class MySQLStorageProvider implements IStorageProvider {
     public CompletableFuture<Void> saveStatistics(@NotNull Map<String, Object> statistics) {
         return CompletableFuture.runAsync(() -> {
             try (Connection connection = dataSource.getConnection()) {
-                // Batch insert/update
-                String sql = "INSERT INTO atomguard_statistics (stat_key, stat_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE stat_value = ?";
+                connection.setAutoCommit(false);
+                String sql = "INSERT INTO atomguard_statistics (stat_key, stat_value) VALUES (?, ?) " +
+                        "ON CONFLICT(stat_key) DO UPDATE SET stat_value = ?";
                 try (PreparedStatement ps = connection.prepareStatement(sql)) {
                     for (Map.Entry<String, Object> entry : statistics.entrySet()) {
                         if (entry.getValue() instanceof Number) {
@@ -172,8 +162,10 @@ public class MySQLStorageProvider implements IStorageProvider {
                     }
                     ps.executeBatch();
                 }
+                connection.commit();
+                connection.setAutoCommit(true);
             } catch (SQLException e) {
-                plugin.getLogger().log(Level.SEVERE, "MySQL error", e);
+                plugin.getLogger().log(Level.SEVERE, "SQLite error", e);
             }
         }, executor);
     }
@@ -189,7 +181,7 @@ public class MySQLStorageProvider implements IStorageProvider {
                     stats.put(rs.getString("stat_key"), rs.getLong("stat_value"));
                 }
             } catch (SQLException e) {
-                plugin.getLogger().log(Level.SEVERE, "MySQL error", e);
+                plugin.getLogger().log(Level.SEVERE, "SQLite error", e);
             }
             return stats;
         }, executor);
@@ -200,7 +192,8 @@ public class MySQLStorageProvider implements IStorageProvider {
         return CompletableFuture.runAsync(() -> {
             try (Connection connection = dataSource.getConnection();
                  PreparedStatement ps = connection.prepareStatement(
-                         "INSERT INTO atomguard_blocked_ips (ip_address, reason, expiry) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE reason = ?, expiry = ?")) {
+                         "INSERT INTO atomguard_blocked_ips (ip_address, reason, expiry) VALUES (?, ?, ?) " +
+                                 "ON CONFLICT(ip_address) DO UPDATE SET reason = ?, expiry = ?")) {
                 ps.setString(1, ipAddress);
                 ps.setString(2, reason);
                 ps.setLong(3, expiry);
@@ -208,7 +201,7 @@ public class MySQLStorageProvider implements IStorageProvider {
                 ps.setLong(5, expiry);
                 ps.executeUpdate();
             } catch (SQLException e) {
-                plugin.getLogger().log(Level.SEVERE, "MySQL error", e);
+                plugin.getLogger().log(Level.SEVERE, "SQLite error", e);
             }
         }, executor);
     }
@@ -221,7 +214,7 @@ public class MySQLStorageProvider implements IStorageProvider {
                 ps.setString(1, ipAddress);
                 ps.executeUpdate();
             } catch (SQLException e) {
-                plugin.getLogger().log(Level.SEVERE, "MySQL error", e);
+                plugin.getLogger().log(Level.SEVERE, "SQLite error", e);
             }
         }, executor);
     }
@@ -237,7 +230,7 @@ public class MySQLStorageProvider implements IStorageProvider {
                     ips.add(rs.getString("ip_address"));
                 }
             } catch (SQLException e) {
-                plugin.getLogger().log(Level.SEVERE, "MySQL error", e);
+                plugin.getLogger().log(Level.SEVERE, "SQLite error", e);
             }
             return ips;
         }, executor);

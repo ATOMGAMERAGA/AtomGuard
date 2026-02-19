@@ -4,8 +4,8 @@ import com.velocitypowered.api.proxy.Player;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
+import java.security.SecureRandom;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,7 +18,7 @@ public class CaptchaVerification {
     private final Map<UUID, CaptchaSession> pending = new ConcurrentHashMap<>();
     private final Set<UUID> verified = ConcurrentHashMap.newKeySet();
     private final MiniMessage mm = MiniMessage.miniMessage();
-    private final Random random = new Random();
+    private final SecureRandom random = new SecureRandom();
     private final int timeoutSeconds;
 
     public CaptchaVerification(int timeoutSeconds) {

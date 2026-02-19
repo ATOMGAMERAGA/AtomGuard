@@ -73,6 +73,13 @@ public class CoreMessagingListener implements PluginMessageListener {
             VerifiedPlayerCache cache = plugin.getVerifiedPlayerCache();
             if (cache != null) {
                 cache.addVerified(playerName, ip);
+                
+                // Trigger API Event
+                Player player = plugin.getServer().getPlayer(playerName);
+                if (player != null) {
+                    plugin.getServer().getPluginManager().callEvent(new com.atomguard.api.event.PlayerVerifiedEvent(player, ip));
+                }
+                
                 plugin.getLogger().fine("CoreMessagingListener: Oyuncu doğrulandı - " + playerName + " [" + ip + "]");
             }
         } catch (Exception e) {

@@ -54,6 +54,7 @@ public class PlayerProfile {
     private final Deque<Long> keepAliveResponseTimes = new ConcurrentLinkedDeque<>();
     
     private int cachedFirstJoinScore = 0;
+    private int currentThreatScore = 0;
     private int maxThreatScore = 0;
     private int successfulSessionCount = 0; // In a real scenario, this would persist
 
@@ -259,6 +260,8 @@ public class PlayerProfile {
     public void setCachedFirstJoinScore(int score) { this.cachedFirstJoinScore = score; }
     public int getMaxThreatScore() { return maxThreatScore; }
     public void updateMaxThreatScore(int score) { if (score > maxThreatScore) maxThreatScore = score; }
+    public int getCurrentThreatScore() { return currentThreatScore; }
+    public void setCurrentThreatScore(int score) { this.currentThreatScore = score; }
     public int getSuccessfulSessionCount() { return successfulSessionCount; }
     public void incrementSuccessfulSessionCount() { successfulSessionCount++; }
     public long getLastSeen() { return lastSeen; }

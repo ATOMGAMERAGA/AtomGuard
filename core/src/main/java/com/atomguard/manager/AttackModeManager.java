@@ -74,8 +74,15 @@ public class AttackModeManager {
             peakRate = currentRate;
         }
 
-        if (!attackMode && currentRate >= threshold) {
-            activateAttackMode(currentRate);
+        if (currentRate >= threshold) {
+            // Trigger DDoS Event (every time threshold reached, even if already in attack mode)
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                plugin.getServer().getPluginManager().callEvent(new com.atomguard.api.event.DDoSDetectedEvent(currentRate, threshold, attackMode));
+            });
+            
+            if (!attackMode) {
+                activateAttackMode(currentRate);
+            }
         }
     }
 
@@ -87,6 +94,9 @@ public class AttackModeManager {
 
         plugin.getLogger().warning("!!! ATTACK MODE ACTIVATED !!! Connection rate: " + triggerRate + "/sec");
         plugin.getLogManager().warning("System entered ATTACK MODE due to high connection rate.");
+
+        // Trigger API Event
+        plugin.getServer().getPluginManager().callEvent(new com.atomguard.api.event.AttackModeToggleEvent(true, triggerRate));
 
         // Execute actions
         executeAttackActions();
@@ -112,6 +122,8 @@ public class AttackModeManager {
             this.peakRate = threshold;
             this.blockedDuringAttack = 0;
             executeAttackActions();
+            // Trigger API Event
+            plugin.getServer().getPluginManager().callEvent(new com.atomguard.api.event.AttackModeToggleEvent(true, threshold));
             plugin.getLogger().warning("!!! ATTACK MODE ACTIVATED (Synced via Redis) !!!");
         }
     }
@@ -122,6 +134,8 @@ public class AttackModeManager {
     public void forceDisable() {
         if (attackMode) {
             this.attackMode = false;
+            // Trigger API Event
+            plugin.getServer().getPluginManager().callEvent(new com.atomguard.api.event.AttackModeToggleEvent(false, peakRate));
             plugin.getLogger().info("Attack mode deactivated (Synced via Redis).");
         }
     }
@@ -160,6 +174,9 @@ public class AttackModeManager {
         }
 
         this.attackMode = false;
+
+        // Trigger API Event
+        plugin.getServer().getPluginManager().callEvent(new com.atomguard.api.event.AttackModeToggleEvent(false, peakRate));
 
         plugin.getLogger().info("Attack mode deactivated. Peak rate: " + peakRate
                 + "/sec, Blocked: " + blockedDuringAttack);

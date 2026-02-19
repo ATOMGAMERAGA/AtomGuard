@@ -471,6 +471,8 @@ public class IPReputationManager implements IReputationService {
         boolean added = manualBlocklist.add(ip);
         if (added) {
             saveManualBlocklist();
+            // Trigger API Event
+            Bukkit.getPluginManager().callEvent(new com.atomguard.api.event.IPBlockedEvent(ip, "Manuel Kara Liste", null, 0));
         }
         return added;
     }
@@ -861,6 +863,8 @@ public class IPReputationManager implements IReputationService {
         while (recentBlocks.size() > MAX_RECENT_BLOCKS) {
             recentBlocks.removeLast();
         }
+        // Trigger API Event
+        Bukkit.getPluginManager().callEvent(new com.atomguard.api.event.IPBlockedEvent(ip, reason, playerName, 0));
     }
 
     private void notifyAdmins(@NotNull String message) {

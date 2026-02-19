@@ -43,7 +43,7 @@ public class IPTablesModule extends VelocityModule {
                 IPTablesRule rule = new IPTablesRule(ip, null, "DROP", System.currentTimeMillis() + durationMs);
                 ruleStore.addRule(ip, rule);
                 
-                String msg = plugin.getMessageManager().getMessage("iptables.ban-eklendi")
+                String msg = plugin.getMessageManager().getRaw("iptables.ban-eklendi")
                         .replace("{ip}", ip)
                         .replace("{sure}", String.valueOf(durationMs / 1000));
                 logger.info("IPTables ban: " + msg);
@@ -57,7 +57,7 @@ public class IPTablesModule extends VelocityModule {
         manager.unbanIP(ip).thenAccept(success -> {
             if (success) {
                 ruleStore.removeRule(ip);
-                String msg = plugin.getMessageManager().getMessage("iptables.ban-kaldirildi")
+                String msg = plugin.getMessageManager().getRaw("iptables.ban-kaldirildi")
                         .replace("{ip}", ip);
                 logger.info("IPTables unban: " + msg);
             }

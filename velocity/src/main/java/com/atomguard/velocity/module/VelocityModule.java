@@ -62,6 +62,10 @@ public abstract class VelocityModule {
         return plugin.getConfigManager().getLong("moduller." + name + "." + key, def);
     }
 
+    protected double getConfigDouble(String key, double def) {
+        return plugin.getConfigManager().getDouble("moduller." + name + "." + key, def);
+    }
+
     protected String getConfigString(String key, String def) {
         return plugin.getConfigManager().getString("moduller." + name + "." + key, def);
     }

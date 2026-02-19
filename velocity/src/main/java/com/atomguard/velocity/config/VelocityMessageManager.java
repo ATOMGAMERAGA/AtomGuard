@@ -69,11 +69,15 @@ public class VelocityMessageManager {
                 .forEach(p -> p.sendMessage(msg));
     }
 
+    public Component parse(String raw) {
+        return mm.deserialize(raw);
+    }
+
     public Component deserialize(String raw) {
         return mm.deserialize(raw);
     }
 
-    private String getRaw(String key) {
+    public String getRaw(String key) {
         if (root == null) return "<red>[Mesaj Yok: " + key + "]</red>";
         CommentedConfigurationNode node = root.node((Object[]) key.split("\\."));
         String val = node.getString();

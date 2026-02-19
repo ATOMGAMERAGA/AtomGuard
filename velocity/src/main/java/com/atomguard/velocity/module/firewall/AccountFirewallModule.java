@@ -51,7 +51,7 @@ public class AccountFirewallModule extends VelocityModule {
         String username = event.getUsername();
         
         if (blacklist.isBlacklisted(username)) {
-             String reason = plugin.getMessageManager().getMessage("hesap-guvenlik-duvari.hesap-yasakli")
+             String reason = plugin.getMessageManager().getRaw("hesap-guvenlik-duvari.hesap-yasakli")
                      .replace("{sebep}", "Kara liste");
              event.setResult(PreLoginEvent.PreLoginComponentResult.denied(
                      plugin.getMessageManager().parse(reason)
@@ -75,7 +75,7 @@ public class AccountFirewallModule extends VelocityModule {
         String crackedPolicy = getConfigString("cracked-hesap.politika", "izin-ver");
         if (!isPremium && "engelle".equalsIgnoreCase(crackedPolicy)) {
              return CompletableFuture.completedFuture(AccountFirewallResult.deny(
-                     plugin.getMessageManager().getMessage("hesap-guvenlik-duvari.cracked-engel")
+                     plugin.getMessageManager().getRaw("hesap-guvenlik-duvari.cracked-engel")
              ));
         }
 
@@ -89,7 +89,7 @@ public class AccountFirewallModule extends VelocityModule {
                 
                 if (ageDays < minDays) {
                     return AccountFirewallResult.deny(
-                            plugin.getMessageManager().getMessage("hesap-guvenlik-duvari.hesap-cok-yeni")
+                            plugin.getMessageManager().getRaw("hesap-guvenlik-duvari.hesap-cok-yeni")
                                     .replace("{gun}", String.valueOf(minDays))
                     );
                 }

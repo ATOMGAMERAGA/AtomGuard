@@ -9,7 +9,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -70,6 +72,12 @@ public class VelocityConfigManager {
         finally { lock.readLock().unlock(); }
     }
 
+    public double getDouble(String path, double def) {
+        lock.readLock().lock();
+        try { return node(path).getDouble(def); }
+        finally { lock.readLock().unlock(); }
+    }
+
     public String getString(String path, String def) {
         lock.readLock().lock();
         try {
@@ -84,6 +92,19 @@ public class VelocityConfigManager {
             return node(path).childrenList().stream()
                     .map(n -> n.getString(""))
                     .filter(s -> !s.isEmpty())
+                    .toList();
+        } finally { lock.readLock().unlock(); }
+    }
+
+    public List<Map<String, Object>> getMapList(String path) {
+        lock.readLock().lock();
+        try {
+            return node(path).childrenList().stream()
+                    .map(n -> {
+                        Map<String, Object> map = new HashMap<>();
+                        n.childrenMap().forEach((k, v) -> map.put(k.toString(), v.raw()));
+                        return map;
+                    })
                     .toList();
         } finally { lock.readLock().unlock(); }
     }
