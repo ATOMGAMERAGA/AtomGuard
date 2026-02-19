@@ -5,11 +5,18 @@ import com.atomguard.velocity.data.ThreatScore;
 import com.atomguard.velocity.module.VelocityModule;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Anti-bot modülü. Config key: "bot-koruma"
+ *
+ * <p>Düzeltmeler (false positive önleme):
+ * <ul>
+ *   <li>Varsayılan eşikler güncellendi: windowSec=15, suspicious=8, highRisk=75, mediumRisk=45</li>
+ *   <li>JoinPatternDetector: (120, 8, 15)</li>
+ *   <li>{@link #markVerified}, {@link #isVerified}, {@link #revokeVerification} proxy metodları</li>
+ *   <li>{@link #analyzePreLogin}: Doğrulanmış oyuncular → sıfır ThreatScore döner</li>
+ * </ul>
  */
 public class VelocityAntiBotModule extends VelocityModule {
 
@@ -24,10 +31,10 @@ public class VelocityAntiBotModule extends VelocityModule {
 
     @Override
     public void onEnable() {
-        int windowSec = getConfigInt("analiz-penceresi", 10);
-        int suspiciousThreshold = getConfigInt("supheli-esik", 5);
-        int highRisk = getConfigInt("yuksek-risk-esik", 70);
-        int mediumRisk = getConfigInt("orta-risk-esik", 40);
+        int windowSec = getConfigInt("analiz-penceresi", 15);
+        int suspiciousThreshold = getConfigInt("supheli-esik", 8);
+        int highRisk = getConfigInt("yuksek-risk-esik", 75);
+        int mediumRisk = getConfigInt("orta-risk-esik", 45);
         boolean enforceProtocols = getConfigBoolean("protokol-dogrulama", true);
         boolean allowUnknownBrands = getConfigBoolean("bilinmeyen-brand-izin", true);
         List<String> blockedBrands = getConfigStringList("engelli-brandlar");
@@ -40,7 +47,8 @@ public class VelocityAntiBotModule extends VelocityModule {
         ConnectionAnalyzer connAnalyzer = new ConnectionAnalyzer(windowSec, suspiciousThreshold);
         HandshakeValidator hsValidator = new HandshakeValidator(enforceProtocols);
         BrandAnalyzer brandAnalyzer = new BrandAnalyzer(blockedBrands, allowUnknownBrands);
-        JoinPatternDetector joinDetector = new JoinPatternDetector(60, 5, 10);
+        // maxJoinsInWindow=8, maxQuitsBeforeSuspect=15 (minimum değerler)
+        JoinPatternDetector joinDetector = new JoinPatternDetector(120, 8, 15);
 
         engine = new BotDetectionEngine(connAnalyzer, hsValidator, brandAnalyzer, joinDetector, highRisk, mediumRisk);
         captcha = new CaptchaVerification(captchaTimeout);
@@ -54,7 +62,15 @@ public class VelocityAntiBotModule extends VelocityModule {
     @Override
     public void onDisable() {}
 
+    /**
+     * Ön-giriş analizi. Doğrulanmış oyuncular → sıfır ThreatScore döner.
+     */
     public ThreatScore analyzePreLogin(String ip, String username, String hostname, int port, int protocol) {
+        // Doğrulanmış oyuncu bypass
+        if (engine.isVerified(ip)) {
+            return new ThreatScore();
+        }
+
         NicknameBlocker.NicknameCheckResult nickResult = nicknameBlocker.check(username);
         if (nickResult.isBlocked()) {
             ThreatScore score = new ThreatScore();
@@ -65,16 +81,18 @@ public class VelocityAntiBotModule extends VelocityModule {
             score.setJoinPatternScore(100);
             score.setGeoScore(100);
             score.setProtocolScore(100);
-            score.calculate(); // Should result in 100
+            score.calculate();
             return score;
         }
-        
+
         engine.recordConnection(ip);
         return engine.analyze(ip, username, null, hostname, port, protocol);
     }
 
     public void recordBrand(String ip, String brand) {
-        engine.analyze(ip, null, brand, null, 0, 0);
+        if (!engine.isVerified(ip)) {
+            engine.analyze(ip, null, brand, null, 0, 0);
+        }
     }
 
     public void recordJoin(String ip) { engine.recordJoin(ip); }
@@ -83,6 +101,15 @@ public class VelocityAntiBotModule extends VelocityModule {
     public boolean isHighRisk(String ip) { return engine.isHighRisk(ip); }
     public boolean isMediumRisk(String ip) { return engine.isMediumRisk(ip); }
     public ThreatScore getScore(String ip) { return engine.getScore(ip); }
+
+    /** IP'yi doğrulanmış oyuncu olarak işaretle (engine'e yönlendir) */
+    public void markVerified(String ip) { engine.markVerified(ip); }
+
+    /** IP doğrulanmış mı? (engine'e yönlendir) */
+    public boolean isVerified(String ip) { return engine.isVerified(ip); }
+
+    /** Doğrulama statüsünü iptal et (engine'e yönlendir) */
+    public void revokeVerification(String ip) { engine.revokeVerification(ip); }
 
     public boolean isCaptchaEnabled() { return captchaEnabled; }
     public CaptchaVerification getCaptcha() { return captcha; }

@@ -100,8 +100,12 @@ moduller:
   # ─────────────────────────────────────
   bot-koruma:
     aktif: true
+    analiz-penceresi: 15
+    supheli-esik: 8
+    yuksek-risk-esik: 75
+    orta-risk-esik: 45
     tehdit-skoru:
-      esik-uyari: 40
+      esik-uyari: 45
       esik-captcha: 60
       esik-kick: 75
       esik-ban: 90
@@ -168,8 +172,11 @@ moduller:
     kick-mesaji: "<red>VPN veya Proxy kullandığınız tespit edildi.<br><gray>Hata ise yöneticiye başvurun."
     onbellek-sure: 3600
     guven-skoru-esigi: 60
+    konsensus-esigi: 2
+    saldiri-modu-esigi: 40
+    residential-bypass: true
     premium-vpn-politikasi: "izin-ver" # izin-ver, uyar, engelle
-    
+
     provider-zinciri:
       - "local"
       - "cidr"
@@ -210,20 +217,25 @@ moduller:
   # ─────────────────────────────────────
   guvenlik-duvari:
     aktif: true
+    oto-yasak-esik: 150
+    decay-dakika: 5
+    decay-miktar: 10
+    grace-violations: 3
+    basarili-login-bonus: 15
     itibar-skoru:
       baslangic: 50
-      basarili-login-bonus: 5
+      basarili-login-bonus: 15
       basarisiz-login-ceza: 10
       flood-ceza: 20
       exploit-ceza: 30
       decay-saat: 1
-      decay-miktar: 2
+      decay-miktar: 10
       engel-esigi: 15
     otomatik-ban:
       aktif: true
       kurallar:
         - tetikleyici: "bot-tespit"
-          sayi: 3
+          sayi: 5
           sure: "1h"
           sebep: "Tekrarlayan bot tespiti"
     whitelist:

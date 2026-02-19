@@ -7,6 +7,13 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Güvenlik duvarı modülü. Config key: "guvenlik-duvari"
+ *
+ * <p>Güncellemeler (false positive önleme):
+ * <ul>
+ *   <li>Periyodik bakım: 10dk → 5dk</li>
+ *   <li>Decay miktarı: 5 → 10</li>
+ *   <li>{@link #recordViolation}: bağlamsal skor türü iletilir</li>
+ * </ul>
  */
 public class FirewallModule extends VelocityModule {
 
@@ -22,7 +29,7 @@ public class FirewallModule extends VelocityModule {
 
     @Override
     public void onEnable() {
-        int autoBanThreshold = getConfigInt("oto-yasak-esik", 100);
+        int autoBanThreshold = getConfigInt("oto-yasak-esik", 150);
         long autoBanDurationMs = getConfigLong("oto-yasak-sure", 3600) * 1000L;
         int permanentBanThreshold = getConfigInt("kalici-yasak-esik", 500);
 
@@ -37,9 +44,10 @@ public class FirewallModule extends VelocityModule {
         blacklistManager.load();
         whitelistManager.load();
 
+        // 10dk → 5dk (daha sık decay, daha hızlı skor temizleme)
         plugin.getProxyServer().getScheduler()
             .buildTask(plugin, this::periodicMaintenance)
-            .repeat(10, TimeUnit.MINUTES)
+            .repeat(5, TimeUnit.MINUTES)
             .schedule();
     }
 
@@ -84,7 +92,8 @@ public class FirewallModule extends VelocityModule {
     private void periodicMaintenance() {
         tempBanManager.cleanup();
         tempBanManager.save();
-        reputationEngine.decayAll(5);
+        // 5 → 10 puan decay (daha agresif temizleme)
+        reputationEngine.decayAll(10);
     }
 
     public IPReputationEngine getReputationEngine() { return reputationEngine; }

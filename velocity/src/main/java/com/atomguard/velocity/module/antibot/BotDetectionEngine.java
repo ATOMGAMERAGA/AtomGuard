@@ -3,11 +3,19 @@ package com.atomguard.velocity.module.antibot;
 import com.atomguard.velocity.data.ThreatScore;
 
 import java.util.Map;
-import java.util.UUID;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Bileşik bot tespit motoru - ağırlıklı skorlama sistemi.
+ * Bileşik bot tespit motoru — ağırlıklı skorlama + doğrulanmış oyuncu bypass.
+ *
+ * <p>Kritik düzeltmeler (false positive önleme):
+ * <ul>
+ *   <li>Her {@link #analyze} çağrısında {@code score.resetForNewAnalysis()} çağrılır</li>
+ *   <li>Doğrulanmış oyuncular ({@link #markVerified}) bot kontrolüne girmez</li>
+ *   <li>{@link #isHighRisk}: hem skor eşiği hem {@code flagCount >= 2} şartı</li>
+ *   <li>{@link #cleanup}: 10dk'dan eski ve sıfır skorlu girişler temizlenir</li>
+ * </ul>
  */
 public class BotDetectionEngine {
 
@@ -17,6 +25,10 @@ public class BotDetectionEngine {
     private final JoinPatternDetector joinPatternDetector;
 
     private final Map<String, ThreatScore> threatScores = new ConcurrentHashMap<>();
+
+    /** Başarılı login yapan, doğrulanmış oyuncu IP'leri */
+    private final Set<String> verifiedPlayers = ConcurrentHashMap.newKeySet(10000);
+
     private final int highRiskThreshold;
     private final int mediumRiskThreshold;
 
@@ -33,18 +45,36 @@ public class BotDetectionEngine {
         this.mediumRiskThreshold = mediumRiskThreshold;
     }
 
+    /**
+     * IP'yi analiz et ve ThreatScore döndür.
+     * Doğrulanmış oyuncular için sıfır skor döner.
+     */
     public ThreatScore analyze(String ip, String username, String brand,
                                 String hostname, int port, int protocol) {
+        // Doğrulanmış oyuncular bot kontrolüne girmez
+        if (verifiedPlayers.contains(ip)) {
+            return new ThreatScore();
+        }
+
         ThreatScore score = threatScores.computeIfAbsent(ip, k -> new ThreatScore());
+
+        // Her analiz döngüsü başlamadan önce sıfırla — birikim sorununu önler
+        score.resetForNewAnalysis();
+
+        // Zaman bazlı decay uygula
+        score.applyTimeDecay(60_000L, 10);
 
         // Bağlantı hızı analizi
         if (connectionAnalyzer.isSuspicious(ip)) {
-            score.setConnectionRateScore((int)(connectionAnalyzer.getConnectionRate(ip) * 10));
+            score.setConnectionRateScore((int) (connectionAnalyzer.getConnectionRate(ip) * 10));
         }
 
         // Handshake doğrulama
-        HandshakeValidator.ValidationResult hvResult = handshakeValidator.validate(hostname, port, protocol, username);
-        if (!hvResult.valid()) score.setHandshakeScore(50);
+        if (hostname != null || port > 0 || protocol > 0) {
+            HandshakeValidator.ValidationResult hvResult =
+                    handshakeValidator.validate(hostname, port, protocol, username);
+            if (!hvResult.valid()) score.setHandshakeScore(50);
+        }
 
         // Brand analizi
         if (brand != null) {
@@ -61,7 +91,10 @@ public class BotDetectionEngine {
     }
 
     public void recordConnection(String ip) {
-        connectionAnalyzer.recordConnection(ip);
+        // Doğrulanmış IP'lerde sayma yapma
+        if (!verifiedPlayers.contains(ip)) {
+            connectionAnalyzer.recordConnection(ip);
+        }
     }
 
     public void recordJoin(String ip) {
@@ -72,23 +105,64 @@ public class BotDetectionEngine {
         joinPatternDetector.recordQuit(ip);
     }
 
+    /**
+     * Yüksek risk mi? Doğrulanmış oyuncular asla yüksek risk değildir.
+     * flagCount >= 2 şartı da aranır (tek kategoride yüksek skor yeterli değil).
+     */
     public boolean isHighRisk(String ip) {
+        if (verifiedPlayers.contains(ip)) return false;
         ThreatScore score = threatScores.get(ip);
-        return score != null && score.getTotalScore() >= highRiskThreshold;
+        return score != null && score.getTotalScore() >= highRiskThreshold && score.getFlagCount() >= 2;
     }
 
+    /**
+     * Orta risk mi? Doğrulanmış oyuncular asla orta risk değildir.
+     */
     public boolean isMediumRisk(String ip) {
+        if (verifiedPlayers.contains(ip)) return false;
         ThreatScore score = threatScores.get(ip);
-        return score != null && score.getTotalScore() >= mediumRiskThreshold;
+        return score != null && score.getTotalScore() >= mediumRiskThreshold && score.getFlagCount() >= 2;
     }
 
     public ThreatScore getScore(String ip) {
         return threatScores.getOrDefault(ip, new ThreatScore());
     }
 
+    /**
+     * IP'yi doğrulanmış oyuncu olarak işaretle (başarılı login sonrası).
+     */
+    public void markVerified(String ip) {
+        if (verifiedPlayers.size() >= 10000) {
+            verifiedPlayers.remove(verifiedPlayers.iterator().next());
+        }
+        verifiedPlayers.add(ip);
+        threatScores.remove(ip); // Eski skor temizle
+    }
+
+    /**
+     * Doğrulama statüsünü iptal et.
+     */
+    public void revokeVerification(String ip) {
+        verifiedPlayers.remove(ip);
+    }
+
+    /**
+     * IP doğrulanmış mı?
+     */
+    public boolean isVerified(String ip) {
+        return verifiedPlayers.contains(ip);
+    }
+
+    /**
+     * 10dk'dan eski ve sıfır skorlu girişleri temizle.
+     */
     public void cleanup() {
         connectionAnalyzer.cleanup();
         joinPatternDetector.cleanup();
-        threatScores.entrySet().removeIf(e -> e.getValue().getTotalScore() == 0);
+        long cutoff = System.currentTimeMillis() - 600_000L; // 10 dakika
+        threatScores.entrySet().removeIf(e -> {
+            ThreatScore s = e.getValue();
+            return s.getTotalScore() == 0 || s.getLastUpdateTime() < cutoff;
+        });
     }
 }

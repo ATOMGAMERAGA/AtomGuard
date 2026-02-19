@@ -22,7 +22,20 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Bağlantı olayları dinleyicisi - pre-login, login, disconnect.
+ * Bağlantı olayları dinleyicisi — pre-login, login, disconnect.
+ *
+ * <p>Güvenlik kontrolü sırası:
+ * <ol>
+ *   <li>Güvenlik duvarı (blacklist/tempban)</li>
+ *   <li>Hız sınırlaması</li>
+ *   <li>Ülke filtreleme</li>
+ *   <li>Hesap güvenlik duvarı</li>
+ *   <li>DDoS koruma</li>
+ *   <li>Bot tespiti — DOĞRULANMIŞ OYUNCU BYPASS</li>
+ *   <li>VPN kontrolü — KONSENSÜS TABANLI + VERIFIED BYPASS</li>
+ * </ol>
+ *
+ * <p>Login başarısında tüm bypass cache'leri güncellenir.
  */
 public class ConnectionListener {
 
@@ -36,7 +49,7 @@ public class ConnectionListener {
     public void onPreLogin(PreLoginEvent event) {
         String ip = event.getConnection().getRemoteAddress().getAddress().getHostAddress();
         String username = event.getUsername();
-        UUID uuid = event.getUniqueId(); // Available if online mode or proxied correctly
+        UUID uuid = event.getUniqueId();
 
         // 1. Güvenlik duvarı kontrolü
         FirewallModule firewall = plugin.getFirewallModule();
@@ -44,7 +57,8 @@ public class ConnectionListener {
             FirewallModule.FirewallCheckResult fwResult = firewall.check(ip);
             if (fwResult.verdict() == FirewallModule.FirewallVerdict.DENY) {
                 event.setResult(PreLoginEvent.PreLoginComponentResult.denied(
-                    plugin.getMessageManager().buildKickMessage("kick.yasakli", Map.of("ip", ip, "sebep", fwResult.reason()))));
+                    plugin.getMessageManager().buildKickMessage("kick.yasakli",
+                        Map.of("ip", ip, "sebep", fwResult.reason()))));
                 return;
             }
         }
@@ -56,39 +70,32 @@ public class ConnectionListener {
                 plugin.getMessageManager().buildKickMessage("kick.rate-limit", Map.of())));
             return;
         }
-        
-        // 3. Ülke Filtreleme (Yeni Modül)
+
+        // 3. Ülke Filtreleme
         CountryFilterModule countryFilter = plugin.getCountryFilterModule();
         if (countryFilter != null && countryFilter.isEnabled()) {
             CountryFilterResult geoResult = countryFilter.check(ip);
             if (!geoResult.isAllowed()) {
                 event.setResult(PreLoginEvent.PreLoginComponentResult.denied(
-                    plugin.getMessageManager().parse(geoResult.getReason())
-                ));
+                    plugin.getMessageManager().parse(geoResult.getReason())));
                 return;
             }
         }
-        
-        // 4. Hesap Güvenlik Duvarı (Async Check)
+
+        // 4. Hesap Güvenlik Duvarı
         AccountFirewallModule accountFirewall = plugin.getAccountFirewallModule();
         if (accountFirewall != null && accountFirewall.isEnabled()) {
             try {
-                // Determine if premium (Velocity doesn't give isOnlineMode easily here without checking server config or event result?)
-                // Assuming online mode if UUID is present and valid v4? 
-                // For now, pass true or check config.
-                // We'll pass false for isPremium default unless we know better, or check logic inside module handles it.
-                // Actually, checkAsync uses Ashcon which works for premium names.
-                boolean isPremium = true; // Assume premium for check or make configurable
-                
-                AccountFirewallResult accResult = accountFirewall.checkAsync(username, uuid, isPremium).get(2, TimeUnit.SECONDS);
+                boolean isPremium = true;
+                AccountFirewallResult accResult = accountFirewall.checkAsync(username, uuid, isPremium)
+                        .get(2, TimeUnit.SECONDS);
                 if (!accResult.isAllowed()) {
                     event.setResult(PreLoginEvent.PreLoginComponentResult.denied(
-                        plugin.getMessageManager().parse(accResult.getReason())
-                    ));
+                        plugin.getMessageManager().parse(accResult.getReason())));
                     return;
                 }
             } catch (Exception ignored) {
-                // Timeout or error
+                // Timeout veya hata → fail-open
             }
         }
 
@@ -103,31 +110,39 @@ public class ConnectionListener {
             }
         }
 
-        // 6. Bot tespiti
+        // 6. Bot tespiti — DOĞRULANMIŞ OYUNCU BYPASS
         VelocityAntiBotModule antiBot = plugin.getAntiBotModule();
-        if (antiBot != null) {
-            antiBot.analyzePreLogin(ip, username, null, 0, 0);
-            if (antiBot.isHighRisk(ip)) {
-                plugin.getFirewallModule().recordViolation(ip, 20, "bot-tespiti");
-                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(
-                    plugin.getMessageManager().buildKickMessage("kick.bot", Map.of())));
-                return;
+        if (antiBot != null && antiBot.isEnabled()) {
+            if (!antiBot.isVerified(ip)) {
+                antiBot.analyzePreLogin(ip, username, null, 0, 0);
+                if (antiBot.isHighRisk(ip)) {
+                    if (firewall != null) {
+                        // 20 → 10 puan, bağlamsal tür "bot-tespiti" (0.7x çarpan)
+                        firewall.recordViolation(ip, 10, "bot-tespiti");
+                    }
+                    event.setResult(PreLoginEvent.PreLoginComponentResult.denied(
+                        plugin.getMessageManager().buildKickMessage("kick.bot", Map.of())));
+                    return;
+                }
             }
         }
 
-        // 7. VPN kontrolü (asenkron, zaman aşımı ile)
+        // 7. VPN kontrolü — KONSENSÜS TABANLI + VERIFIED BYPASS
         VPNDetectionModule vpn = plugin.getVpnModule();
         if (vpn != null && vpn.isEnabled()) {
-            try {
-                // Wait up to 2 seconds for VPN check
-                VPNDetectionModule.DetectionResult vpnResult = vpn.check(ip, false).get(2, TimeUnit.SECONDS);
-                if (vpnResult.isVPN()) {
-                    event.setResult(PreLoginEvent.PreLoginComponentResult.denied(
-                        plugin.getMessageManager().buildKickMessage("kick.vpn", Map.of())));
-                    return;
+            if (!vpn.isVerifiedClean(ip)) {
+                try {
+                    // 3 saniyelik timeout (önceden 2 sn)
+                    VPNDetectionModule.DetectionResult vpnResult = vpn.check(ip, false)
+                            .get(3, TimeUnit.SECONDS);
+                    if (vpnResult.isVPN()) {
+                        event.setResult(PreLoginEvent.PreLoginComponentResult.denied(
+                            plugin.getMessageManager().buildKickMessage("kick.vpn", Map.of())));
+                        return;
+                    }
+                } catch (Exception ignored) {
+                    // VPN kontrolü zaman aşımına uğradı → fail-open (erişilebilirlik öncelikli)
                 }
-            } catch (Exception ignored) {
-                // VPN kontrolü zaman aşımına uğradı, devam et
             }
         }
 
@@ -137,7 +152,24 @@ public class ConnectionListener {
     @Subscribe
     public void onLogin(LoginEvent event) {
         String ip = event.getPlayer().getRemoteAddress().getAddress().getHostAddress();
-        if (plugin.getAntiBotModule() != null) plugin.getAntiBotModule().recordJoin(ip);
+
+        // Başarılı giriş = otomatik doğrulama (tüm sistemlerde)
+        VelocityAntiBotModule antiBot = plugin.getAntiBotModule();
+        if (antiBot != null) {
+            antiBot.markVerified(ip);
+            antiBot.recordJoin(ip);
+        }
+
+        FirewallModule firewall = plugin.getFirewallModule();
+        if (firewall != null) {
+            firewall.getReputationEngine().rewardSuccessfulLogin(ip);
+        }
+
+        VPNDetectionModule vpn = plugin.getVpnModule();
+        if (vpn != null) {
+            vpn.markAsVerifiedClean(ip);
+        }
+
         plugin.getStatisticsManager().increment("total_connections");
         plugin.getLogManager().log("Giriş: " + event.getPlayer().getUsername() + " (" + ip + ")");
     }
@@ -155,9 +187,13 @@ public class ConnectionListener {
     @Subscribe
     public void onBrand(PlayerClientBrandEvent event) {
         String ip = event.getPlayer().getRemoteAddress().getAddress().getHostAddress();
-        if (plugin.getAntiBotModule() != null) {
-            plugin.getAntiBotModule().recordBrand(ip, event.getBrand());
-            if (plugin.getAntiBotModule().isHighRisk(ip)) {
+        VelocityAntiBotModule antiBot = plugin.getAntiBotModule();
+        if (antiBot != null) {
+            // Doğrulanmış oyuncuları atla
+            if (antiBot.isVerified(ip)) return;
+
+            antiBot.recordBrand(ip, event.getBrand());
+            if (antiBot.isHighRisk(ip)) {
                 event.getPlayer().disconnect(
                     plugin.getMessageManager().buildKickMessage("kick.bot", Map.of()));
             }

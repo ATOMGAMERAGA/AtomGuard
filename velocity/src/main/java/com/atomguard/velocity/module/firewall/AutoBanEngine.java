@@ -3,7 +3,10 @@ package com.atomguard.velocity.module.firewall;
 import com.atomguard.velocity.AtomGuardVelocity;
 
 /**
- * Otomatik yasaklama motoru - itibar puanı eşiğini aşan IP'leri yasaklar.
+ * Otomatik yasaklama motoru — itibar puanı eşiğini aşan IP'leri yasaklar.
+ *
+ * <p>Güncelleme: {@link #recordViolation} artık bağlamsal skorlama kullanır
+ * ({@link IPReputationEngine#addContextualScore}).
  */
 public class AutoBanEngine {
 
@@ -49,8 +52,15 @@ public class AutoBanEngine {
         return new BanResult(BanType.NONE, score);
     }
 
+    /**
+     * İhlal kaydet — bağlamsal skor ekler (ihlal türüne göre çarpan uygulanır).
+     *
+     * @param ip          IP adresi
+     * @param scorePoints temel puan
+     * @param reason      ihlal türü (Türkçe key, örn: "bot-tespiti", "exploit")
+     */
     public void recordViolation(String ip, int scorePoints, String reason) {
-        reputationEngine.addScore(ip, scorePoints);
+        reputationEngine.addContextualScore(ip, scorePoints, reason);
         checkAndBan(ip, reason);
     }
 

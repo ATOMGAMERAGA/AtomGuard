@@ -118,3 +118,70 @@ core/src/main/java/com.atomguard
 2. Add it to `AtomGuardAPI` constructor and getter
 3. Implement it in the core module
 4. Wire the implementation in `AtomGuard.initializeAPI()`
+
+## Anti-False-Positive Architecture (Velocity — v1.1.0)
+
+The Velocity module implements a layered false-positive prevention system across VPN detection, bot detection, and IP reputation.
+
+### VPN/Proxy Detection (`module/antivpn/`)
+
+**Multi-provider consensus** (`VPNProviderChain`):
+- Parallel queries to all configured providers with 4-second timeout (fail-open on timeout)
+- `consensusThreshold` (default 2): minimum positive votes to block
+- `confidenceScore` (0–100): weighted average of provider reliability scores
+- Provider weights: local/CIDR=1.0, ip2proxy=0.95, proxycheck=0.90, iphub=0.85, abuseipdb=0.80, dnsbl=0.70, ip-api=0.60
+- **Residential bypass**: if the only positive signal is `hosting=true` (not `proxy=true`) from ip-api and ≤1 provider voted positive → pass (prevents Turkish ISP false positives)
+- Results cached in `VPNResultCache` (TTL: 1 hour)
+
+**`IPApiProvider`**: `proxy=true` only triggers a VPN vote. `hosting=true` alone is flagged as `hostingOnly` and subject to residential bypass.
+
+**Verified clean cache** (`VPNDetectionModule.verifiedCleanIPs`): IPs that passed VPN check or logged in successfully are cached (max 10 000). They skip re-checking entirely.
+
+### Bot Detection (`module/antibot/`)
+
+**Per-analysis score reset** (`ThreatScore.resetForNewAnalysis()`): All sub-scores are zeroed before each analysis cycle, preventing unbounded accumulation across reconnects.
+
+**Single-category penalty reduction** (`ThreatScore.calculate()`): If only 1 category flags (flagCount ≤ 1), the raw score is multiplied by 0.60 — a single high sub-score alone cannot trigger a block.
+
+**Risk thresholds require multiple flags** (`isHighRisk()` / `isMediumRisk()`): Both require `flagCount >= 2` in addition to the score threshold, preventing single-vector false positives.
+
+**Suspicious connection threshold** (`ConnectionAnalyzer`): Minimum enforced at 8 (not configurable below this). 5-second grace period after first connection.
+
+**Join/quit pattern thresholds** (`JoinPatternDetector`): `maxJoinsInWindow` ≥ 8, `maxQuitsBeforeSuspect` ≥ 15. Quit counter decays by 3 every 10 minutes.
+
+**Verified player cache** (`BotDetectionEngine.verifiedPlayers`): Players who successfully logged in are marked verified (max 10 000). Verified IPs skip connection recording and bot analysis entirely.
+
+### IP Reputation & Auto-Ban (`module/firewall/`)
+
+**Contextual scoring** (`IPReputationEngine.addContextualScore()`): Violation type multipliers:
+- `bot-tespiti` → 0.7× (high false-positive risk)
+- `supheli-ip` → 0.5×
+- `vpn-tespit` → 1.0×
+- `exploit` → 1.5×
+- `flood` → 1.2×
+- `crash-girisimi` → 2.0×
+
+**Verified IP discount**: Verified IPs receive 50% of the computed penalty.
+
+**Grace period** (`shouldAutoBan()`): First 3 violations do not trigger auto-ban regardless of score.
+
+**Auto-ban threshold**: Minimum enforced at 150 (not configurable below this).
+
+**Successful login reward** (`rewardSuccessfulLogin()`): −15 points + marks IP as verified.
+
+**Faster decay** (`FirewallModule`): Maintenance runs every 5 minutes (was 10), decaying 10 points per cycle (was 5).
+
+### Connection Flow (`listener/ConnectionListener`)
+
+Pre-login check order:
+1. Firewall (blacklist/tempban)
+2. Rate limit
+3. Country filter
+4. Account firewall
+5. DDoS protection
+6. **Bot detection — verified players bypass entirely**
+7. **VPN detection — verified clean IPs bypass, 3-second timeout, fail-open**
+
+On successful login: `antiBot.markVerified(ip)` + `reputationEngine.rewardSuccessfulLogin(ip)` + `vpn.markAsVerifiedClean(ip)`
+
+Brand event: verified players are skipped.
