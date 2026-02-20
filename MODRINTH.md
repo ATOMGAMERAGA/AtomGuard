@@ -445,7 +445,7 @@ Available events: `ExploitBlockedEvent` · `AttackModeToggleEvent` · `PlayerRep
 
 <br>
 
-<img src="https://r.resimlink.com/pTtW512LDN9.png" alt="AtomGuard" width="48">
+<img src="https://r.resimlink.com/O3oeN.png" alt="ATOMLAND Studios" width="180">
 
 <br>
 
