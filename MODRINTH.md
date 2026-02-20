@@ -124,7 +124,7 @@ Threat score built from **7 weighted behavioral signals:**
 
 <br>
 
-### 🌐 VPN & Proxy Detection — 7-Provider Chain
+### 🌐 VPN & Proxy Detection
 
 Parallel queries with **consensus voting** — minimum 2 positive hits required to block. Fail-open on timeout, so legitimate players are never affected by a slow API.
 
@@ -151,7 +151,7 @@ Parallel queries with **consensus voting** — minimum 2 positive hits required 
 
 <br>
 
-### 🌍 Geo Filtering · 🔒 Firewall · ⚡ IPTables
+### 🌍 Additional Protections
 
 <details>
 <summary><b>🌍 Country / Geo Filtering</b></summary>
@@ -297,7 +297,7 @@ Block IPs at the **kernel level** — bypasses the JVM entirely for the fastest 
 
 <br>
 
-### 🤖 AtomShield™ Core — Heuristic Bot Detection
+### 🤖 AtomShield™ Core
 
 <div align="center">
 
