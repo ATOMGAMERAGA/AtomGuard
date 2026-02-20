@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/ATOMGAMERAGA/AtomGuard/releases/latest">
-    <img src="https://img.shields.io/github/v/release/ATOMGAMERAGA/AtomGuard?style=flat-square&color=5865F2&label=latest" alt="Latest Release">
+    <img src="https://img.shields.io/github/v/release/ATOMGAMERAGA/AtomGuard?style=flat-square&color=5865F2" alt="Latest Release">
   </a>
   <a href="https://github.com/ATOMGAMERAGA/AtomGuard/actions">
     <img src="https://img.shields.io/github/actions/workflow/status/ATOMGAMERAGA/AtomGuard/build.yml?branch=main&style=flat-square&label=build" alt="Build">
