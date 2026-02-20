@@ -30,7 +30,7 @@
 
 <div align="center">
 
-## 🗺️ Full Attack Surface Coverage
+## 🗺️ Coverage
 
 </div>
 
@@ -82,7 +82,7 @@ AtomGuard defends every stage of the connection lifecycle — from the very firs
 
 <br>
 
-### 🤖 Bot Detection — AtomShield™
+### 🤖 Bot Detection
 
 Threat score built from **7 weighted behavioral signals:**
 
@@ -225,7 +225,7 @@ Block IPs at the **kernel level** — bypasses the JVM entirely for the fastest 
 
 <div align="center">
 
-## 🔨 Core Plugin — Paper 1.21.4
+## 🔨 Core Plugin
 
 *44+ modules for crash fixes, exploit patches, and bot detection*
 
