@@ -1,12 +1,14 @@
 package com.atomguard.velocity.module;
 
+import com.atomguard.api.module.IModule;
 import com.atomguard.velocity.AtomGuardVelocity;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-public abstract class VelocityModule {
+public abstract class VelocityModule implements IModule {
 
     protected final AtomGuardVelocity plugin;
     protected final String name;
@@ -39,10 +41,36 @@ public abstract class VelocityModule {
     protected void onEnable() {}
     protected void onDisable() {}
 
-    public String getName() { return name; }
+    @Override
+    public @NotNull String getName() { return name; }
+    
+    @Override
+    public @NotNull String getDescription() {
+        return "AtomGuard Velocity protection module: " + name;
+    }
+
+    @Override
     public boolean isEnabled() { return enabled; }
+    
+    @Override
     public long getBlockedCount() { return blockedCount.get(); }
+    
     protected void incrementBlocked() { blockedCount.incrementAndGet(); }
+
+    /** Bu modülün bağımlı olduğu modül isimleri */
+    public java.util.List<String> getDependencies() {
+        return java.util.List.of();
+    }
+
+    /** Bu modülün etkinleştirme sırası (düşük = önce) */
+    public int getPriority() {
+        return 100;
+    }
+
+    /** Yapılandırma yenilendiğinde çağrılır. */
+    public void onConfigReload() {
+        // Alt sınıflar override edebilir
+    }
 
     protected boolean isAttackMode() { return plugin.isAttackMode(); }
 

@@ -67,8 +67,10 @@ public class RedisBridge {
             return t;
         });
         subscriber.submit(() -> {
+            int attempt = 0;
             while (running) {
                 try (Jedis jedis = pool.getResource()) {
+                    attempt = 0; // Başarılı bağlantıda deneme sayısını sıfırla
                     jedis.subscribe(new JedisPubSub() {
                         @Override
                         public void onMessage(String channel, String message) {
@@ -77,8 +79,10 @@ public class RedisBridge {
                     }, CHANNEL);
                 } catch (Exception e) {
                     if (running) {
-                        logger.warn("Redis subscriber hatası, yeniden bağlanıyor: {}", e.getMessage());
-                        try { Thread.sleep(5000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+                        long delay = Math.min(5000L * (1L << attempt), 60_000L); // Max 60sn
+                        logger.warn("Redis subscriber hatası, {} ms sonra yeniden bağlanıyor (deneme {}): {}", delay, attempt + 1, e.getMessage());
+                        try { Thread.sleep(delay); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+                        attempt++;
                     }
                 }
             }

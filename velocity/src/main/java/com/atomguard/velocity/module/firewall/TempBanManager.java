@@ -84,6 +84,10 @@ public class TempBanManager {
         bans.entrySet().removeIf(e -> e.getValue().expiry() < now);
     }
 
+    public java.util.Set<String> getBannedIPs() {
+        return java.util.Collections.unmodifiableSet(bans.keySet());
+    }
+
     public int size() { return bans.size(); }
 
     record BanEntry(long expiry, String reason) {}

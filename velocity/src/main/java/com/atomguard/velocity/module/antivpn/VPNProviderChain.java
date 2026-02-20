@@ -253,7 +253,7 @@ public class VPNProviderChain {
         return cachedCache;
     }
 
-    private final VPNResultCache cachedCache = new VPNResultCache(3600_000L);
+    private final VPNResultCache cachedCache = new VPNResultCache(3600_000L, 10000);
 
     /**
      * Dışarıdan cache enjeksiyonu için.
@@ -269,6 +269,28 @@ public class VPNProviderChain {
 
     public void close() {
         ip2Proxy.close();
+    }
+
+    public void cleanup() {
+        if (cachedCache != null) cachedCache.cleanup();
+    }
+
+    /**
+     * Senkron VPN kontrolü - Sadece cache, yerel liste ve CIDR kontrolü yapar.
+     * Ağ sorgusu yapmaz.
+     */
+    public boolean isVPN(String ip) {
+        if (isPrivateOrLoopback(ip)) return false;
+        
+        // Cache
+        VPNResultCache.CacheResult cached = resultCache().get(ip);
+        if (cached != null) return cached.isVPN();
+
+        // Yerel listeler
+        if (localList.isProxy(ip)) return true;
+        if (cidrBlocker.isBlocked(ip)) return true;
+
+        return false;
     }
 
     /**

@@ -1,58 +1,99 @@
 package com.atomguard.velocity.module.antiddos;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Kayan pencere ile IP başına bağlantı hız sınırlaması.
+ * IP başına bağlantı hız sınırlayıcı (1 dakikalık pencere).
+ * <p>
+ * Caffeine cache sayesinde otomatik temizlenir — memory leak yok.
+ * Saldırı modunda limit yarıya düşer.
+ * AttackLevel tabanlı dinamik limit desteği mevcuttur.
  */
 public class ConnectionThrottler {
 
     private final int limitPerMinute;
-    private final Map<String, Deque<Long>> windows = new ConcurrentHashMap<>();
 
+    /**
+     * IP → dakikadaki bağlantı sayısı.
+     * TTL: 70 saniye (1 dakika pencere + tolerans)
+     */
+    private final Cache<String, AtomicInteger> minuteCounters = Caffeine.newBuilder()
+            .expireAfterWrite(70, TimeUnit.SECONDS)
+            .maximumSize(500_000)
+            .build();
+
+    /**
+     * @param limitPerMinute IP başına 1 dakikadaki maksimum bağlantı sayısı
+     */
     public ConnectionThrottler(int limitPerMinute) {
         this.limitPerMinute = limitPerMinute;
     }
 
+    /**
+     * Normal modda bağlantı denemesi.
+     *
+     * @param ip Kaynak IP
+     * @return true ise izin verildi
+     */
     public boolean tryConnect(String ip) {
         return check(ip, limitPerMinute);
     }
 
+    /**
+     * Saldırı modunda bağlantı denemesi (limit yarıya düşer).
+     *
+     * @param ip Kaynak IP
+     * @return true ise izin verildi
+     */
     public boolean tryConnectAttackMode(String ip) {
-        return check(ip, limitPerMinute / 2);
+        int attackLimit = Math.max(1, limitPerMinute / 2);
+        return check(ip, attackLimit);
+    }
+
+    /**
+     * Belirtilen limitle bağlantı denemesi (AttackLevel'e göre dinamik).
+     *
+     * @param ip    Kaynak IP
+     * @param limit Uygulanan limit
+     * @return true ise izin verildi
+     */
+    public boolean tryConnectWithLimit(String ip, int limit) {
+        return check(ip, limit);
     }
 
     private boolean check(String ip, int limit) {
-        long now = System.currentTimeMillis();
-        long windowStart = now - 60_000L;
-        Deque<Long> times = windows.computeIfAbsent(ip, k -> new ArrayDeque<>());
-        synchronized (times) {
-            while (!times.isEmpty() && times.peekFirst() < windowStart) times.pollFirst();
-            if (times.size() >= limit) return false;
-            times.addLast(now);
-            return true;
-        }
+        AtomicInteger counter = minuteCounters.get(ip, k -> new AtomicInteger(0));
+        return counter.incrementAndGet() <= limit;
     }
 
-    public void cleanup() {
-        long windowStart = System.currentTimeMillis() - 60_000L;
-        windows.entrySet().removeIf(e -> {
-            synchronized (e.getValue()) {
-                while (!e.getValue().isEmpty() && e.getValue().peekFirst() < windowStart) e.getValue().pollFirst();
-                return e.getValue().isEmpty();
-            }
-        });
-    }
-
+    /**
+     * IP'nin mevcut dakikadaki bağlantı sayısını döndür.
+     */
     public int getConnectionCount(String ip) {
-        Deque<Long> times = windows.get(ip);
-        if (times == null) return 0;
-        long windowStart = System.currentTimeMillis() - 60_000L;
-        synchronized (times) {
-            return (int) times.stream().filter(t -> t >= windowStart).count();
-        }
+        AtomicInteger c = minuteCounters.getIfPresent(ip);
+        return c != null ? c.get() : 0;
+    }
+
+    /**
+     * IP sayacını sıfırla.
+     */
+    public void reset(String ip) {
+        minuteCounters.invalidate(ip);
+    }
+
+    /**
+     * Manuel temizlik — Caffeine otomatik temizler; compatibility için korunur.
+     */
+    public void cleanup() {
+        minuteCounters.cleanUp();
+    }
+
+    /** Takip edilen IP sayısı. */
+    public long getTrackedIPCount() {
+        return minuteCounters.estimatedSize();
     }
 }

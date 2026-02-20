@@ -177,12 +177,12 @@ Providers are queried in order — stops as soon as a verdict is reached:
 
 ### Paper Server
 1. Place [PacketEvents](https://modrinth.com/plugin/packetevents) in your `plugins/` folder.
-2. Place `AtomGuard-core-1.0.0.jar` in your `plugins/` folder.
+2. Place `AtomGuard-core-1.1.0.jar` in your `plugins/` folder.
 3. Start the server — config files are generated automatically.
 4. Configure `plugins/AtomGuard/config.yml`.
 
 ### Velocity Proxy
-1. Place `AtomGuard-velocity-1.0.0.jar` in the Velocity `plugins/` folder.
+1. Place `AtomGuard-velocity-1.1.0.jar` in the Velocity `plugins/` folder.
 2. Start the proxy — config files are generated automatically.
 3. Configure `plugins/atomguard-velocity/config.yml`.
 4. If using Redis, enable the `redis` section on both sides.
@@ -212,7 +212,7 @@ Providers are queried in order — stops as soon as a verdict is reached:
 <dependency>
     <groupId>com.atomguard</groupId>
     <artifactId>AtomGuard-api</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -242,8 +242,8 @@ public void onExploitBlocked(ExploitBlockedEvent event) {
 git clone https://github.com/ATOMGAMERAGA/AtomGuard.git
 cd AtomGuard
 mvn clean package -DskipTests
-# Core output:     core/target/AtomGuard-1.0.0.jar
-# Velocity output: velocity/target/AtomGuard-velocity-1.0.0.jar
+# Core output:     core/target/AtomGuard-1.1.0.jar
+# Velocity output: velocity/target/AtomGuard-velocity-1.1.0.jar
 ```
 
 ---

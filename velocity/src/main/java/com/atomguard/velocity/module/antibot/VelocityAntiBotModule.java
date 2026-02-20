@@ -30,6 +30,9 @@ public class VelocityAntiBotModule extends VelocityModule {
     }
 
     @Override
+    public int getPriority() { return 50; }
+
+    @Override
     public void onEnable() {
         int windowSec = getConfigInt("analiz-penceresi", 15);
         int suspiciousThreshold = getConfigInt("supheli-esik", 8);
@@ -103,7 +106,35 @@ public class VelocityAntiBotModule extends VelocityModule {
     public ThreatScore getScore(String ip) { return engine.getScore(ip); }
 
     /** IP'yi doğrulanmış oyuncu olarak işaretle (engine'e yönlendir) */
-    public void markVerified(String ip) { engine.markVerified(ip); }
+    public void markVerified(String ip) { 
+        if (!engine.isVerified(ip)) {
+            markVerifiedLocal(ip);
+
+            // 2. Redis Sync
+            if (plugin.getBackendCommunicator() != null) {
+                plugin.getBackendCommunicator().broadcastPlayerVerified("Unknown", ip);
+            }
+
+            // 3. Velocity Event
+            if (plugin.getEventBus() != null) {
+                plugin.getEventBus().firePlayerVerified(ip, "Unknown");
+            }
+        }
+    }
+
+    public void markVerifiedLocal(String ip) {
+        engine.markVerified(ip);
+        if (plugin.getAuditLogger() != null) {
+            plugin.getAuditLogger().log(com.atomguard.velocity.audit.AuditLogger.EventType.PLAYER_VERIFIED, ip, null, "antibot", "Verified", com.atomguard.velocity.audit.AuditLogger.Severity.INFO);
+        }
+    }
+
+    @Override
+    public void onConfigReload() {
+        onDisable();
+        onEnable();
+        logger.info("Anti-Bot yapılandırması dinamik olarak yenilendi.");
+    }
 
     /** IP doğrulanmış mı? (engine'e yönlendir) */
     public boolean isVerified(String ip) { return engine.isVerified(ip); }

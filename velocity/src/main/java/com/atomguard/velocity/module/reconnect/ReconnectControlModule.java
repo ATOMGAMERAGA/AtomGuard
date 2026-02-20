@@ -22,6 +22,13 @@ public class ReconnectControlModule extends VelocityModule {
     }
 
     @Override
+    public void onConfigReload() {
+        onDisable();
+        onEnable();
+        logger.info("Reconnect Control yapılandırması dinamik olarak yenilendi.");
+    }
+
+    @Override
     public void onEnable() {
         cleanupTask = plugin.getProxyServer().getScheduler()
                 .buildTask(plugin, tracker::cleanup)
@@ -40,6 +47,10 @@ public class ReconnectControlModule extends VelocityModule {
         plugin.getProxyServer().getEventManager().unregisterListener(plugin, this);
         tracker.clear();
         logger.info("Reconnect Control module disabled.");
+    }
+
+    public void cleanup() {
+        if (tracker != null) tracker.cleanup();
     }
 
     @Subscribe

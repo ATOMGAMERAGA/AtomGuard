@@ -7,12 +7,19 @@ prefix: "<gradient:#00d4ff:#00ff88>AtomGuard</gradient> <dark_gray>»</dark_gray
 
 kick:
   ddos: "<red>Sunucumuz şu anda saldırı altında. Lütfen daha sonra tekrar deneyin.</red>"
+  ddos-seviye: "<red>Sunucu <bold>{seviye}</bold> saldırı seviyesinde. Lütfen daha sonra tekrar deneyin.</red>"
+  ddos-subnet: "<red>Ağınızdan çok sayıda şüpheli bağlantı tespit edildi.</red>"
+  ddos-parmak-izi: "<red>Bağlantı profili bot aktivitesiyle eşleşti.</red>"
+  ddos-itibar: "<red>IP adresinizin güven puanı yetersiz. Lütfen daha sonra tekrar deneyin.</red>"
+  ddos-slot: "<red>Saldırı modu aktif. Yalnızca doğrulanmış oyuncular bağlanabilir.</red>"
   bot: "<red>Bot olarak algılandınız. Lütfen daha sonra tekrar deneyin.</red>"
   vpn: "<red>VPN veya Proxy kullanımı bu sunucuda yasaktır.<br><gray>Hata ise yöneticiye başvurun.</gray>"
-  rate-limit: "<red>Çok fazla bağlantı isteği! <gray>Lütfen bir süre bekleyin.</gray>"
+  rate-limit: "<red>Çok fazla bağlantı isteği! <gray>Lütfen {sure} saniye sonra tekrar deneyin.</gray>"
+  trust-score: "<red>Bağlantı düşük güven skoru ({score}/{threshold}) nedeniyle reddedildi."
   yasakli: "<red>IP adresiniz kara listede.<br><gray>Sebep: <white>{sebep}</white></gray>"
   tempban: "<red>Geçici olarak engellendiniz.<br><gray>Kalan süre: <white>{sure}</white></gray>"
   protocol: "<red>Desteklenmeyen oyun sürümü.<br><gray>İzin verilen: <white>{min} - {max}</white></gray>"
+  genel: "<red>Bağlantı reddedildi. Lütfen daha sonra tekrar deneyin.</red>"
 
 # IPTables Entegrasyonu
 iptables:

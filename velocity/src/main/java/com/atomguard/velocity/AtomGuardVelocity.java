@@ -1,9 +1,14 @@
 package com.atomguard.velocity;
 
+import com.atomguard.api.AtomGuardAPI;
+import com.atomguard.velocity.adapter.VelocityModuleManagerAdapter;
+import com.atomguard.velocity.adapter.VelocityReputationAdapter;
+import com.atomguard.velocity.adapter.VelocityStatisticsAdapter;
 import com.atomguard.velocity.command.AtomGuardVelocityCommand;
 import com.atomguard.velocity.communication.BackendCommunicator;
 import com.atomguard.velocity.config.VelocityConfigManager;
 import com.atomguard.velocity.config.VelocityMessageManager;
+import com.atomguard.velocity.event.VelocityEventBus;
 import com.atomguard.velocity.listener.*;
 import com.atomguard.velocity.manager.*;
 import com.atomguard.velocity.module.antiddos.DDoSProtectionModule;
@@ -13,6 +18,7 @@ import com.atomguard.velocity.module.firewall.FirewallModule;
 import com.atomguard.velocity.module.ratelimit.GlobalRateLimitModule;
 import com.atomguard.velocity.module.protocol.ProtocolValidationModule;
 import com.atomguard.velocity.module.exploit.ProxyExploitModule;
+import com.atomguard.velocity.storage.VelocityStorageProvider;
 
 // New Modules
 import com.atomguard.velocity.module.iptables.IPTablesModule;
@@ -48,6 +54,7 @@ public class AtomGuardVelocity {
     private final ProxyServer server;
     private final Logger logger;
     private final Path dataDirectory;
+    private static AtomGuardVelocity instance;
 
     private VelocityConfigManager configManager;
     private VelocityMessageManager messageManager;
@@ -56,6 +63,16 @@ public class AtomGuardVelocity {
     private VelocityAlertManager alertManager;
     private VelocityModuleManager moduleManager;
     private BackendCommunicator backendCommunicator;
+    private VelocityStorageProvider storageProvider;
+    private VelocityEventBus eventBus;
+    private com.atomguard.velocity.audit.AuditLogger auditLogger;
+    private com.atomguard.velocity.pipeline.ConnectionPipeline connectionPipeline;
+    private AttackAnalyticsManager attackAnalyticsManager;
+    private com.atomguard.velocity.metrics.PrometheusExporter prometheusExporter;
+    private AttackModeManager attackModeManager;
+    private BehaviorManager behaviorManager;
+    private com.atomguard.velocity.data.ConnectionHistory connectionHistory;
+    private volatile boolean dataLoaded = false;
 
     // Modüller
     private DDoSProtectionModule ddosModule;
@@ -83,7 +100,10 @@ public class AtomGuardVelocity {
         this.server = server;
         this.logger = logger;
         this.dataDirectory = dataDirectory;
+        instance = this;
     }
+
+    public static AtomGuardVelocity getInstance() { return instance; }
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
@@ -94,6 +114,9 @@ public class AtomGuardVelocity {
             registerListeners();
             registerCommands();
             initializeCommunication();
+            initializeAPI();
+            startCleanupScheduler();
+            loadDatabaseData();
 
             // İstatistikleri periyodik kaydet
             server.getScheduler()
@@ -111,18 +134,47 @@ public class AtomGuardVelocity {
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
         logger.info("AtomGuard Velocity kapatılıyor...");
+        
+        // Save current attack snapshot if active
+        if (attackMode && attackAnalyticsManager != null) {
+            attackAnalyticsManager.onAttackEnd();
+        }
+
+        // Persist bans and verified players
+        if (storageProvider != null && storageProvider.isConnected()) {
+            if (firewallModule != null) {
+                firewallModule.getTempBanManager().getBannedIPs().forEach(ip -> {
+                    long remaining = firewallModule.getTempBanManager().getRemainingMs(ip);
+                    String reason = firewallModule.getTempBanManager().getBanReason(ip);
+                    storageProvider.saveBlockedIP(ip, reason != null ? reason : "shutdown-persist", System.currentTimeMillis() + remaining).join();
+                });
+            }
+        }
+
+        // Persist behavioral profiles
+        if (behaviorManager != null) {
+            behaviorManager.getAllProfiles().forEach(profile -> 
+                storageProvider.saveBehaviorProfile(profile));
+        }
+
         if (moduleManager != null) moduleManager.disableAll();
         if (backendCommunicator != null) backendCommunicator.shutdown();
         if (statisticsManager != null) statisticsManager.save();
+        if (auditLogger != null) auditLogger.shutdown();
+        if (prometheusExporter != null) prometheusExporter.stop();
+        if (storageProvider != null) storageProvider.disconnect();
         if (logManager != null) logManager.shutdown();
+        
+        AtomGuardAPI.shutdown();
     }
 
     private void initializeManagers() throws Exception {
         configManager = new VelocityConfigManager(dataDirectory, logger);
         configManager.load();
+        configManager.validateAndMigrate();
 
         messageManager = new VelocityMessageManager(dataDirectory, logger);
-        messageManager.load();
+        messageManager.load(configManager.getString("dil", "tr"));
 
         logManager = new VelocityLogManager(dataDirectory, logger);
         logManager.initialize();
@@ -135,8 +187,85 @@ public class AtomGuardVelocity {
         boolean discordEnabled = configManager.getBoolean("discord-webhook.aktif", false);
         alertManager.configure(webhookUrl, discordEnabled);
 
+        storageProvider = new VelocityStorageProvider(this);
+        try {
+            storageProvider.connect();
+        } catch (Exception e) {
+            logger.error("Depolama bağlantısı kurulamadı: {}", e.getMessage());
+        }
+
+        auditLogger = new com.atomguard.velocity.audit.AuditLogger(storageProvider);
+        connectionPipeline = new com.atomguard.velocity.pipeline.ConnectionPipeline();
         moduleManager = new VelocityModuleManager(logger);
+        eventBus = new VelocityEventBus(this);
+        attackAnalyticsManager = new AttackAnalyticsManager(this);
+        attackModeManager = new AttackModeManager(this);
+        behaviorManager = new BehaviorManager(this);
+        connectionHistory = new com.atomguard.velocity.data.ConnectionHistory();
+
+        if (configManager.getBoolean("metrikler.prometheus.aktif", false)) {
+            prometheusExporter = new com.atomguard.velocity.metrics.PrometheusExporter(this);
+            try {
+                prometheusExporter.start(configManager.getInt("metrikler.prometheus.port", 9225));
+            } catch (Exception e) {
+                logger.error("Prometheus metrik sunucusu başlatılamadı: {}", e.getMessage());
+            }
+        }
     }
+
+    private void initializeAPI() {
+        VelocityModuleManagerAdapter moduleAdapter = new VelocityModuleManagerAdapter(moduleManager);
+        VelocityStatisticsAdapter statsAdapter = new VelocityStatisticsAdapter(statisticsManager);
+        VelocityReputationAdapter reputationAdapter = new VelocityReputationAdapter(this);
+
+        new AtomGuardAPI(moduleAdapter, storageProvider, statsAdapter, reputationAdapter, "1.0.0");
+        logger.info("AtomGuard API başlatıldı (Velocity).");
+    }
+
+    private void startCleanupScheduler() {
+        server.getScheduler().buildTask(this, () -> {
+            logger.debug("Periyodik bellek temizliği başlatıldı...");
+            
+            if (behaviorManager != null) behaviorManager.cleanup();
+            if (rateLimitModule != null) rateLimitModule.cleanup();
+            if (reconnectControlModule != null) reconnectControlModule.cleanup();
+            
+            logger.info("Periyodik sistem bakımı ve bellek temizliği tamamlandı.");
+        }).repeat(10, java.util.concurrent.TimeUnit.MINUTES).schedule();
+    }
+
+    private void loadDatabaseData() {
+        if (storageProvider == null || !storageProvider.isConnected()) return;
+
+        // 1. Banları Yükle
+        storageProvider.loadActiveBansWithExpiry().thenAccept(bans -> {
+            if (firewallModule != null && bans != null) {
+                bans.forEach((ip, expiry) -> {
+                    long duration = expiry - System.currentTimeMillis();
+                    if (duration > 0 || expiry == 0) {
+                        firewallModule.getTempBanManager().ban(ip, duration > 0 ? duration : 31536000000L, "DB-Restore");
+                    }
+                });
+                logger.info("Veritabanından {} aktif yasak yüklendi.", bans.size());
+            }
+        });
+
+        // 2. Doğrulanmış Oyuncuları Yükle
+        storageProvider.loadVerifiedPlayers().thenAccept(ips -> {
+            if (antiBotModule != null && ips != null) {
+                ips.forEach(ip -> antiBotModule.markVerified(ip));
+                logger.info("Veritabanından {} doğrulanmış oyuncu yüklendi.", ips.size());
+            }
+        });
+
+        // 3. Davranış Profillerini Yükle
+        if (behaviorManager != null) behaviorManager.loadFromDatabase();
+        
+        dataLoaded = true;
+        logger.info("AtomGuard güvenlik verileri tamamen yüklendi ve koruma %100 kapasiteye ulaştı.");
+    }
+
+    public boolean isDataLoaded() { return dataLoaded; }
 
     private void registerModules() {
         ddosModule = new DDoSProtectionModule(this);
@@ -172,6 +301,16 @@ public class AtomGuardVelocity {
         moduleManager.register(reconnectControlModule);
         moduleManager.register(passwordCheckModule);
         moduleManager.register(latencyCheckModule);
+
+        // Register Pipeline Checks
+        connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.ProtocolCheck(this));
+        connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.FirewallCheck(this));
+        connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.TrustScoreCheck(this));
+        connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.RateLimitCheck(this));
+        connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.DDoSCheck(this));
+        connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.AccountFirewallCheck(this));
+        connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.AntiBotCheck(this));
+        connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.VPNCheck(this));
     }
 
     private void registerListeners() {
@@ -199,13 +338,23 @@ public class AtomGuardVelocity {
     public boolean isAttackMode() { return attackMode; }
 
     public void setAttackMode(boolean state) {
+        setAttackMode(state, 0);
+    }
+
+    public void setAttackMode(boolean state, int triggerRate) {
         if (this.attackMode == state) return;
         this.attackMode = state;
         if (state) {
             attackModeStartTime = System.currentTimeMillis();
             logManager.warn("SALDIRI MODU AKTİF!");
+            if (attackAnalyticsManager != null) {
+                attackAnalyticsManager.onAttackStart(triggerRate);
+            }
         } else {
             logManager.log("Saldırı modu sona erdi.");
+            if (attackAnalyticsManager != null) {
+                attackAnalyticsManager.onAttackEnd();
+            }
         }
         // Backend'e bildir
         if (backendCommunicator != null) backendCommunicator.broadcastAttackMode(state);
@@ -224,6 +373,14 @@ public class AtomGuardVelocity {
     public VelocityAlertManager getAlertManager() { return alertManager; }
     public VelocityModuleManager getModuleManager() { return moduleManager; }
     public BackendCommunicator getBackendCommunicator() { return backendCommunicator; }
+    public VelocityStorageProvider getStorageProvider() { return storageProvider; }
+    public VelocityEventBus getEventBus() { return eventBus; }
+    public com.atomguard.velocity.audit.AuditLogger getAuditLogger() { return auditLogger; }
+    public com.atomguard.velocity.pipeline.ConnectionPipeline getConnectionPipeline() { return connectionPipeline; }
+    public AttackAnalyticsManager getAttackAnalyticsManager() { return attackAnalyticsManager; }
+    public AttackModeManager getAttackModeManager() { return attackModeManager; }
+    public BehaviorManager getBehaviorManager() { return behaviorManager; }
+    public com.atomguard.velocity.data.ConnectionHistory getConnectionHistory() { return connectionHistory; }
 
     public DDoSProtectionModule getDdosModule() { return ddosModule; }
     public VelocityAntiBotModule getAntiBotModule() { return antiBotModule; }

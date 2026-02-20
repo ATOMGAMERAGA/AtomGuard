@@ -1,0 +1,55 @@
+# ╔══════════════════════════════════════════════════════════╗
+# ║           AtomGuard Velocity Message File                ║
+# ║                  English (EN)                            ║
+# ╚══════════════════════════════════════════════════════════╝
+
+prefix: "<gradient:#00d4ff:#00ff88>AtomGuard</gradient> <dark_gray>»</dark_gray> "
+
+kick:
+  ddos: "<red>The server is currently under attack protection. Please try again later.</red>"
+  bot: "<red>Bot activity detected. Please try again in a few minutes.</red>"
+  vpn: "<red>VPN or Proxy usage is not allowed on this server.<br><gray>If this is an error, please contact an admin.</gray>"
+  rate-limit: "<red>Too many connection attempts! <gray>Please wait {sure} seconds before trying again.</gray>"
+  trust-score: "<red>Connection rejected due to low trust score ({score}/{threshold})."
+  yasakli: "<red>Your IP address is blacklisted.<br><gray>Reason: <white>{sebep}</white></gray>"
+  tempban: "<red>You have been temporarily banned.<br><gray>Remaining time: <white>{sure}</white></gray>"
+  protocol: "<red>Unsupported game version.<br><gray>Allowed versions: <white>{min} - {max}</white></gray>"
+
+# IPTables Integration
+iptables:
+  ban-eklendi: "IPTables: {ip} has been blocked for {sure} seconds."
+  ban-kaldirildi: "IPTables: Block on {ip} has been removed."
+  kullanilemiyor: "IPTables integration is unavailable (root permissions required)."
+  hata: "IPTables command failed: {hata}"
+
+# Account Firewall
+hesap-guvenlik-duvari:
+  hesap-yasakli: "Your account has been banned. Reason: {sebep}"
+  hesap-cok-yeni: "Your account is too new. Minimum account age required: {gun} days."
+  cracked-engel: "This server is for licensed accounts only."
+
+# Fast Chat
+hizli-sohbet:
+  rate-limit: "<red>You are sending messages too fast!"
+  tekrar-mesaj: "<red>You cannot send the same message again!"
+  buyuk-harf: "<red>Please avoid using all caps."
+  tekrar-karakter: "<red>Please avoid repeating characters."
+  link-engel: "<red>Link sharing is not allowed."
+
+# Reconnect Control
+yeniden-baglanti:
+  delay: "<gray>Please wait {sure} seconds before connecting..."
+  kick: "<red>Too many connection attempts. Please wait."
+  kisa-oturum: "<red>You are connecting and disconnecting too frequently."
+
+# Latency Check
+gecikme-kontrol:
+  hizli-login: "<red>Login process was abnormally fast (possible bot activity)."
+  yavas-login: "<red>Login process timed out."
+
+# General Messages
+genel:
+  yetki-yok: "<red>You do not have permission to use this command."
+  reload-basarili: "<green>Settings successfully reloaded."
+  bilinmeyen-ulke: "<red>Access from unknown country has been blocked."
+  ulke-yasakli: "<red>Access from your country is not allowed."

@@ -22,6 +22,7 @@ public class VelocityMessageManager {
     private final Path dataDirectory;
     private final Logger logger;
     private CommentedConfigurationNode root;
+    private CommentedConfigurationNode fallbackRoot;
 
     private static final String DEFAULT_PREFIX = "<gray>[<gradient:#FF6B6B:#FF8E53>AtomGuard</gradient>]</gray> ";
 
@@ -30,20 +31,44 @@ public class VelocityMessageManager {
         this.logger = logger;
     }
 
-    public void load() {
+    public void load(String lang) {
         try {
-            Path msgPath = dataDirectory.resolve("messages_tr.yml");
+            // Load primary language
+            Path msgPath = dataDirectory.resolve("messages_" + lang + ".yml");
             if (!Files.exists(msgPath)) {
-                try (InputStream in = getClass().getResourceAsStream("/messages_tr.yml")) {
+                try (InputStream in = getClass().getResourceAsStream("/messages_" + lang + ".yml")) {
                     if (in != null) Files.copy(in, msgPath);
                 }
             }
             if (Files.exists(msgPath)) {
                 root = YamlConfigurationLoader.builder().path(msgPath).build().load();
             }
+
+            // Load TR fallback (always, unless TR is already primary)
+            if (!"tr".equals(lang)) {
+                Path trPath = dataDirectory.resolve("messages_tr.yml");
+                if (!Files.exists(trPath)) {
+                    try (InputStream in = getClass().getResourceAsStream("/messages_tr.yml")) {
+                        if (in != null) Files.copy(in, trPath);
+                    }
+                }
+                if (Files.exists(trPath)) {
+                    fallbackRoot = YamlConfigurationLoader.builder().path(trPath).build().load();
+                }
+            }
+
+            // If primary language file didn't load, use fallback as primary
+            if (root == null && fallbackRoot != null) {
+                root = fallbackRoot;
+                fallbackRoot = null;
+            }
         } catch (IOException e) {
             logger.warn("Mesaj dosyası yüklenemedi, varsayılanlar kullanılıyor: {}", e.getMessage());
         }
+    }
+
+    public Component getMessage(String key) {
+        return getMessage(key, TagResolver.empty());
     }
 
     public Component getMessage(String key, TagResolver... resolvers) {
@@ -78,9 +103,21 @@ public class VelocityMessageManager {
     }
 
     public String getRaw(String key) {
-        if (root == null) return "<red>[Mesaj Yok: " + key + "]</red>";
-        CommentedConfigurationNode node = root.node((Object[]) key.split("\\."));
-        String val = node.getString();
-        return val != null ? val : "<red>[Mesaj Yok: " + key + "]</red>";
+        if (root != null) {
+            CommentedConfigurationNode node = root.node((Object[]) key.split("\\."));
+            String val = node.getString();
+            if (val != null) return val;
+        }
+        // Per-key fallback to TR
+        if (fallbackRoot != null) {
+            CommentedConfigurationNode fallbackNode = fallbackRoot.node((Object[]) key.split("\\."));
+            String fallback = fallbackNode.getString();
+            if (fallback != null) {
+                logger.debug("Eksik mesaj anahtarı '{}' için TR yedek kullanılıyor.", key);
+                return fallback;
+            }
+        }
+        logger.warn("Eksik mesaj anahtarı: {}", key);
+        return "<red>[Missing: " + key + "]</red>";
     }
 }

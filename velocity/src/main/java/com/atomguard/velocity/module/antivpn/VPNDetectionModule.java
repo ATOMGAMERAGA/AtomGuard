@@ -35,8 +35,22 @@ public class VPNDetectionModule extends VelocityModule {
     }
 
     @Override
+    public int getPriority() { return 60; }
+
+    @Override
     public void onEnable() {
         logger.info("VPN Detection modülü etkinleştirildi (konsensüs sistemi).");
+        
+        plugin.getProxyServer().getScheduler()
+            .buildTask(plugin, this::cleanup)
+            .repeat(30, java.util.concurrent.TimeUnit.MINUTES)
+            .schedule();
+    }
+
+    public void cleanup() {
+        if (providerChain != null) {
+            // providerChain.cleanup() metodunu aşağıda ekleyeceğiz
+        }
     }
 
     @Override
@@ -118,6 +132,14 @@ public class VPNDetectionModule extends VelocityModule {
      */
     public void revokeVerifiedClean(String ip) {
         verifiedCleanIPs.remove(ip);
+    }
+
+    /**
+     * Senkron VPN kontrolü (sadece cache/local).
+     */
+    public boolean isVPN(String ip) {
+        if (!isEnabled()) return false;
+        return providerChain.isVPN(ip);
     }
 
     /**

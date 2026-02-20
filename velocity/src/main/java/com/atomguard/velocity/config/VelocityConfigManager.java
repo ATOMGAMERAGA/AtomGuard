@@ -48,10 +48,57 @@ public class VelocityConfigManager {
         lock.writeLock().lock();
         try {
             root = loader.load();
+            validateAndMigrate();
             logger.info("Yapılandırma yeniden yüklendi.");
         } catch (ConfigurateException e) {
             logger.error("Yeniden yükleme hatası: {}", e.getMessage());
         } finally { lock.writeLock().unlock(); }
+    }
+
+    public void validateAndMigrate() {
+        lock.writeLock().lock();
+        try {
+            String version = getString("config-versiyon", "1.0.0");
+            boolean changed = false;
+
+            // Versiyon 1.0.0 -> 1.1.0 Migration
+            if ("1.0.0".equals(version)) {
+                setDefault("vpn-proxy-engelleme.konsensus-esigi", 2);
+                setDefault("vpn-proxy-engelleme.guven-skoru-esigi", 60);
+                setDefault("vpn-proxy-engelleme.residential-bypass", true);
+                setDefault("guvenlik-duvari.decay-dakika", 5);
+                set("config-versiyon", "1.1.0");
+                changed = true;
+                logger.info("Yapılandırma v1.0.0 sürümünden v1.1.0 sürümüne yükseltildi.");
+            }
+
+            // Temel doğrulama uyarıları
+            int consThreshold = getInt("vpn-proxy-engelleme.konsensus-esigi", 2);
+            if (consThreshold < 1 || consThreshold > 6) {
+                logger.warn("Yapılandırma Uyarısı: vpn-proxy-engelleme.konsensus-esigi 1-6 arasında olmalıdır.");
+            }
+
+            if (changed) {
+                loader.save(root);
+            }
+        } catch (ConfigurateException e) {
+            logger.error("Yapılandırma migrasyon hatası: {}", e.getMessage());
+        } finally { lock.writeLock().unlock(); }
+    }
+
+    public void setDefault(String path, Object value) {
+        CommentedConfigurationNode n = node(path);
+        if (n.virtual()) {
+            try {
+                n.set(value);
+            } catch (ConfigurateException ignored) {}
+        }
+    }
+
+    public void set(String path, Object value) {
+        try {
+            node(path).set(value);
+        } catch (ConfigurateException ignored) {}
     }
 
     public boolean getBoolean(String path, boolean def) {

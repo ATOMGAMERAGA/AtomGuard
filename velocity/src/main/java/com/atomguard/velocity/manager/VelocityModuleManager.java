@@ -23,14 +23,25 @@ public class VelocityModuleManager {
     }
 
     public void enableAll() {
-        modules.values().forEach(m -> {
-            try {
-                m.enable();
-                logger.info("Modül aktif: {}", m.getName());
-            } catch (Exception e) {
-                logger.error("Modül başlatılamadı {}: {}", m.getName(), e.getMessage());
-            }
-        });
+        modules.values().stream()
+            .sorted(java.util.Comparator.comparingInt(VelocityModule::getPriority))
+            .forEach(m -> {
+                // Bağımlılık Kontrolü
+                for (String dep : m.getDependencies()) {
+                    VelocityModule depModule = modules.get(dep);
+                    if (depModule == null || !depModule.isEnabled()) {
+                        logger.warn("Modül '{}' aktif edilemedi: bağımlılık '{}' eksik veya devre dışı.", m.getName(), dep);
+                        return;
+                    }
+                }
+                
+                try {
+                    m.enable();
+                    logger.info("Modül aktif: {} (Öncelik: {})", m.getName(), m.getPriority());
+                } catch (Exception e) {
+                    logger.error("Modül başlatılamadı {}: {}", m.getName(), e.getMessage());
+                }
+            });
     }
 
     public void disableAll() {

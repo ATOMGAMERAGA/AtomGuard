@@ -33,6 +33,14 @@ public class AccountFirewallModule extends VelocityModule {
     }
 
     @Override
+    public int getPriority() { return 80; }
+
+    @Override
+    public java.util.List<String> getDependencies() {
+        return java.util.List.of("guvenlik-duvari");
+    }
+
+    @Override
     public void onEnable() {
         plugin.getProxyServer().getEventManager().register(plugin, this);
         logger.info("Account Firewall module enabled.");

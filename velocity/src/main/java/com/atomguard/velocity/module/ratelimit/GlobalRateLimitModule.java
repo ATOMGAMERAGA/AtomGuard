@@ -29,6 +29,20 @@ public class GlobalRateLimitModule extends VelocityModule {
     }
 
     @Override
+    public int getPriority() { return 20; }
+
+    @Override
+    public void onConfigReload() {
+        int connLimit = getConfigInt("baglanti-saniye.ip-basina-max", 3);
+        int pingLimit = getConfigInt("ping-saniye.ip-basina-max", 5);
+        
+        // Sayaçlar sıfırlanabilir (Reload anında küçük bir tolerans), önemli olan yeni limitin devreye girmesi.
+        this.connectionLimiter = new ConnectionRateLimiter(connLimit, 1);
+        this.pingLimiter = new PingRateLimiter(pingLimit, 1);
+        logger.info("Hız sınırlaması ayarları dinamik olarak yenilendi.");
+    }
+
+    @Override
     public void onEnable() {
         int connLimit = getConfigInt("baglanti-saniye.ip-basina-max", 3);
         int pingLimit = getConfigInt("ping-saniye.ip-basina-max", 5);
@@ -51,23 +65,28 @@ public class GlobalRateLimitModule extends VelocityModule {
     }
 
     public boolean allowConnection(String ip) {
-        if (!isEnabled()) return true;
+        return allowConnectionWithInfo(ip).allowed();
+    }
+
+    public ConnectionRateLimiter.RateLimitResult allowConnectionWithInfo(String ip) {
+        if (!isEnabled()) return ConnectionRateLimiter.RateLimitResult.ALLOWED;
 
         // Global Check
         int globalMax = getConfigInt("baglanti-saniye.global-max", 50);
         if (globalConnectionCounter.get() >= globalMax) {
             incrementBlocked();
-            return false; 
+            return new ConnectionRateLimiter.RateLimitResult(false, 1000); 
         }
 
         // IP Check
-        if (!connectionLimiter.allowConnection(ip)) {
+        ConnectionRateLimiter.RateLimitResult result = connectionLimiter.check(ip);
+        if (!result.allowed()) {
             incrementBlocked();
-            return false;
+        } else {
+            globalConnectionCounter.incrementAndGet();
         }
         
-        globalConnectionCounter.incrementAndGet();
-        return true;
+        return result;
     }
 
     public boolean allowPing(String ip) {
@@ -87,6 +106,11 @@ public class GlobalRateLimitModule extends VelocityModule {
         
         globalPingCounter.incrementAndGet();
         return true;
+    }
+
+    public void cleanup() {
+        if (connectionLimiter != null) connectionLimiter.cleanup();
+        if (pingLimiter != null) pingLimiter.cleanup();
     }
 
     private void periodicCleanup() {

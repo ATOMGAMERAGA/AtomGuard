@@ -178,12 +178,12 @@ Tehdidin tipi ve kaynağına göre otomatik provider zinciri:
 
 ### Paper Sunucu
 1. [PacketEvents](https://modrinth.com/plugin/packetevents) pluginini `plugins/` klasörüne atın.
-2. `AtomGuard-core-1.0.0.jar` dosyasını `plugins/` klasörüne atın.
+2. `AtomGuard-core-1.1.0.jar` dosyasını `plugins/` klasörüne atın.
 3. Sunucuyu başlatın — config otomatik oluşturulur.
 4. `plugins/AtomGuard/config.yml` dosyasını yapılandırın.
 
 ### Velocity Proxy
-1. `AtomGuard-velocity-1.0.0.jar` dosyasını Velocity `plugins/` klasörüne atın.
+1. `AtomGuard-velocity-1.1.0.jar` dosyasını Velocity `plugins/` klasörüne atın.
 2. Proxy'yi başlatın — config otomatik oluşturulur.
 3. `plugins/atomguard-velocity/config.yml` dosyasını yapılandırın.
 4. Redis kullanıyorsanız her iki tarafta da `redis` bölümünü etkinleştirin.
@@ -213,7 +213,7 @@ Tehdidin tipi ve kaynağına göre otomatik provider zinciri:
 <dependency>
     <groupId>com.atomguard</groupId>
     <artifactId>AtomGuard-api</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -243,8 +243,8 @@ public void onExploitBlocked(ExploitBlockedEvent event) {
 git clone https://github.com/ATOMGAMERAGA/AtomGuard.git
 cd AtomGuard
 mvn clean package -DskipTests
-# Core çıktı: core/target/AtomGuard-1.0.0.jar
-# Velocity çıktı: velocity/target/AtomGuard-velocity-1.0.0.jar
+# Core çıktı: core/target/AtomGuard-1.1.0.jar
+# Velocity çıktı: velocity/target/AtomGuard-velocity-1.1.0.jar
 ```
 
 ---

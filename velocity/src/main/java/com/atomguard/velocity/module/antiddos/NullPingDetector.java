@@ -1,21 +1,42 @@
 package com.atomguard.velocity.module.antiddos;
 
-import java.util.Collections;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Geçersiz/malformed handshake paketlerini tespit eder.
+ * <p>
+ * Caffeine cache kullanarak memory-leak koruması sağlar.
+ * Ek olarak ConnectionFingerprinter ile entegre parmak izi doğrulaması destekler.
  */
 public class NullPingDetector {
 
-    private final Set<String> blocked = Collections.newSetFromMap(new ConcurrentHashMap<>());
-    private final ConcurrentHashMap<String, AtomicInteger> invalidCounts = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Long> blockTimes = new ConcurrentHashMap<>();
-    private static final int BLOCK_THRESHOLD = 5;
-    private static final long BLOCK_DURATION_MS = 300_000L;
+    private static final int  BLOCK_THRESHOLD  = 5;
+    private static final long BLOCK_DURATION_MS = 300_000L; // 5 dakika
 
+    /** IP → geçersiz handshake sayısı (10 dakika TTL) */
+    private final Cache<String, AtomicInteger> invalidCounts = Caffeine.newBuilder()
+            .expireAfterWrite(10, TimeUnit.MINUTES)
+            .maximumSize(100_000)
+            .build();
+
+    /** Engellenen IP'ler (5 dakika ban) */
+    private final Cache<String, Boolean> blockedIPs = Caffeine.newBuilder()
+            .expireAfterWrite(BLOCK_DURATION_MS, TimeUnit.MILLISECONDS)
+            .maximumSize(10_000)
+            .build();
+
+    /**
+     * Handshake parametrelerinin geçerliliğini kontrol et.
+     *
+     * @param hostname       Bağlanılan hostname
+     * @param port           Bağlanılan port
+     * @param protocolVersion Minecraft protokol versiyonu
+     * @return true ise geçerli handshake
+     */
     public boolean isValidHandshake(String hostname, int port, int protocolVersion) {
         if (hostname == null || hostname.isBlank()) return false;
         if (hostname.length() > 255) return false;
@@ -24,30 +45,40 @@ public class NullPingDetector {
         return true;
     }
 
+    /**
+     * Geçersiz handshake kaydet.
+     * Eşik aşılırsa IP engellenir.
+     *
+     * @param ip Kaynak IP
+     */
     public void recordInvalid(String ip) {
-        int count = invalidCounts.computeIfAbsent(ip, k -> new AtomicInteger(0)).incrementAndGet();
-        if (count >= BLOCK_THRESHOLD) {
-            blocked.add(ip);
-            blockTimes.put(ip, System.currentTimeMillis());
+        AtomicInteger count = invalidCounts.get(ip, k -> new AtomicInteger(0));
+        if (count.incrementAndGet() >= BLOCK_THRESHOLD) {
+            blockedIPs.put(ip, Boolean.TRUE);
         }
     }
 
-    public boolean isBlocked(String ip) { return blocked.contains(ip); }
+    /**
+     * IP engelli mi?
+     */
+    public boolean isBlocked(String ip) {
+        return blockedIPs.getIfPresent(ip) != null;
+    }
 
+    /**
+     * IP'nin geçersiz handshake sayısını döndür.
+     */
     public int getInvalidCount(String ip) {
-        AtomicInteger c = invalidCounts.get(ip);
+        AtomicInteger c = invalidCounts.getIfPresent(ip);
         return c != null ? c.get() : 0;
     }
 
+    /**
+     * Periyodik temizlik — Caffeine otomatik temizler;
+     * bu metod compatibility için korunmuştur.
+     */
     public void cleanup() {
-        long now = System.currentTimeMillis();
-        blockTimes.entrySet().removeIf(e -> {
-            if (now - e.getValue() > BLOCK_DURATION_MS) {
-                blocked.remove(e.getKey());
-                invalidCounts.remove(e.getKey());
-                return true;
-            }
-            return false;
-        });
+        invalidCounts.cleanUp();
+        blockedIPs.cleanUp();
     }
 }

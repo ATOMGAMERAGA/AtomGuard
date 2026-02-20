@@ -3,7 +3,51 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
-## [1.1.0] - 2026-02-19
+## [1.1.0] - 2026-02-20
+
+### 🔥 DDoS Koruma Modülü — Tam Yeniden Yazım (Velocity)
+
+Velocity proxy DDoS koruma motoru sıfırdan yeniden yazıldı. 16 alt sistem, bellek sızıntısı olmayan Caffeine önbellekleri ve 5 kademeli saldırı yönetimi ile.
+
+#### Yeni Alt Sistemler
+
+- **`AttackLevelManager`**: 5 kademeli saldırı seviyesi (NONE → ELEVATED → HIGH → CRITICAL → LOCKDOWN), hysteresis ile ani geçişler engellendi
+- **`SubnetAnalyzer`**: /24 ve /16 subnet bazlı koordineli botnet tespiti, Caffeine önbelleği
+- **`TrafficAnomalyDetector`**: Z-skoru anomali tespiti, yavaş rampa ve nabız saldırısı dedektörü
+- **`ConnectionFingerprinter`**: Bağlantı parmak izi (`protokol|hostname_pattern|timing_class`) ile bot ordusu tespiti
+- **`EnhancedSlowlorisDetector`**: IP başına bekleyen bağlantı izleme, sistem genelinde oran alarmı
+- **`IPReputationTracker`**: DDoS'a özgü itibar skoru (0–100), otomatik 1h/24h ban
+- **`AttackSessionRecorder`**: Tam saldırı oturumu kaydı — tepe CPS, sürü IP'leri, JSON çıktısı
+- **`AttackClassifier`**: 7 saldırı tipi sınıflandırması (VOLUMETRIC, SLOWLORIS, APPLICATION_LAYER…)
+- **`VerifiedPlayerShield`**: CRITICAL/LOCKDOWN seviyesinde doğrulanmış oyunculara garantili slot
+- **`DDoSMetricsCollector`**: Gerçek zamanlı metrikler — CPS ortalamaları, engelleme oranı, bant genişliği tahmini
+- **`DDoSCheck`**: Modüler kontrol pipeline arayüzü, kısa devre desteği
+
+#### Düzeltilen Hatalar
+
+- **`isVerified` bug** (`pipeline/DDoSCheck.java`): `ddos.checkConnection(ip, false)` her zaman `false` gönderiyordu; artık `antiBot.isVerified(ip)` kullanılıyor
+- **`SmartThrottleEngine` bellek sızıntısı**: `connectionCounts` `ConcurrentHashMap` → Caffeine önbelleği (5dk TTL)
+- **`GeoBlocker` reflection**: `DatabaseReader` artık doğrudan MaxMind API ile kullanılıyor
+- **`SynFloodDetector` ani de-escalation**: 10 saniye tutarlı düşük CPS gerekliliği ile hysteresis eklendi
+- **`AttackSnapshot` kullanılmıyordu**: `AttackSessionRecorder` periyodik snapshot alıyor
+
+#### Güncellenen Bileşenler
+
+| Dosya | Değişiklik |
+|---|---|
+| `DDoSProtectionModule.java` | Tamamen yeniden yazıldı — 16 alt sistem entegrasyonu |
+| `RateLimiter.java` | Caffeine önbelleği ile bellek sızıntısı giderildi |
+| `ConnectionThrottler.java` | Caffeine 70s TTL, sınır güncelleme API'si |
+| `SmartThrottleEngine.java` | `AttackLevelManager` entegrasyonu, Caffeine connectionCounts |
+| `SynFloodDetector.java` | Anomali dedektörü, oturum kaydedici, sınıflandırıcı bağlantıları |
+| `PingFloodDetector.java` | MOTD önbelleği Caffeine'e taşındı |
+| `NullPingDetector.java` | `invalidCounts` ve `blockedIPs` Caffeine'e taşındı |
+| `GeoBlocker.java` | Reflection kaldırıldı, doğrudan `DatabaseReader` API |
+| `pipeline/DDoSCheck.java` | `isVerified` bug düzeltmesi |
+| `config.yml` (velocity) | `moduller.ddos-koruma` altına 40+ yeni ayar |
+| `messages_tr.yml` | Yeni kick mesajları: `kick.ddos-seviye`, `kick.ddos-subnet` vb. |
+
+---
 
 ### 🛡️ Anti-False-Positive Overhaul — Velocity Proxy Modülü
 

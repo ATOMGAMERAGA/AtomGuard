@@ -1,458 +1,129 @@
-# ╔══════════════════════════════════════════════════════════╗
-# ║       AtomGuard Velocity Yapılandırma v1.1.0            ║
-# ║       Enterprise Proxy Güvenlik Sistemi                  ║
-# ╚══════════════════════════════════════════════════════════╝
-
+# AtomGuard Velocity - Ana Yapılandırma Dosyası
 config-versiyon: "1.1.0"
+dil: "tr"
 
-# ═══════════════════════════════════════
-# Genel Ayarlar
-# ═══════════════════════════════════════
-genel:
-  dil: "tr"
-  onek: "<gradient:#00d4ff:#00ff88>AtomGuard</gradient> <dark_gray>»</dark_gray>"
-  debug: false
-  log:
+# Depolama Ayarları
+depolama:
+  tip: "sqlite"  # sqlite veya mysql
+  mysql:
+    host: "localhost"
+    port: 3306
+    veritabani: "atomguard"
+    kullanici: "root"
+    sifre: ""
+
+# Metrikler ve İzleme
+metrikler:
+  prometheus:
     aktif: true
-    klasor: "logs"
-    gunluk-dosya: true
-    log-saklama-gunu: 7
+    port: 9225
 
-# ═══════════════════════════════════════
-# Redis Senkronizasyon
-# ═══════════════════════════════════════
+# Redis Senkronizasyon (Bungee/Velocity arası)
 redis:
   aktif: false
   host: "localhost"
   port: 6379
   sifre: ""
-  zaman-asimi: 2000
+  zaman-asimi: 3000
 
-# ═══════════════════════════════════════
-# Plugin Messaging
-# ═══════════════════════════════════════
-mesajlasma:
-  aktif: true
-  kanal: "atomguard:main"
-  protokol-versiyon: 2
-  zaman-asimi-ms: 5000
-
-# ═══════════════════════════════════════
-# Discord Webhook Bildirimleri
-# ═══════════════════════════════════════
+# Discord Bildirimleri
 discord-webhook:
   aktif: false
   webhook-url: ""
-  bildirimler:
-    saldiri-modu: true
-    ddos-tespit: true
-    bot-tespit: true
-    vpn-engel: true
-    panik-modu: true
 
-# ═══════════════════════════════════════
-# İstatistikler
-# ═══════════════════════════════════════
-istatistik:
-  aktif: true
-  kaydetme-dakika: 5
+# Bot ve Davranış Kontrolü
+bot-koruma:
+  analiz-penceresi: 15
+  supheli-esik: 8
+  yuksek-risk-esik: 75
+  orta-risk-esik: 45
+  guven-skoru-esik: 10 # Bu eşiğin altındaki IP'ler TrustScoreCheck tarafından reddedilir
 
-# ═══════════════════════════════════════
-# Saldırı Modu
-# ═══════════════════════════════════════
-saldiri-modu:
-  esik-saniye: 30
-  sure-saniye: 120
-  aksiyonlar:
-    sadece-dogrulanmis: true
-    siki-limitler: true
-    discord-bildirim: true
-    backend-senkronizasyon: true
-
-# ═══════════════════════════════════════
-# Modüller
-# ═══════════════════════════════════════
+# Pipeline Modülleri (Öncelik Sırasına Göre İşlenir)
 moduller:
-
-  # ─────────────────────────────────────
-  # DDoS Koruma Modülü
-  # ─────────────────────────────────────
+  guvenlik-duvari:
+    aktif: true
+    oto-yasak-esik: 150
+    oto-yasak-sure: 3600
+    decay-dakika: 5
+  hiz-siniri:
+    aktif: true
+    baglanti-saniye:
+      ip-basina-max: 3
+      global-max: 50
   ddos-koruma:
     aktif: true
     baglanti-limiti:
       ip-basina-dakika: 5
       global-saniye: 50
       subnet-basina-dakika: 20
+      subnet-ban-aktif: false
+      subnet-ban-esik: 10
     ping-limit: 3
     saldiri-modu:
       esik: 30
-      sure-saniye: 120
-      sadece-dogrulanmis: true
+    saldiri-seviyeleri:
+      aktif: true
+      hysteresis-yukselme-sn: 3
+      hysteresis-dusme-sn: 15
+      dogrulanmis-ayrilmis-slot: 50
+      captcha-seviyeleri:
+        - "ELEVATED"
+        - "HIGH"
     akilli-throttle:
       aktif: true
       normal-limit: 10
       dikkatli-limit: 5
       agresif-limit: 2
       lockdown-limit: 0
-
-  # ─────────────────────────────────────
-  # Bot Koruma Modülü
-  # ─────────────────────────────────────
-  bot-koruma:
-    aktif: true
-    analiz-penceresi: 15
-    supheli-esik: 8
-    yuksek-risk-esik: 75
-    orta-risk-esik: 45
-    tehdit-skoru:
-      esik-uyari: 45
-      esik-captcha: 60
-      esik-kick: 75
-      esik-ban: 90
-    agirliklar:
-      baglanti-hizi: 0.20
-      handshake: 0.15
-      brand: 0.15
-      join-pattern: 0.20
-      kullanici-adi: 0.10
-      geo: 0.10
-      protokol: 0.10
-    captcha:
+    anomali-tespiti:
       aktif: true
-      limbo-sunucu: "limbo"
-      zaman-asimi-saniye: 30
-      max-deneme: 3
-      soru-tipi: "matematik"
-    dogrulanmis-cache:
+      z-skoru-esigi: 3.0
+      profil-penceresi-saat: 1
+      yavas-rampa-esigi-yuzde: 10.0
+      pulse-tespit-aktif: true
+    parmak-izi:
       aktif: true
-      sure-saat: 48
-    bilinen-client-brandlari:
-      izinli:
-        - "vanilla"
-        - "fabric"
-        - "forge"
-        - "lunarclient"
-        - "badlion"
-        - "feather client"
-        - "optifine"
-        - "labymod"
-        - "essential"
-        - "sodium"
-      engelli:
-        - "crasher"
-        - "exploit"
-        - "nuker"
-        - "bot"
-        - "hack"
-        - "cheat"
-        - "nuke"
-        - "attack"
-        - "flood"
-        - "ddos"
-    nick-engelleme:
+      bilinen-botnet-patternler:
+        - "null|bot-fast"
+        - "unknown|bot-fast"
+        - "ip-like|bot-fast"
+      kitle-esigi: 20
+    ip-itibar:
       aktif: true
-      tam-eslesme: []
-      prefix-listesi: ["Bot_", "Rbot", "RBOT"]
-      suffix-listesi: ["_bot", "_BOT", "xd", "Hack"]
-      regex-listesi:
-        - "Bot\\d+"
-        - "[A-Z]{10,}"
-        - "\\d{8,}"
-      minimum-uzunluk: 3
-      maksimum-uzunluk: 16
-      sadece-sayi-engel: true
-      ozel-karakter-engel: true
-      buyuk-harf-esik: 10
-
-  # ─────────────────────────────────────
-  # VPN/Proxy Engelleme Modülü (Enhanced)
-  # ─────────────────────────────────────
+      baslangic-skoru: 50
+      basarili-baglanti-bonus: 5
+      rate-limit-ceza: 10
+      gecersiz-handshake-ceza: 15
+      slowloris-ceza: 25
+      saldiri-baglanti-ceza: 20
+      otomatik-ban-esik-1saat: 20
+      otomatik-ban-esik-24saat: 5
+      decay-saat-puan: 3
+      dogrulanmis-minimum-skor: 30
+    saldiri-kayit:
+      aktif: true
+      json-kaydet: true
+      maks-gecmis: 50
+      snapshot-araligi-sn: 5
+    metrikler:
+      aktif: true
+      prometheus-aktif: false
+      prometheus-port: 9225
+      gecmis-dakika: 60
+    slowloris-gelismis:
+      aktif: true
+      maks-pending-ip: 5
+      zaman-asimi-ms: 10000
+      pending-oran-alarm: 0.30
+      keep-alive-kontrol: true
+    geo-engelleme:
+      aktif: false
+      engelli-ulkeler: []
+      izinli-ulkeler: []
+      izinli-ulkeler-modu: false
   vpn-proxy-engelleme:
     aktif: true
-    kick-mesaji: "<red>VPN veya Proxy kullandığınız tespit edildi.<br><gray>Hata ise yöneticiye başvurun."
-    onbellek-sure: 3600
-    guven-skoru-esigi: 60
     konsensus-esigi: 2
-    saldiri-modu-esigi: 40
+    guven-skoru-esigi: 60
     residential-bypass: true
-    premium-vpn-politikasi: "izin-ver" # izin-ver, uyar, engelle
-
-    provider-zinciri:
-      - "local"
-      - "cidr"
-      - "dnsbl"
-      - "iphub"
-      - "proxycheck"
-      - "abuseipdb"
-      - "ipapi"
-
-    abuseipdb:
-      aktif: false
-      api-anahtari: ""
-      guven-esigi: 50
-
-    ip2proxy:
-      aktif: false
-      veritabani-yolu: "IP2PROXY-LITE-PX2.BIN"
-      otomatik-guncelle: true
-
-    dnsbl-listesi:
-      - "dnsbl.dronebl.org"
-      - "zen.spamhaus.org"
-
-    engelli-cidr:
-      - "198.51.100.0/24"
-      - "203.0.113.0/24"
-    engelli-asn:
-      - "AS14061"
-
-    api:
-      proxycheck:
-        api-key: ""
-      iphub:
-        api-key: ""
-
-  # ─────────────────────────────────────
-  # Güvenlik Duvarı Modülü
-  # ─────────────────────────────────────
-  guvenlik-duvari:
-    aktif: true
-    oto-yasak-esik: 150
-    decay-dakika: 5
-    decay-miktar: 10
-    grace-violations: 3
-    basarili-login-bonus: 15
-    itibar-skoru:
-      baslangic: 50
-      basarili-login-bonus: 15
-      basarisiz-login-ceza: 10
-      flood-ceza: 20
-      exploit-ceza: 30
-      decay-saat: 1
-      decay-miktar: 10
-      engel-esigi: 15
-    otomatik-ban:
-      aktif: true
-      kurallar:
-        - tetikleyici: "bot-tespit"
-          sayi: 5
-          sure: "1h"
-          sebep: "Tekrarlayan bot tespiti"
-    whitelist:
-      beyaz-liste:
-        dosya: "whitelist.json"
-      ip-listesi: []
-      cidr-listesi:
-        - "127.0.0.1/32"
-      asn-listesi: []
-      ulke-listesi: []
-      tum-modullere-uygula: true
-    istisnalar:
-      dosya: "firewall_exceptions.json"
-
-  # ─────────────────────────────────────
-  # IPTables Entegrasyonu
-  # ─────────────────────────────────────
-  iptables-entegrasyon:
-    aktif: false
-    iptables-yolu: "/usr/sbin/iptables"
-    ip6tables-yolu: "/usr/sbin/ip6tables"
-    nftables-yolu: "/usr/sbin/nft"
-    nftables-mod: false
-    otomatik-ban:
-      aktif: true
-      tetikleyici-esik: 200
-      ban-sure-saniye: 3600
-      kalici-ban-esik: 1000
-    subnet-ban-aktif: false
-    subnet-ban-esik: 5
-    kural-temizleme:
-      baslangic-temizle: true
-      kapatma-temizle: true
-    loglama:
-      komut-logla: true
-      hata-logla: true
-
-  # ─────────────────────────────────────
-  # Hesap Güvenlik Duvarı
-  # ─────────────────────────────────────
-  hesap-guvenlik-duvari:
-    aktif: true
-    kick-mesaji: "Hesabınız bu sunucudan yasaklandı.\nSebep: {sebep}"
-    mojang-api:
-      aktif: true
-      onbellek-saat: 24
-      zaman-asimi-ms: 3000
-    hesap-yas-kontrolu:
-      aktif: false
-      minimum-gun: 7
-      aksiyon: "kick"
-    cracked-hesap:
-      politika: "izin-ver" # izin-ver, engelle, challenge
-    kara-liste-dosya: "account_blacklist.json"
-
-  # ─────────────────────────────────────
-  # Ülke Filtreleme
-  # ─────────────────────────────────────
-  ulke-filtreleme:
-    aktif: false
-    mod: "blacklist" # blacklist veya whitelist
-    engelli-ulkeler: []
-    izinli-ulkeler: []
-    bilinmeyen-ulke: "izin-ver"
-    kick-mesaji: "Bu sunucuya ülkenizden bağlanma izniniz yok."
-    maxmind:
-      lisans-anahtari: ""
-      otomatik-guncelle: true
-      guncelleme-gunu: "THURSDAY"
-    beyaz-liste-muafiyeti: true
-    loglama:
-      engellenen-ulkeleri-logla: false
-
-  # ─────────────────────────────────────
-  # Hızlı Sohbet Kontrol (Velocity)
-  # ─────────────────────────────────────
-  hizli-sohbet-kontrol:
-    aktif: true
-    mesaj-hizi:
-      saniyede-max: 3.0
-      burst-izin: 5.0
-    tekrar-mesaj:
-      aktif: true
-      hatirlama-sayisi: 5
-    pattern-analiz:
-      aktif: true
-      buyuk-harf-yuzde: 80
-      tekrar-karakter-esik: 5
-      link-engel: false
-    mesajlar:
-      rate-limit: "<red>Çok hızlı mesaj gönderiyorsunuz!"
-      tekrar-mesaj: "<red>Aynı mesajı tekrar gönderemezsiniz!"
-
-  # ─────────────────────────────────────
-  # Şifre Kontrol
-  # ─────────────────────────────────────
-  sifre-kontrol:
-    aktif: false
-    auth-plugin: "AuthMe"
-    brute-force:
-      aktif: true
-      max-deneme: 5
-      pencere-saniye: 60
-      aksiyon: "tempban"
-      tempban-sure-sn: 600
-    ortak-sifre:
-      aktif: true
-      aksiyon: "uyar" # uyar, kick
-    benzer-sifre:
-      aktif: true
-      ip-basina-max-ayni-sifre: 3
-      aksiyon: "flag" # flag, kick
-
-  # ─────────────────────────────────────
-  # Hız Sınırı (Enhanced)
-  # ─────────────────────────────────────
-  hiz-siniri:
-    aktif: true
-    baglanti-saniye:
-      ip-basina-max: 3
-      global-max: 50
-    ping-saniye:
-      ip-basina-max: 5
-      global-max: 200
-    yeni-hesap:
-      ip-basina-saat: 3
-    saldiri-modu-carpan: 0.3
-    sliding-window: true
-
-  # ─────────────────────────────────────
-  # Yeniden Bağlantı Kontrol
-  # ─────────────────────────────────────
-  yeniden-baglanti-kontrol:
-    aktif: true
-    hizli-yeniden-baglanti:
-      aktif: true
-      cooldown-saniye: 10
-    crash-dongu-tespit:
-      aktif: true
-      esik-sayisi: 3
-      pencere-saniye: 30
-      aksiyon: "challenge"
-    kisa-oturum-tespit:
-      aktif: true
-      esik-sayisi: 5
-      min-oturum-saniye: 3
-      aksiyon: "kick"
-    aksiyon-mesaji:
-      delay: "<gray>Bağlantı kurulmadan önce {sure} saniye bekleniyor..."
-      kick: "<red>Çok fazla bağlantı denemesi. Lütfen bekleyin."
-
-  # ─────────────────────────────────────
-  # Harici Listeler
-  # ─────────────────────────────────────
-  harici-listeler:
-    aktif: false
-    listeler:
-      - isim: "spamhaus-drop"
-        aktif: false
-        url: "https://www.spamhaus.org/drop/drop.txt"
-        format: "plaintext"
-      - isim: "tor-exit-nodes"
-        aktif: false
-        url: "https://check.torproject.org/torbulkexitlist"
-        format: "plaintext"
-
-  # ─────────────────────────────────────
-  # Gecikme Kontrol
-  # ─────────────────────────────────────
-  gecikme-kontrol:
-    aktif: true
-    handshake-login-suresi:
-      aktif: true
-      minimum-ms: 15
-      maksimum-ms: 30000
-      aksiyon-hizli: "flag"
-      aksiyon-yavas: "kick"
-    istatistiksel-analiz:
-      aktif: false
-      pencere-baglanti-sayisi: 10
-
-  # ─────────────────────────────────────
-  # Protokol Doğrulama Modülü
-  # ─────────────────────────────────────
-  protokol-dogrulama:
-    aktif: true
-    izinli-versiyonlar:
-      min: 765
-      max: 769
-    max-hostname-uzunluk: 255
-    max-paket-boyut: 32767
-
-  # ─────────────────────────────────────
-  # Exploit Koruma Modülü
-  # ─────────────────────────────────────
-  exploit-koruma:
-    aktif: true
-    tab-complete-limit: 5
-    chat-spam:
-      max-mesaj-saniye: 3
-      tekrar-esigi: 3
-      mute-sure-saniye: 60
-    komut-flood-limit: 10
-    sunucu-degistir-cooldown-ms: 2000
-
-# ═══════════════════════════════════════
-# Mesajlar (MiniMessage formatı)
-# ═══════════════════════════════════════
-mesajlar:
-  kick:
-    ddos: "<red>Sunucumuz şu anda saldırı altında. Lütfen daha sonra tekrar deneyin.</red>"
-    bot: "<red>Bot olarak algılandınız. Lütfen daha sonra tekrar deneyin.</red>"
-    vpn: "<red>VPN veya Proxy kullanımı bu sunucuda yasaktır.<br><gray>Hata ise yöneticiye başvurun.</gray>"
-    rate-limit: "<red>Çok fazla bağlantı isteği! <gray>Lütfen <white>{sure}</white> saniye bekleyin.</gray>"
-    blacklisted: "<red>IP adresiniz kara listede.<br><gray>Sebep: <white>{sebep}</white></gray>"
-    tempban: "<red>Geçici olarak engellendiniz.<br><gray>Kalan süre: <white>{sure}</white></gray>"
-    protocol: "<red>Desteklenmeyen oyun sürümü.<br><gray>İzin verilen: <white>{min} - {max}</white></gray>"
-    captcha-fail: "<red>CAPTCHA doğrulaması başarısız. Lütfen tekrar deneyin.</red>"
-    panic: "<red>Sunucu şu anda bakım modunda.<br><gray>Lütfen daha sonra tekrar deneyin.</gray>"
-    genel: "<red>Bağlantınız güvenlik sistemi tarafından reddedildi.</red>"

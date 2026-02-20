@@ -20,6 +20,9 @@ public class ProtocolValidationModule extends VelocityModule {
     }
 
     @Override
+    public int getPriority() { return 5; }
+
+    @Override
     public void onEnable() {
         boolean enforceKnown = getConfigBoolean("bilinen-protokol-zorla", false);
         int minProtocol = getConfigInt("min-protokol", 0);

@@ -1,5 +1,6 @@
 package com.atomguard.velocity.module.firewall;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -21,20 +22,26 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class IPReputationEngine {
 
+    private final com.atomguard.velocity.AtomGuardVelocity plugin;
     private final ConcurrentHashMap<String, AtomicInteger> scores = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, AtomicInteger> violationCounts = new ConcurrentHashMap<>();
     private final Set<String> verifiedIPs = ConcurrentHashMap.newKeySet(10000);
     private final Queue<String> verifiedIPsOrder = new ConcurrentLinkedQueue<>();
-    private final int autoBanThreshold;
+    private int autoBanThreshold;
 
     /** Grace period: ilk 3 ihlalde otomatik ban yapma */
     private static final int GRACE_VIOLATIONS = 3;
     /** Başarılı login bonus (negatif puan) */
     private static final int SUCCESSFUL_LOGIN_BONUS = 15;
 
-    public IPReputationEngine(int autoBanThreshold) {
+    public IPReputationEngine(com.atomguard.velocity.AtomGuardVelocity plugin, int autoBanThreshold) {
+        this.plugin = plugin;
         // Minimum 150 — çok düşük eşik false positive ban oluşturur
         this.autoBanThreshold = Math.max(150, autoBanThreshold);
+    }
+
+    public void setThreshold(int threshold) {
+        this.autoBanThreshold = Math.max(150, threshold);
     }
 
     /**
@@ -49,21 +56,6 @@ public class IPReputationEngine {
 
     /**
      * Bağlamsal skor ekle — ihlal türüne göre farklı çarpanlar uygular.
-     *
-     * <p>Çarpanlar:
-     * <ul>
-     *   <li>{@code bot-tespiti} → 0.7x (false positive riski yüksek)</li>
-     *   <li>{@code supheli-ip} → 0.5x</li>
-     *   <li>{@code vpn-tespit} → 1.0x (konsensüs bazlı, güvenilir)</li>
-     *   <li>{@code exploit} → 1.5x</li>
-     *   <li>{@code flood} → 1.2x</li>
-     *   <li>{@code crash-girisimi} → 2.0x</li>
-     *   <li>diğer → 1.0x</li>
-     * </ul>
-     *
-     * @param ip            IP adresi
-     * @param basePoints    temel puan
-     * @param violationType ihlal türü (Türkçe key)
      */
     public void addContextualScore(String ip, int basePoints, String violationType) {
         double multiplier = getMultiplier(violationType);
@@ -74,8 +66,31 @@ public class IPReputationEngine {
             actualPoints = Math.max(1, actualPoints / 2);
         }
 
-        scores.computeIfAbsent(ip, k -> new AtomicInteger(0)).addAndGet(actualPoints);
+        int oldScore = getScore(ip);
+        int newScore = scores.computeIfAbsent(ip, k -> new AtomicInteger(0)).addAndGet(actualPoints);
         violationCounts.computeIfAbsent(ip, k -> new AtomicInteger(0)).incrementAndGet();
+        
+        // 1. Veritabanına kaydet (Live Sync)
+        if (plugin.getStorageProvider() != null) {
+            plugin.getStorageProvider().saveIPReputation(ip, newScore);
+        }
+
+        // 2. Velocity Event
+        if (plugin.getEventBus() != null) {
+            plugin.getEventBus().fireThreatScoreChanged(ip, oldScore, newScore, violationType);
+        }
+    }
+
+    public void loadScores(Map<String, Integer> loadedScores) {
+        if (loadedScores != null) {
+            loadedScores.forEach((ip, score) -> scores.put(ip, new AtomicInteger(score)));
+        }
+    }
+
+    public Map<String, Integer> getAllScores() {
+        Map<String, Integer> currentScores = new HashMap<>();
+        scores.forEach((k, v) -> currentScores.put(k, v.get()));
+        return currentScores;
     }
 
     private double getMultiplier(String violationType) {
@@ -94,8 +109,17 @@ public class IPReputationEngine {
     public void reduceScore(String ip, int points) {
         AtomicInteger score = scores.get(ip);
         if (score != null) {
-            int newVal = score.addAndGet(-points);
-            if (newVal <= 0) scores.remove(ip);
+            int oldScore = score.get();
+            int newScore = score.addAndGet(-points);
+            if (newScore <= 0) {
+                scores.remove(ip);
+                newScore = 0;
+            }
+            
+            // Veritabanına kaydet
+            if (plugin.getStorageProvider() != null) {
+                plugin.getStorageProvider().saveIPReputation(ip, newScore);
+            }
         }
     }
 
@@ -158,11 +182,21 @@ public class IPReputationEngine {
 
     public void decayAll(int decayAmount) {
         scores.entrySet().removeIf(e -> {
+            int oldVal = e.getValue().get();
             int newVal = e.getValue().addAndGet(-decayAmount);
+            
             if (newVal <= 0) {
-                // Skor sıfırlandı → violation count da temizle
+                // Skor sıfırlandı -> veritabanından tamamen sil
+                if (plugin.getStorageProvider() != null) {
+                    plugin.getStorageProvider().saveIPReputation(e.getKey(), 0); 
+                }
                 violationCounts.remove(e.getKey());
                 return true;
+            } else {
+                // Skor azaldı -> veritabanını güncelle
+                if (plugin.getStorageProvider() != null) {
+                    plugin.getStorageProvider().saveIPReputation(e.getKey(), newVal);
+                }
             }
             return false;
         });

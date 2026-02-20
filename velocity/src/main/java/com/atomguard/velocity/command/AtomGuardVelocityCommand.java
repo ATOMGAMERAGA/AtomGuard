@@ -2,17 +2,25 @@ package com.atomguard.velocity.command;
 
 import com.atomguard.velocity.AtomGuardVelocity;
 import com.atomguard.velocity.VelocityBuildInfo;
+import com.atomguard.velocity.data.ThreatScore;
+import com.atomguard.velocity.manager.AttackAnalyticsManager;
 import com.atomguard.velocity.module.VelocityModule;
+import com.atomguard.velocity.module.antibot.VelocityAntiBotModule;
+import com.atomguard.velocity.module.antivpn.VPNDetectionModule;
+import com.atomguard.velocity.module.firewall.FirewallModule;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
+import com.velocitypowered.api.proxy.Player;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 /**
- * Ana /agv komutu.
+ * Gelişmiş Ana /agv komutu.
  */
 public class AtomGuardVelocityCommand implements SimpleCommand {
 
@@ -40,12 +48,7 @@ public class AtomGuardVelocityCommand implements SimpleCommand {
 
         switch (args[0].toLowerCase()) {
             case "durum", "status" -> sendStatus(source);
-            case "yenile", "reload" -> {
-                plugin.getConfigManager().reload();
-                plugin.getMessageManager().load();
-                source.sendMessage(mm.deserialize("<green>Yapılandırma yeniden yüklendi.</green>"));
-                plugin.getLogManager().log("Yapılandırma yeniden yüklendi: " + getSourceName(source));
-            }
+            case "yenile", "reload" -> handleReload(source);
             case "modul", "module" -> {
                 if (args.length < 2) { source.sendMessage(mm.deserialize("<red>Kullanım: /agv modul <isim></red>")); return; }
                 handleModuleCommand(source, args);
@@ -65,8 +68,44 @@ public class AtomGuardVelocityCommand implements SimpleCommand {
                 plugin.setAttackMode(!state);
                 source.sendMessage(mm.deserialize("<yellow>Saldırı modu: " + (!state ? "<red>AKTİF</red>" : "<green>KAPALI</green>") + "</yellow>"));
             }
+            case "inceleme", "inspect" -> {
+                if (args.length < 2) { source.sendMessage(mm.deserialize("<red>Kullanım: /agv inceleme <ip/oyuncu></red>")); return; }
+                handleInspect(source, args[1]);
+            }
+            case "rapor", "report" -> sendAttackReport(source);
+            case "saglik", "health" -> sendHealthCheck(source);
             default -> sendHelp(source);
         }
+    }
+
+    private void handleReload(CommandSource source) {
+        plugin.getConfigManager().reload();
+        plugin.getMessageManager().load(plugin.getConfigManager().getString("dil", "tr"));
+        
+        // 1. Backend İletişimi (Redis) Yenile
+        if (plugin.getBackendCommunicator() != null) {
+            plugin.getBackendCommunicator().reload();
+        }
+
+        // 2. Audit Log
+        if (plugin.getAuditLogger() != null) {
+            plugin.getAuditLogger().log(
+                com.atomguard.velocity.audit.AuditLogger.EventType.CONFIG_RELOADED,
+                null, getSourceName(source), "system", "Source: " + getSourceName(source),
+                com.atomguard.velocity.audit.AuditLogger.Severity.INFO
+            );
+        }
+
+        plugin.getModuleManager().getAll().forEach(m -> {
+            try {
+                m.onConfigReload();
+            } catch (Exception e) {
+                plugin.getSlf4jLogger().error("Modül config reload hatası {}: {}", m.getName(), e.getMessage());
+            }
+        });
+
+        source.sendMessage(mm.deserialize("<green>Yapılandırma ve tüm modüller yeniden yüklendi.</green>"));
+        plugin.getLogManager().log("Yapılandırma yeniden yüklendi: " + getSourceName(source));
     }
 
     private void sendHelp(CommandSource source) {
@@ -81,6 +120,9 @@ public class AtomGuardVelocityCommand implements SimpleCommand {
             "<yellow>/agv af <ip></yellow> <gray>- Yasak kaldır\n" +
             "<yellow>/agv istatistik</yellow> <gray>- İstatistikler\n" +
             "<yellow>/agv saldiri</yellow> <gray>- Saldırı modunu aç/kapat\n" +
+            "<yellow>/agv inceleme <ip></yellow> <gray>- Detaylı oyuncu/IP profili\n" +
+            "<yellow>/agv rapor</yellow> <gray>- Son 24 saat saldırı analizi\n" +
+            "<yellow>/agv saglik</yellow> <gray>- Sunucu kaynak ve yük durumu\n" +
             "<gray>─────────────────────────────"
         ));
     }
@@ -109,6 +151,98 @@ public class AtomGuardVelocityCommand implements SimpleCommand {
         source.sendMessage(mm.deserialize(sb.toString()));
     }
 
+    private void handleInspect(CommandSource source, String target) {
+        // Resolve IP if target is a username
+        String ip = target;
+        Player player = plugin.getProxyServer().getPlayer(target).orElse(null);
+        if (player != null) {
+            ip = player.getRemoteAddress().getAddress().getHostAddress();
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<gray>─── IP İnceleme: <white>").append(ip).append("</white> ───\n");
+
+        FirewallModule fw = plugin.getFirewallModule();
+        if (fw != null) {
+            boolean banned = fw.getTempBanManager().isBanned(ip) || fw.getBlacklistManager().isBlacklisted(ip);
+            int reputation = fw.getReputationEngine().getScore(ip);
+            sb.append("<white>Güvenlik Duvarı: ").append(banned ? "<red>YASAKLI</red>" : "<green>TEMİZ</green>").append("\n");
+            sb.append("<white>İtibar Skoru: <yellow>").append(reputation).append("/100</yellow>\n");
+        }
+
+        VelocityAntiBotModule ab = plugin.getAntiBotModule();
+        if (ab != null) {
+            ThreatScore ts = ab.getScore(ip);
+            boolean verified = ab.isVerified(ip);
+            sb.append("<white>Bot Tehdit Skoru: <yellow>").append(ts != null ? ts.getTotalScore() : 0).append("</yellow>");
+            sb.append(" | Doğrulanmış: ").append(verified ? "<green>EVET</green>" : "<red>HAYIR</red>").append("\n");
+        }
+
+        VPNDetectionModule vpn = plugin.getVpnModule();
+        if (vpn != null) {
+            boolean verifiedClean = vpn.isVerifiedClean(ip);
+            sb.append("<white>VPN Temiz Cache: ").append(verifiedClean ? "<green>EVET</green>" : "<gray>YOK</gray>").append("\n");
+        }
+
+        // Connection History
+        if (player != null && plugin.getConnectionHistory() != null) {
+            List<com.atomguard.velocity.data.ConnectionHistory.SessionRecord> history = plugin.getConnectionHistory().getHistory(player.getUniqueId());
+            if (!history.isEmpty()) {
+                sb.append("<white>Son Sunucular: <yellow>").append(String.join(", ", history.get(0).getServerHistory())).append("</yellow>\n");
+            }
+        }
+
+        sb.append("<gray>───────────────────────────");
+        source.sendMessage(mm.deserialize(sb.toString()));
+    }
+
+    private void sendHealthCheck(CommandSource source) {
+        Runtime rt = Runtime.getRuntime();
+        long usedMB = (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024);
+        long maxMB = rt.maxMemory() / (1024 * 1024);
+        int playerCount = plugin.getProxyServer().getPlayerCount();
+        int serverCount = plugin.getProxyServer().getAllServers().size();
+
+        String redisStatus = plugin.getBackendCommunicator().isRedisEnabled() ? "<green>BAĞLI</green>" : "<gray>KAPALI</gray>";
+
+        Map<String, Long> moduleBlocks = plugin.getModuleManager().getStatistics();
+        String topModule = moduleBlocks.entrySet().stream()
+            .max(Map.Entry.comparingByValue())
+            .map(e -> e.getKey() + " (" + e.getValue() + ")")
+            .orElse("Yok");
+
+        source.sendMessage(mm.deserialize(String.format("""
+            <gray>─── Sistem Sağlığı ───
+            <white>Bellek: <yellow>%d/%d MB</yellow> (%%%d)
+            <white>Oyuncular: <yellow>%d</yellow> | Sunucular: <yellow>%d</yellow>
+            <white>Redis: %s
+            <white>Saldırı Modu: %s
+            <white>En Aktif Modül: <yellow>%s</yellow>
+            <gray>───────────────────────────""",
+            usedMB, maxMB, (maxMB > 0 ? (usedMB * 100 / maxMB) : 0),
+            playerCount, serverCount,
+            redisStatus,
+            plugin.isAttackMode() ? "<red>AKTİF</red>" : "<green>KAPALI</green>",
+            topModule)));
+    }
+
+    private void sendAttackReport(CommandSource source) {
+        AttackAnalyticsManager analytics = plugin.getAttackAnalyticsManager();
+        if (analytics == null) {
+            source.sendMessage(mm.deserialize("<red>Analitik motoru aktif değil.</red>"));
+            return;
+        }
+
+        AttackAnalyticsManager.AttackSummary summary = analytics.getLast24hSummary();
+        source.sendMessage(mm.deserialize(String.format("""
+            <gray>─── Son 24 Saat Saldırı Raporu ───
+            <white>Saldırı Sayısı: <yellow>%d</yellow>
+            <white>Toplam Engellenen: <yellow>%d</yellow>
+            <white>En Yüksek Hız: <yellow>%d</yellow>/sn
+            <gray>───────────────────────────""",
+            summary.attackCount(), summary.totalBlocked(), summary.peakRate())));
+    }
+
     private void handleModuleCommand(CommandSource source, String[] args) {
         String moduleName = args[1];
         boolean toggled = plugin.getModuleManager().toggle(moduleName);
@@ -135,25 +269,33 @@ public class AtomGuardVelocityCommand implements SimpleCommand {
     }
 
     private String getSourceName(CommandSource source) {
-        if (source instanceof com.velocitypowered.api.proxy.Player p) return p.getUsername();
+        if (source instanceof Player p) return p.getUsername();
         return "Konsol";
     }
 
     @Override
-    public List<String> suggest(Invocation invocation) {
-        String[] args = invocation.arguments();
-        if (args.length <= 1) {
-            String prefix = args.length == 1 ? args[0].toLowerCase() : "";
-            return List.of("durum", "yenile", "modul", "yasak", "af", "istatistik", "saldiri")
-                .stream().filter(s -> s.startsWith(prefix))
-                .collect(java.util.stream.Collectors.toList());
-        }
-        if (args.length == 2 && args[0].equalsIgnoreCase("modul")) {
-            return plugin.getModuleManager().getAll().stream()
-                .map(m -> m.getName()).filter(n -> n.startsWith(args[1].toLowerCase()))
-                .collect(java.util.stream.Collectors.toList());
-        }
-        return List.of();
+    public CompletableFuture<List<String>> suggestAsync(Invocation invocation) {
+        return CompletableFuture.supplyAsync(() -> {
+            String[] args = invocation.arguments();
+            if (args.length <= 1) {
+                String prefix = args.length == 1 ? args[0].toLowerCase() : "";
+                return List.of("durum", "yenile", "modul", "yasak", "af",
+                               "istatistik", "saldiri", "inceleme", "rapor", "saglik")
+                    .stream().filter(s -> s.startsWith(prefix)).collect(Collectors.toList());
+            }
+            if (args.length == 2 && ("modul".equalsIgnoreCase(args[0]) || "module".equalsIgnoreCase(args[0]))) {
+                return plugin.getModuleManager().getAll().stream()
+                    .map(VelocityModule::getName)
+                    .filter(n -> n.startsWith(args[1].toLowerCase())).collect(Collectors.toList());
+            }
+            if (args.length == 2 && ("inceleme".equalsIgnoreCase(args[0]) || "inspect".equalsIgnoreCase(args[0]))) {
+                // Çevrimiçi oyuncuları öner
+                return plugin.getProxyServer().getAllPlayers().stream()
+                    .map(Player::getUsername)
+                    .filter(n -> n.toLowerCase().startsWith(args[1].toLowerCase())).collect(Collectors.toList());
+            }
+            return List.of();
+        });
     }
 
     @Override

@@ -8,16 +8,18 @@ import java.util.List;
 public class AttackSnapshot {
 
     private final long timestamp;
+    private final long duration;
     private final int peakConnectionRate;
     private final int blockedConnections;
     private final String dominantSourceCIDR;
     private final List<String> topAttackerIPs;
     private final boolean attackModeTriggered;
 
-    public AttackSnapshot(long timestamp, int peakConnectionRate, int blockedConnections,
+    public AttackSnapshot(long timestamp, long duration, int peakConnectionRate, int blockedConnections,
                           String dominantSourceCIDR, List<String> topAttackerIPs,
                           boolean attackModeTriggered) {
         this.timestamp = timestamp;
+        this.duration = duration;
         this.peakConnectionRate = peakConnectionRate;
         this.blockedConnections = blockedConnections;
         this.dominantSourceCIDR = dominantSourceCIDR;
@@ -26,6 +28,7 @@ public class AttackSnapshot {
     }
 
     public long getTimestamp() { return timestamp; }
+    public long getDuration() { return duration; }
     public int getPeakConnectionRate() { return peakConnectionRate; }
     public int getBlockedConnections() { return blockedConnections; }
     public String getDominantSourceCIDR() { return dominantSourceCIDR; }
@@ -37,8 +40,8 @@ public class AttackSnapshot {
      */
     public String getSummary() {
         return String.format(
-            "Saldırı Özeti: Tepe hızı=%d/s | Engellenen=%d | Kaynak=%s | Saldırı modu=%s",
-            peakConnectionRate, blockedConnections,
+            "Saldırı Özeti: Tepe hızı=%d/s | Engellenen=%d | Süre=%dms | Kaynak=%s | Saldırı modu=%s",
+            peakConnectionRate, blockedConnections, duration,
             dominantSourceCIDR != null ? dominantSourceCIDR : "Bilinmiyor",
             attackModeTriggered ? "AKTİF" : "KAPALI"
         );
@@ -47,9 +50,9 @@ public class AttackSnapshot {
     /**
      * Factory metodu: mevcut saldırı snapshot'u oluşturur.
      */
-    public static AttackSnapshot current(int peakRate, int blockedCount, String sourceCIDR,
+    public static AttackSnapshot current(long duration, int peakRate, int blockedCount, String sourceCIDR,
                                          List<String> topIPs, boolean attackMode) {
-        return new AttackSnapshot(System.currentTimeMillis(), peakRate, blockedCount,
+        return new AttackSnapshot(System.currentTimeMillis(), duration, peakRate, blockedCount,
                                   sourceCIDR, topIPs, attackMode);
     }
 

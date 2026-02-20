@@ -17,20 +17,32 @@ public class ConnectionRateLimiter {
         this.windowMs = windowSeconds * 1000;
     }
 
-    public boolean allowConnection(String ip) {
+    public RateLimitResult check(String ip) {
         long now = System.currentTimeMillis();
         
         // Reset if window passed
-        ipLastReset.compute(ip, (k, last) -> {
-            if (last == null || (now - last > windowMs)) {
-                ipCounts.put(ip, new AtomicInteger(0));
-                return now;
-            }
-            return last;
-        });
+        Long lastReset = ipLastReset.get(ip);
+        if (lastReset == null || (now - lastReset > windowMs)) {
+            ipCounts.put(ip, new AtomicInteger(0));
+            ipLastReset.put(ip, now);
+            lastReset = now;
+        }
 
         AtomicInteger count = ipCounts.computeIfAbsent(ip, k -> new AtomicInteger(0));
-        return count.incrementAndGet() <= limit;
+        if (count.incrementAndGet() <= limit) {
+            return RateLimitResult.ALLOWED;
+        } else {
+            long retryAfter = windowMs - (now - lastReset);
+            return new RateLimitResult(false, Math.max(0, retryAfter));
+        }
+    }
+
+    public static record RateLimitResult(boolean allowed, long retryAfterMs) {
+        public static final RateLimitResult ALLOWED = new RateLimitResult(true, 0);
+    }
+
+    public boolean allowConnection(String ip) {
+        return check(ip).allowed();
     }
 
     public void cleanup() {

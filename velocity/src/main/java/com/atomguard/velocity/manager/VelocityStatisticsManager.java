@@ -64,6 +64,16 @@ public class VelocityStatisticsManager {
         return v != null ? v.get() : 0L;
     }
 
+    public long getLong(String key, long def) {
+        AtomicLong v = stats.get(key);
+        return v != null ? v.get() : def;
+    }
+
+    public int getInt(String key, int def) {
+        AtomicLong v = stats.get(key);
+        return v != null ? (int) v.get() : def;
+    }
+
     public void reset(String key) {
         stats.computeIfAbsent(key, k -> new AtomicLong(0)).set(0);
     }
@@ -72,5 +82,16 @@ public class VelocityStatisticsManager {
         Map<String, Long> snapshot = new HashMap<>();
         stats.forEach((k, v) -> snapshot.put(k, v.get()));
         return snapshot;
+    }
+
+    public Map<String, Long> getAllModuleStats() {
+        Map<String, Long> moduleStats = new HashMap<>();
+        stats.forEach((k, v) -> {
+            if (k.startsWith("module-") && k.endsWith("-total")) {
+                String moduleName = k.substring(7, k.length() - 6);
+                moduleStats.put(moduleName, v.get());
+            }
+        });
+        return moduleStats;
     }
 }
