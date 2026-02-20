@@ -6,7 +6,7 @@
 
 <h1>⚛️ AtomGuard</h1>
 
-<h3><i>Advanced Minecraft Server Security — Paper 1.21.4 + Velocity</i></h3>
+<p><i>Advanced Minecraft Server Security — Paper 1.21.4 + Velocity</i></p>
 
 <br>
 
