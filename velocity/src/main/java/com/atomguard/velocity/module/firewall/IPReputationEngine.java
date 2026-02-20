@@ -1,8 +1,10 @@
 package com.atomguard.velocity.module.firewall;
 
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -22,6 +24,7 @@ public class IPReputationEngine {
     private final ConcurrentHashMap<String, AtomicInteger> scores = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, AtomicInteger> violationCounts = new ConcurrentHashMap<>();
     private final Set<String> verifiedIPs = ConcurrentHashMap.newKeySet(10000);
+    private final Queue<String> verifiedIPsOrder = new ConcurrentLinkedQueue<>();
     private final int autoBanThreshold;
 
     /** Grace period: ilk 3 ihlalde otomatik ban yapma */
@@ -35,12 +38,13 @@ public class IPReputationEngine {
     }
 
     /**
-     * Geriye dönük uyumluluk metodu — sabit puan ekler.
-     * Yeni kodlar {@link #addContextualScore} kullansın.
+     * Geriye dönük uyumluluk metodu — bağlamsal skorlamaya yönlendirir.
+     *
+     * @deprecated Yeni kodlar {@link #addContextualScore} kullansın.
      */
+    @Deprecated
     public void addScore(String ip, int points) {
-        scores.computeIfAbsent(ip, k -> new AtomicInteger(0)).addAndGet(points);
-        violationCounts.computeIfAbsent(ip, k -> new AtomicInteger(0)).incrementAndGet();
+        addContextualScore(ip, points, "bilinmeyen");
     }
 
     /**
@@ -96,18 +100,24 @@ public class IPReputationEngine {
     }
 
     /**
-     * Başarılı login ödülü: -15 puan + doğrulanmış işaret.
+     * Başarılı login ödülü: -15 puan + doğrulanmış işaret + violationCount sıfırlama.
      */
     public void rewardSuccessfulLogin(String ip) {
         reduceScore(ip, SUCCESSFUL_LOGIN_BONUS);
+        // Başarılı giriş → grace period yeniden başlasın
+        violationCounts.remove(ip);
         markVerified(ip);
     }
 
     public void markVerified(String ip) {
-        if (verifiedIPs.size() >= 10000) {
-            verifiedIPs.remove(verifiedIPs.iterator().next());
+        if (verifiedIPs.add(ip)) {
+            verifiedIPsOrder.offer(ip);
         }
-        verifiedIPs.add(ip);
+        // Cache doluysa en eski IP'yi çıkar (LRU eviction)
+        while (verifiedIPs.size() > 10000) {
+            String oldest = verifiedIPsOrder.poll();
+            if (oldest != null) verifiedIPs.remove(oldest);
+        }
     }
 
     public boolean isVerified(String ip) {
@@ -149,7 +159,12 @@ public class IPReputationEngine {
     public void decayAll(int decayAmount) {
         scores.entrySet().removeIf(e -> {
             int newVal = e.getValue().addAndGet(-decayAmount);
-            return newVal <= 0;
+            if (newVal <= 0) {
+                // Skor sıfırlandı → violation count da temizle
+                violationCounts.remove(e.getKey());
+                return true;
+            }
+            return false;
         });
     }
 }

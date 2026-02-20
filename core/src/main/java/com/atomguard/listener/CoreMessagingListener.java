@@ -9,7 +9,10 @@ import org.bukkit.entity.Player;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
 /**
@@ -19,6 +22,13 @@ import java.util.logging.Level;
 public class CoreMessagingListener implements PluginMessageListener {
     private static final String CHANNEL = "atomguard:main";
     private static final byte PROTOCOL_VERSION = 1;
+
+    /** Velocity yüksek tehdit skoru sayacı — tekrarlama kontrolü için */
+    private final Map<String, AtomicInteger> highThreatCounts = new ConcurrentHashMap<>();
+    private final Map<String, Long> highThreatFirstSeen = new ConcurrentHashMap<>();
+    private static final int HIGH_THREAT_BAN_THRESHOLD = 90;
+    private static final int HIGH_THREAT_REPEAT_COUNT = 3;
+    private static final long HIGH_THREAT_WINDOW_MS = 10 * 60 * 1000L; // 10 dakika
 
     private final AtomGuard plugin;
 
@@ -165,9 +175,26 @@ public class CoreMessagingListener implements PluginMessageListener {
 
             plugin.getLogger().fine("CoreMessagingListener: Tehdit skoru alındı - " + uuid + " [" + ip + "] Skor: " + score);
 
-            // Yüksek tehdit skoru - itibar sistemine ekle
-            if (score >= 75 && plugin.getReputationManager() != null) {
-                plugin.getReputationManager().blockIP(ip);
+            // Yüksek tehdit skoru — yalnızca çok yüksek skor + tekrarlama ile geçici bildir
+            if (score >= HIGH_THREAT_BAN_THRESHOLD && plugin.getReputationManager() != null) {
+                long now = System.currentTimeMillis();
+                highThreatFirstSeen.putIfAbsent(ip, now);
+
+                // Zaman penceresi dışındaysa sıfırla
+                if (now - highThreatFirstSeen.get(ip) > HIGH_THREAT_WINDOW_MS) {
+                    highThreatCounts.remove(ip);
+                    highThreatFirstSeen.put(ip, now);
+                }
+
+                int count = highThreatCounts.computeIfAbsent(ip, k -> new AtomicInteger(0)).incrementAndGet();
+                plugin.getLogger().warning("CoreMessagingListener: Velocity yüksek tehdit skoru: " + ip + " skor=" + score + " tekrar=" + count);
+
+                // En az 3 kez >=90 skor geldiyse geçici işaretle (kalıcı ban değil)
+                if (count >= HIGH_THREAT_REPEAT_COUNT) {
+                    plugin.getReputationManager().addThreatScore(ip, score);
+                    highThreatCounts.remove(ip);
+                    highThreatFirstSeen.remove(ip);
+                }
             }
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "THREAT_SCORE işleme hatası: " + e.getMessage());

@@ -29,9 +29,9 @@ public class GravityCheck extends AbstractCheck {
         int totalChecks = 0;
         double tolerance = module.getConfigDouble("kontroller.yercekimi.tolerans", 0.08); // 0.03'ten 0.08'e çıkarıldı
 
-        // FP-06: Düşük TPS durumunda toleransı artır
-        if (tps < 18.0) {
-            tolerance *= 2.0;
+        // FP-06/07: Düşük TPS durumunda toleransı artır — eşik 19'a yükseltildi, çarpan 3x'e çıkarıldı
+        if (tps < 19.0) {
+            tolerance *= 3.0;
         }
 
         for (int i = 2; i < yPositions.size(); i++) {

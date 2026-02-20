@@ -55,6 +55,7 @@ public class WebPanel {
         }
     });
     private final java.util.Map<String, Long> validTokens = new java.util.concurrent.ConcurrentHashMap<>();
+    private java.util.concurrent.ScheduledExecutorService tokenCleanupExecutor;
 
     public WebPanel(AtomGuard plugin) {
         this.plugin = plugin;
@@ -74,8 +75,9 @@ public class WebPanel {
         
         this.maxEvents = plugin.getConfig().getInt("web-panel.max-olay-sayisi", 100);
         
-        // Cleanup task for expired tokens
-        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+        // Cleanup task for expired tokens — executor kaydediliyor (stop()'ta kapatılacak)
+        tokenCleanupExecutor = Executors.newSingleThreadScheduledExecutor();
+        tokenCleanupExecutor.scheduleAtFixedRate(() -> {
             long now = System.currentTimeMillis();
             validTokens.entrySet().removeIf(entry -> entry.getValue() < now);
         }, 1, 1, java.util.concurrent.TimeUnit.HOURS);
@@ -126,8 +128,10 @@ public class WebPanel {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            // CORS Headers
-            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            // CORS Headers — wildcard yerine config'den izin verilen origin
+            String allowedOrigin = plugin.getConfig().getString("web-panel.cors-origin", "");
+            String corsOrigin = (allowedOrigin == null || allowedOrigin.isBlank()) ? "null" : allowedOrigin;
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", corsOrigin);
             exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
             exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
@@ -253,6 +257,9 @@ public class WebPanel {
         if (server != null) {
             server.stop(0);
         }
+        if (tokenCleanupExecutor != null && !tokenCleanupExecutor.isShutdown()) {
+            tokenCleanupExecutor.shutdown();
+        }
     }
 
     // ═══════════════════════════════════════
@@ -271,7 +278,7 @@ public class WebPanel {
         recentEvents.addFirst(record);
 
         while (recentEvents.size() > maxEvents) {
-            recentEvents.removeLast();
+            recentEvents.pollLast(); // removeLast() yerine pollLast() — boş deque'de NPE güvenli
         }
     }
 

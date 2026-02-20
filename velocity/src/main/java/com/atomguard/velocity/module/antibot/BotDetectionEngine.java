@@ -3,8 +3,10 @@ package com.atomguard.velocity.module.antibot;
 import com.atomguard.velocity.data.ThreatScore;
 
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Bileşik bot tespit motoru — ağırlıklı skorlama + doğrulanmış oyuncu bypass.
@@ -26,8 +28,9 @@ public class BotDetectionEngine {
 
     private final Map<String, ThreatScore> threatScores = new ConcurrentHashMap<>();
 
-    /** Başarılı login yapan, doğrulanmış oyuncu IP'leri */
+    /** Başarılı login yapan, doğrulanmış oyuncu IP'leri (LRU eviction) */
     private final Set<String> verifiedPlayers = ConcurrentHashMap.newKeySet(10000);
+    private final Queue<String> verifiedPlayersOrder = new ConcurrentLinkedQueue<>();
 
     private final int highRiskThreshold;
     private final int mediumRiskThreshold;
@@ -130,12 +133,17 @@ public class BotDetectionEngine {
 
     /**
      * IP'yi doğrulanmış oyuncu olarak işaretle (başarılı login sonrası).
+     * LRU eviction: ekleme sırasındaki en eski IP çıkarılır.
      */
     public void markVerified(String ip) {
-        if (verifiedPlayers.size() >= 10000) {
-            verifiedPlayers.remove(verifiedPlayers.iterator().next());
+        if (verifiedPlayers.add(ip)) {
+            verifiedPlayersOrder.offer(ip);
         }
-        verifiedPlayers.add(ip);
+        // Cache doluysa en eski IP'yi çıkar
+        while (verifiedPlayers.size() > 10000) {
+            String oldest = verifiedPlayersOrder.poll();
+            if (oldest != null) verifiedPlayers.remove(oldest);
+        }
         threatScores.remove(ip); // Eski skor temizle
     }
 

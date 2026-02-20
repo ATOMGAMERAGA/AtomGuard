@@ -129,7 +129,7 @@ public class IPReputationManager implements IReputationService {
         this.enabled = plugin.getConfig().getBoolean("anti-vpn.enabled", false);
         this.cacheTtl = TimeUnit.HOURS.toMillis(plugin.getConfig().getLong("anti-vpn.cache-hours", 24));
         this.primaryApiKey = plugin.getConfig().getString("anti-vpn.api-kontrol.api-key", "");
-        this.riskThreshold = plugin.getConfig().getInt("anti-vpn.risk-threshold", 60);
+        this.riskThreshold = plugin.getConfig().getInt("anti-vpn.risk-threshold", 75); // 60'tan 75'e yükseltildi (FP-13)
         this.blockedCountries = plugin.getConfig().getStringList("anti-vpn.blocked-countries");
 
         // Beyaz liste (IP)
@@ -537,6 +537,24 @@ public class IPReputationManager implements IReputationService {
         addToManualBlocklist(ipAddress);
     }
 
+    /**
+     * Velocity'den gelen yüksek tehdit skoru — kalıcı ban yerine itibar puanı olarak kaydeder.
+     * Bu metod kalıcı blocklist'e eklemez; yalnızca API cache'e yüksek riskli işaret koyar.
+     */
+    public void addThreatScore(@NotNull String ip, int score) {
+        ReputationResult threatResult = new ReputationResult(
+            false, Math.min(score, 100), "Velocity Tehdit Skoru", "Bilinmiyor", "Bilinmiyor");
+        apiCache.put(ip, threatResult);
+        plugin.getLogger().info("[AntiBot] Velocity tehdit skoru kaydedildi: " + ip + " (" + score + " puan)");
+    }
+
+    /**
+     * Başarılı giriş sonrası API önbelleğindeki yanlış engellemeleri temizler.
+     */
+    public void clearCacheForIp(@NotNull String ip) {
+        apiCache.remove(ip);
+    }
+
     @Override
     public void unblockIP(@NotNull String ipAddress) {
         removeFromManualBlocklist(ipAddress);
@@ -667,7 +685,7 @@ public class IPReputationManager implements IReputationService {
     // ═══════════════════════════════════════════════════
 
     private ReputationResult queryApis(@NotNull String ip, @Nullable String playerName, boolean wasInProxyList) {
-        int baseRisk = wasInProxyList ? 40 : 0;
+        int baseRisk = wasInProxyList ? 20 : 0; // 40'tan 20'ye düşürüldü — proxy listesi tek başına güvenilir değil (FP-12)
 
         // ProxyCheck.io (birincil)
         if (!primaryApiKey.isEmpty()) {
@@ -790,7 +808,7 @@ public class IPReputationManager implements IReputationService {
                 String asn = json.has("as") ? json.get("as").getAsString() : "Bilinmiyor";
                 String org = json.has("org") ? json.get("org").getAsString() : "Bilinmiyor";
 
-                int risk = wasInProxyList ? 40 : 0;
+                int risk = wasInProxyList ? 20 : 0; // 40'tan 20'ye düşürüldü (FP-12)
                 String type = "Temiz";
                 
                 if (isProxy) { 
@@ -805,9 +823,9 @@ public class IPReputationManager implements IReputationService {
                 boolean hostingEngelle = plugin.getConfig().getBoolean("anti-vpn.hosting-engelle", false);
                 
                 // FP-02: isHosting tek başına engelleme sebebi olmamalı (hosting-engelle kapalıysa)
-                boolean blocked = isProxy 
+                // FP-12: Eski proxy listesi + hosting kombinasyonu kaldırıldı (Türk ISP false positive kaynağı)
+                boolean blocked = isProxy
                         || (isHosting && hostingEngelle && risk >= riskThreshold)
-                        || (isHosting && wasInProxyList && (risk + 20) >= riskThreshold) // Hosting + Proxy Listesi kombinasyonu
                         || risk >= riskThreshold
                         || blockedCountries.contains(country);
 
@@ -861,7 +879,7 @@ public class IPReputationManager implements IReputationService {
         BlockRecord record = new BlockRecord(ip, playerName, reason, risk, System.currentTimeMillis());
         recentBlocks.addFirst(record);
         while (recentBlocks.size() > MAX_RECENT_BLOCKS) {
-            recentBlocks.removeLast();
+            recentBlocks.pollLast(); // removeLast() yerine pollLast() — boş deque'de NPE güvenli
         }
         // Trigger API Event
         Bukkit.getPluginManager().callEvent(new com.atomguard.api.event.IPBlockedEvent(ip, reason, playerName, 0));

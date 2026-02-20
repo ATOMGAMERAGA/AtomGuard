@@ -7,11 +7,14 @@ import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.LoginEvent;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
 
+import com.velocitypowered.api.scheduler.ScheduledTask;
+
 import java.util.concurrent.TimeUnit;
 
 public class ReconnectControlModule extends VelocityModule {
 
     private final ReconnectTracker tracker;
+    private ScheduledTask cleanupTask;
 
     public ReconnectControlModule(AtomGuardVelocity plugin) {
         super(plugin, "yeniden-baglanti-kontrol");
@@ -20,7 +23,7 @@ public class ReconnectControlModule extends VelocityModule {
 
     @Override
     public void onEnable() {
-        plugin.getProxyServer().getScheduler()
+        cleanupTask = plugin.getProxyServer().getScheduler()
                 .buildTask(plugin, tracker::cleanup)
                 .repeat(1, TimeUnit.MINUTES)
                 .schedule();
@@ -30,6 +33,10 @@ public class ReconnectControlModule extends VelocityModule {
 
     @Override
     public void onDisable() {
+        if (cleanupTask != null) {
+            cleanupTask.cancel();
+            cleanupTask = null;
+        }
         plugin.getProxyServer().getEventManager().unregisterListener(plugin, this);
         tracker.clear();
         logger.info("Reconnect Control module disabled.");

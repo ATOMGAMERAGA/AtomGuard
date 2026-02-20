@@ -4,9 +4,11 @@ import com.atomguard.velocity.AtomGuardVelocity;
 import com.atomguard.velocity.module.VelocityModule;
 
 import java.util.List;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * VPN/Proxy tespit modülü — konsensüs tabanlı, doğrulanmış IP cache destekli.
@@ -23,8 +25,9 @@ public class VPNDetectionModule extends VelocityModule {
 
     private final VPNProviderChain providerChain;
 
-    /** Daha önce temiz çıkmış IP'ler — max 10000 */
+    /** Daha önce temiz çıkmış IP'ler — max 10000 (LRU eviction) */
     private final Set<String> verifiedCleanIPs = ConcurrentHashMap.newKeySet(10000);
+    private final Queue<String> verifiedCleanIPsOrder = new ConcurrentLinkedQueue<>();
 
     public VPNDetectionModule(AtomGuardVelocity plugin) {
         super(plugin, "vpn-proxy-engelleme");
@@ -90,14 +93,17 @@ public class VPNDetectionModule extends VelocityModule {
 
     /**
      * IP'yi doğrulanmış temiz olarak işaretle (başarılı login sonrası çağrılır).
+     * LRU eviction: ekleme sırasındaki en eski IP çıkarılır.
      */
     public void markAsVerifiedClean(String ip) {
-        if (verifiedCleanIPs.size() >= 10000) {
-            // Cache doluysa ilk elemanı çıkar
-            verifiedCleanIPs.iterator().next();
-            verifiedCleanIPs.remove(verifiedCleanIPs.iterator().next());
+        if (verifiedCleanIPs.add(ip)) {
+            verifiedCleanIPsOrder.offer(ip);
         }
-        verifiedCleanIPs.add(ip);
+        // Cache doluysa en eski IP'yi çıkar
+        while (verifiedCleanIPs.size() > 10000) {
+            String oldest = verifiedCleanIPsOrder.poll();
+            if (oldest != null) verifiedCleanIPs.remove(oldest);
+        }
     }
 
     /**

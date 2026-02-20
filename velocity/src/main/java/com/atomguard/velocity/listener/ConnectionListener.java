@@ -114,7 +114,13 @@ public class ConnectionListener {
         VelocityAntiBotModule antiBot = plugin.getAntiBotModule();
         if (antiBot != null && antiBot.isEnabled()) {
             if (!antiBot.isVerified(ip)) {
-                antiBot.analyzePreLogin(ip, username, null, 0, 0);
+                // Gerçek handshake bilgilerini PreLoginEvent'ten çıkar
+                String hostname = event.getConnection().getVirtualHost()
+                        .map(addr -> addr.getHostString()).orElse(null);
+                int port = event.getConnection().getVirtualHost()
+                        .map(addr -> addr.getPort()).orElse(0);
+                int protocol = event.getConnection().getProtocolVersion().getProtocol();
+                antiBot.analyzePreLogin(ip, username, hostname, port, protocol);
                 if (antiBot.isHighRisk(ip)) {
                     if (firewall != null) {
                         // 20 → 10 puan, bağlamsal tür "bot-tespiti" (0.7x çarpan)

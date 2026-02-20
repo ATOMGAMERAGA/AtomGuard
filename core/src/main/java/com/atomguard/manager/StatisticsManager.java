@@ -104,9 +104,9 @@ public class StatisticsManager implements IStatisticsProvider {
         record.date = todayKey();
         attackHistory.addFirst(record);
 
-        // Trim history
+        // Trim history — pollLast() kullan (boş deque'de NPE güvenli)
         while (attackHistory.size() > maxAttackHistory) {
-            attackHistory.removeLast();
+            attackHistory.pollLast();
         }
     }
 

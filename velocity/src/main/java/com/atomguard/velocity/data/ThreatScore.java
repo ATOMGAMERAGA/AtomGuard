@@ -40,7 +40,7 @@ public class ThreatScore {
      * Her yeni analiz döngüsü başlamadan önce tüm alt skorları sıfırlar.
      * Bu olmadan skorlar her analyze() çağrısında birikir ve false positive oluşturur.
      */
-    public void resetForNewAnalysis() {
+    public synchronized void resetForNewAnalysis() {
         connectionRateScore = 0;
         handshakeScore = 0;
         brandScore = 0;
@@ -58,7 +58,7 @@ public class ThreatScore {
      * <p>Tek kategoride yüksek skor artık kesin engelleme yaratmaz:
      * eğer {@code flagCount <= 1} ise ham skor %60'a düşürülür.
      */
-    public void calculate() {
+    public synchronized void calculate() {
         double raw =
             connectionRateScore * 0.20 +
             handshakeScore * 0.15 +

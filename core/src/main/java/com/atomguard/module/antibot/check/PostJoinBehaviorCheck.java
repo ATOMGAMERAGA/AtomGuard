@@ -36,10 +36,10 @@ public class PostJoinBehaviorCheck extends AbstractCheck {
             score += 5;
         }
 
-        // 3. Interactions
+        // 3. Interactions — FP-07: Saldırı modunda bile etkileşim skorları minimumda tutuldu
         if (module.getAttackTracker().isUnderAttack()) {
-            if (!profile.hasInteractedWithInventory()) score += 3; // 5'ten 3'e düşürüldü
-            if (!profile.hasInteractedWithWorld()) score += 2; // 3'ten 2'e düşürüldü
+            if (!profile.hasInteractedWithInventory()) score += 1; // 3'ten 1'e düşürüldü
+            if (!profile.hasInteractedWithWorld()) score += 1; // 2'den 1'e düşürüldü
         }
 
         return Math.min(score, 25);

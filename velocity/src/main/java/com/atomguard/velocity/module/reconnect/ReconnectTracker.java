@@ -19,9 +19,12 @@ public class ReconnectTracker {
     public void recordDisconnect(String ip) {
         long now = System.currentTimeMillis();
         lastDisconnect.put(ip, now);
-        
-        // Record for crash loop analysis
-        crashHistory.computeIfAbsent(ip, k -> new LinkedList<>()).add(now);
+
+        // Record for crash loop analysis — synchronized to match isCrashLoop()
+        LinkedList<Long> list = crashHistory.computeIfAbsent(ip, k -> new LinkedList<>());
+        synchronized (list) {
+            list.add(now);
+        }
     }
 
     public void recordShortSession(String ip) {
@@ -56,7 +59,13 @@ public class ReconnectTracker {
         long now = System.currentTimeMillis();
         lastConnect.entrySet().removeIf(e -> (now - e.getValue()) > TimeUnit.MINUTES.toMillis(10));
         lastDisconnect.entrySet().removeIf(e -> (now - e.getValue()) > TimeUnit.MINUTES.toMillis(10));
-        crashHistory.entrySet().removeIf(e -> (now - e.getValue().getLast()) > TimeUnit.MINUTES.toMillis(5));
+        crashHistory.entrySet().removeIf(e -> {
+            synchronized (e.getValue()) {
+                Long last = e.getValue().peekLast();
+                // Remove entry if list is empty or last entry is older than 5 minutes
+                return last == null || (now - last) > TimeUnit.MINUTES.toMillis(5);
+            }
+        });
         shortSessionCount.clear();
     }
     

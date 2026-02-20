@@ -131,9 +131,14 @@ public class BukkitListener implements Listener {
             // Add to verified player cache
             if (plugin.getVerifiedPlayerCache() != null) {
                 plugin.getVerifiedPlayerCache().addVerified(player.getName(), ip);
-                
+
                 // Trigger API Event
                 plugin.getServer().getPluginManager().callEvent(new com.atomguard.api.event.PlayerVerifiedEvent(player, ip));
+            }
+
+            // Başarılı giriş — önceki false-positive API cache kaydını temizle (FP-15)
+            if (plugin.getReputationManager() != null && plugin.getReputationManager().isEnabled()) {
+                plugin.getReputationManager().clearCacheForIp(ip);
             }
         }
 

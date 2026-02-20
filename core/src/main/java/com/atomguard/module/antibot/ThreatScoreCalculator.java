@@ -76,7 +76,8 @@ public class ThreatScoreCalculator {
 
         int allowThreshold = (int) (module.getConfigInt("skor-esikleri.izin-ver", 30) * multiplier);
         int delayThreshold = (int) (module.getConfigInt("skor-esikleri.geciktir", 60) * multiplier);
-        int kickThreshold = (int) (module.getConfigInt("skor-esikleri.at", 80) * multiplier);
+        // FP-07: Minimum 75 — saldırı modu çarpanı kick eşiğini çok düşüremesin
+        int kickThreshold = Math.max(75, (int) (module.getConfigInt("skor-esikleri.at", 80) * multiplier));
 
         if (totalScore < allowThreshold) {
             action = ActionType.ALLOW;
