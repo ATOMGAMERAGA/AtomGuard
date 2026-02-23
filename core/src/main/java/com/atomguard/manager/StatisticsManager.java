@@ -33,7 +33,7 @@ public class StatisticsManager implements IStatisticsProvider {
     // Data
     private final ConcurrentHashMap<String, ModuleStats> moduleStats = new ConcurrentHashMap<>();
     private final ConcurrentLinkedDeque<AttackRecord> attackHistory = new ConcurrentLinkedDeque<>();
-    private volatile long totalBlockedAllTime = 0;
+    private final java.util.concurrent.atomic.AtomicLong totalBlockedAllTime = new java.util.concurrent.atomic.AtomicLong(0);
     private volatile long serverStartTime = System.currentTimeMillis();
 
     private ScheduledFuture<?> saveTask;
@@ -88,7 +88,7 @@ public class StatisticsManager implements IStatisticsProvider {
         String today = todayKey();
         moduleStats.computeIfAbsent(moduleName, k -> new ModuleStats())
                    .increment(today);
-        totalBlockedAllTime++;
+        totalBlockedAllTime.incrementAndGet();
     }
 
     /**
@@ -115,12 +115,12 @@ public class StatisticsManager implements IStatisticsProvider {
     // ═══════════════════════════════════════
 
     public long getTotalBlockedAllTime() {
-        return totalBlockedAllTime;
+        return totalBlockedAllTime.get();
     }
 
     @Override
     public long getTotalBlocked() {
-        return totalBlockedAllTime;
+        return totalBlockedAllTime.get();
     }
 
     public long getModuleBlockedToday(String moduleName) {
@@ -162,7 +162,7 @@ public class StatisticsManager implements IStatisticsProvider {
             StatsData data = gson.fromJson(reader, type);
             if (data == null) return;
 
-            this.totalBlockedAllTime = data.totalBlockedAllTime;
+            this.totalBlockedAllTime.set(data.totalBlockedAllTime);
             if (data.moduleStats != null) {
                 this.moduleStats.clear();
                 this.moduleStats.putAll(data.moduleStats);
@@ -187,7 +187,7 @@ public class StatisticsManager implements IStatisticsProvider {
             }
 
             StatsData data = new StatsData();
-            data.totalBlockedAllTime = this.totalBlockedAllTime;
+            data.totalBlockedAllTime = this.totalBlockedAllTime.get();
             data.moduleStats = new HashMap<>(this.moduleStats);
             data.attackHistory = new ArrayList<>(this.attackHistory);
             data.lastSave = System.currentTimeMillis();
@@ -221,11 +221,11 @@ public class StatisticsManager implements IStatisticsProvider {
 
     public static class ModuleStats {
         private final ConcurrentHashMap<String, Long> dailyCounts = new ConcurrentHashMap<>();
-        private volatile long total = 0;
+        private final java.util.concurrent.atomic.AtomicLong total = new java.util.concurrent.atomic.AtomicLong(0);
 
         public void increment(String dayKey) {
             dailyCounts.merge(dayKey, 1L, Long::sum);
-            total++;
+            total.incrementAndGet();
         }
 
         public long getCount(String dayKey) {
@@ -233,7 +233,7 @@ public class StatisticsManager implements IStatisticsProvider {
         }
 
         public long getTotal() {
-            return total;
+            return total.get();
         }
 
         public Map<String, Long> getDailyCounts() {

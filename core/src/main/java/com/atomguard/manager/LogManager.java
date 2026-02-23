@@ -22,7 +22,7 @@ import java.util.logging.Level;
  * Günlük dosyalar oluşturur ve eski logları temizler
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 1.1.1
  */
 public class LogManager {
 
@@ -36,6 +36,11 @@ public class LogManager {
 
     private volatile boolean running;
     private Future<?> logTask;
+
+    // Batch flush: her 50 entry'de bir veya 5 saniyede bir flush
+    private int pendingEntries = 0;
+    private static final int FLUSH_EVERY_N_ENTRIES = 50;
+    private long lastFlushTime = System.currentTimeMillis();
 
     // Date formatter'lar
     private static final DateTimeFormatter FILE_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -233,7 +238,15 @@ public class LogManager {
             );
 
             logWriter.write(logLine);
-            logWriter.flush();
+            pendingEntries++;
+
+            // Batch flush: her FLUSH_EVERY_N_ENTRIES entry'de veya her 5 saniyede bir
+            long now = System.currentTimeMillis();
+            if (pendingEntries >= FLUSH_EVERY_N_ENTRIES || (now - lastFlushTime) >= 5000) {
+                logWriter.flush();
+                pendingEntries = 0;
+                lastFlushTime = now;
+            }
 
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Log yazılamadı!", e);

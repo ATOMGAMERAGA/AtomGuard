@@ -48,12 +48,14 @@ public class WebPanel {
             return size() > 2000;
         }
     });
-    private final java.util.Map<String, Integer> loginAttempts = Collections.synchronizedMap(new LinkedHashMap<>(128, 0.75f, true) {
+    // loginAttempts: IP → [count, firstAttemptTimestamp]. 30 dakika sonra sıfırlanır.
+    private final java.util.Map<String, long[]> loginAttempts = Collections.synchronizedMap(new LinkedHashMap<>(128, 0.75f, true) {
         @Override
-        protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
+        protected boolean removeEldestEntry(Map.Entry<String, long[]> eldest) {
             return size() > 1000;
         }
     });
+    private static final long LOGIN_LOCKOUT_MS = 30 * 60 * 1000L; // 30 dakika lockout
     private final java.util.Map<String, Long> validTokens = new java.util.concurrent.ConcurrentHashMap<>();
     private java.util.concurrent.ScheduledExecutorService tokenCleanupExecutor;
 
@@ -153,8 +155,9 @@ public class WebPanel {
                 String referer = exchange.getRequestHeaders().getFirst("Referer");
                 String host = exchange.getRequestHeaders().getFirst("Host");
 
-                boolean originOk = origin != null && (origin.contains(host) || origin.contains("localhost") || origin.contains("127.0.0.1"));
-                boolean refererOk = referer != null && (referer.contains(host) || referer.contains("localhost") || referer.contains("127.0.0.1"));
+                // Güvenli kontrol: contains() yerine tam eşleşme — "evil-localhost.com" bypass'ını önler
+                boolean originOk = origin != null && isOriginAllowed(origin, host);
+                boolean refererOk = referer != null && isRefererAllowed(referer, host);
 
                 if (!originOk && !refererOk) {
                     sendResponse(exchange, 403, "application/json", "{\"error\":\"CSRF detected\"}");
@@ -180,13 +183,20 @@ public class WebPanel {
             }
 
             String ip = exchange.getRemoteAddress().getAddress().getHostAddress();
+            long now = System.currentTimeMillis();
             int attempts;
             synchronized (loginAttempts) {
-                attempts = loginAttempts.getOrDefault(ip, 0);
+                long[] entry = loginAttempts.get(ip);
+                if (entry != null && (now - entry[1]) > LOGIN_LOCKOUT_MS) {
+                    // Lockout süresi doldu — sıfırla
+                    loginAttempts.remove(ip);
+                    entry = null;
+                }
+                attempts = (entry == null) ? 0 : (int) entry[0];
             }
 
-            if (attempts > 5) {
-                sendResponse(exchange, 429, "application/json", "{\"error\":\"Too many login attempts\"}");
+            if (attempts >= 5) {
+                sendResponse(exchange, 429, "application/json", "{\"error\":\"Too many login attempts. Try again later.\"}");
                 return;
             }
 
@@ -200,7 +210,7 @@ public class WebPanel {
                 }
             }
 
-            if (authUser.equals(user) && authPass.equals(pass)) {
+            if (authUser.equals(user) && constantTimeEquals(authPass, pass)) {
                 String token = UUID.randomUUID().toString();
                 validTokens.put(token, System.currentTimeMillis() + (2 * 3600 * 1000L)); // 2 hour expiry
                 synchronized (loginAttempts) {
@@ -209,11 +219,51 @@ public class WebPanel {
                 sendResponse(exchange, 200, "application/json", "{\"token\":\"" + token + "\"}");
             } else {
                 synchronized (loginAttempts) {
-                    loginAttempts.put(ip, attempts + 1);
+                    long[] entry = loginAttempts.get(ip);
+                    if (entry == null) {
+                        loginAttempts.put(ip, new long[]{1, now});
+                    } else {
+                        entry[0]++;
+                    }
                 }
                 sendResponse(exchange, 401, "application/json", "{\"error\":\"Invalid credentials\"}");
             }
         }
+    }
+
+    /**
+     * Origin header'ın izin verilen kaynaklardan gelip gelmediğini kontrol eder.
+     * "evil-localhost.com" gibi domain'lerin bypass yapmasını engeller.
+     */
+    /**
+     * Timing attack'a karşı dayanıklı sabit-zamanlı string karşılaştırması.
+     */
+    private boolean constantTimeEquals(String a, String b) {
+        if (a == null || b == null) return false;
+        byte[] aBytes = a.getBytes(StandardCharsets.UTF_8);
+        byte[] bBytes = b.getBytes(StandardCharsets.UTF_8);
+        return java.security.MessageDigest.isEqual(aBytes, bBytes);
+    }
+
+    private boolean isOriginAllowed(String origin, String host) {
+        if (origin == null) return false;
+        // Tam eşleşme: http://host veya https://host
+        if (host != null && (origin.equals("http://" + host) || origin.equals("https://" + host))) return true;
+        // Loopback — sadece tam "localhost" veya "127.0.0.1" kabul et
+        return origin.equals("http://localhost") || origin.equals("https://localhost")
+            || origin.equals("http://127.0.0.1") || origin.equals("https://127.0.0.1")
+            || origin.startsWith("http://localhost:") || origin.startsWith("https://localhost:")
+            || origin.startsWith("http://127.0.0.1:") || origin.startsWith("https://127.0.0.1:");
+    }
+
+    /**
+     * Referer header'ının izin verilen host ile eşleşip eşleşmediğini kontrol eder.
+     */
+    private boolean isRefererAllowed(String referer, String host) {
+        if (referer == null) return false;
+        if (host != null && (referer.startsWith("http://" + host + "/") || referer.startsWith("https://" + host + "/"))) return true;
+        return referer.startsWith("http://localhost") || referer.startsWith("https://localhost")
+            || referer.startsWith("http://127.0.0.1") || referer.startsWith("https://127.0.0.1");
     }
 
     private boolean checkRateLimit(HttpExchange exchange) {
@@ -310,7 +360,7 @@ public class WebPanel {
         if (authHeader.startsWith("Basic ")) {
             String decoded = new String(Base64.getDecoder().decode(authHeader.substring(6)), StandardCharsets.UTF_8);
             String[] parts = decoded.split(":", 2);
-            if (parts.length == 2 && parts[0].equals(authUser) && parts[1].equals(authPass)) {
+            if (parts.length == 2 && constantTimeEquals(parts[0], authUser) && constantTimeEquals(parts[1], authPass)) {
                 return true;
             }
         }

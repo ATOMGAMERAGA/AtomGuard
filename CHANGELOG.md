@@ -3,6 +3,40 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [1.1.1] - 2026-02-23
+
+### 🔒 Güvenlik Düzeltmeleri
+
+- **WebPanel (CSRF)**: `origin.contains("localhost")` kontrolü `evil-localhost.com` gibi domain'lerle bypass edilebiliyordu. Tam eşleşme tabanlı `isOriginAllowed()` ve `isRefererAllowed()` metodları eklendi.
+- **WebPanel (Brute-Force)**: `loginAttempts` IP'yi kalıcı olarak bloke ediyordu. 30 dakika sonra otomatik sıfırlama mekanizması eklendi.
+- **WebPanel (Timing Attack)**: Basic Auth ve Login endpoint'inde `String.equals()` yerine `MessageDigest.isEqual()` tabanlı constant-time karşılaştırma kullanıldı.
+- **AttackModeManager**: `lastReset` alanı `volatile` olarak işaretlendi (multi-thread visibility).
+
+### 🐛 Hata Düzeltmeleri
+
+- **Attack Mode asla kapanmıyordu**: `AttackModeManager.update()` hiç çağrılmıyordu. `AtomGuard.onEnable()`'a her saniye çalışan periyodik async Bukkit task eklendi.
+- **Discord Webhook batch gönderimi çalışmıyordu**: `DiscordWebhookManager.start()` hiç çağrılmıyordu. `AtomGuard.onEnable()`'a eklendi.
+- **StatisticsManager — veri kaybı (race condition)**: `volatile long totalBlockedAllTime++` ve `ModuleStats.total++` atomik değildi. Her ikisi de `AtomicLong`'a dönüştürüldü.
+- **AttackModeManager.verifiedIps memory leak**: Sınırsız büyüyen `ConcurrentHashMap`'e 50.000 üst sınır ve yaklaşık LRU temizleme eklendi.
+- **LogManager I/O darboğazı**: Her log entry'sinde `flush()` çağrılıyordu. Her 50 entry'de veya 5 saniyede bir toplu flush (batch flush) uygulandı.
+
+### 🏗️ Mimari & Kod Kalitesi
+
+- **BuildInfo.java**: `NAME = "Atom Guard"` → `"AtomGuard"` (marka tutarlılığı). `VERSION_MINOR` ve `VERSION_PATCH` doğru değerlere güncellendi.
+- **VelocityBuildInfo.java**: Hard-coded `VERSION = "1.0.0"` → `"1.1.1"`. Banner Türkçe metin → İngilizce (`"Enterprise Proxy Security System"`). Dinamik genişlik formatlaması eklendi.
+- **ConfigManager**: `checkConfigVersion()` içindeki `currentVersion = "1.0.0"` → `"1.1.1"`.
+- **AtomGuardCommand.java**: Stale `v1.0.0` ve `v4.0.0` referansları temizlendi.
+- **plugin.yml**: Komut açıklamaları Türkçe'den İngilizce'ye çevrildi (Bukkit API convention); izin açıklamaları düzeltildi.
+- **release.yml**: `"AtomGuard Team Team"` typo düzeltildi. `api/target/AtomGuard-api-*.jar` release asset'lerine eklendi. Release adı `"Atom Guard"` → `"AtomGuard"` düzeltildi.
+
+### 📦 Versiyon Güncellemeleri
+
+- Tüm `pom.xml` dosyalarında versiyon `1.1.0` → `1.1.1`
+- `velocity-plugin.json` versiyon `1.1.0` → `1.1.1`
+- `VelocityBuildInfo.java` versiyon `1.0.0` → `1.1.1`
+
+---
+
 ## [1.1.0] - 2026-02-20
 
 ### 🔥 DDoS Koruma Modülü — Tam Yeniden Yazım (Velocity)

@@ -20,7 +20,7 @@ import java.util.logging.Level;
  * Thread-safe ve performanslı config yönetimi sağlar
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 1.1.1
  */
 public class ConfigManager {
 
@@ -62,7 +62,7 @@ public class ConfigManager {
     }
 
     private void checkConfigVersion() {
-        String currentVersion = "1.0.0"; // Sabit v1.0.0 olarak kalacak
+        String currentVersion = "1.1.1";
         String configVersion = config.getString("config-version", "1.0.0");
 
         if (!configVersion.equals(currentVersion)) {

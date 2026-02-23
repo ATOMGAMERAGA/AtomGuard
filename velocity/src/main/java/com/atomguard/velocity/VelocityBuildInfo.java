@@ -4,8 +4,8 @@ import org.slf4j.Logger;
 
 public final class VelocityBuildInfo {
 
-    public static final String VERSION = "1.0.0";
-    public static final String BUILD_DATE = "2026-02-17";
+    public static final String VERSION = "1.1.1";
+    public static final String BUILD_DATE = "2026-02-23";
     public static final String AUTHOR = "AtomGuard Team";
 
     private VelocityBuildInfo() {}
@@ -13,10 +13,10 @@ public final class VelocityBuildInfo {
     public static void printBanner(Logger logger, int moduleCount) {
         logger.info("╔══════════════════════════════════════╗");
         logger.info("║        AtomGuard Velocity            ║");
-        logger.info("║  Kurumsal Proxy Güvenlik Sistemi     ║");
+        logger.info("║  Enterprise Proxy Security System    ║");
         logger.info("╠══════════════════════════════════════╣");
-        logger.info("║  Sürüm   : v{}                  ║", VERSION);
-        logger.info("║  Modüller: {}                      ║", moduleCount);
+        logger.info("║  Version : v{}",   String.format("%-27s║", VERSION));
+        logger.info("║  Modules : {}",    String.format("%-27s║", moduleCount));
         logger.info("╚══════════════════════════════════════╝");
     }
 

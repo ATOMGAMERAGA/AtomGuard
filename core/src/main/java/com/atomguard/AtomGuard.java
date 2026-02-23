@@ -98,6 +98,13 @@ public class AtomGuard extends JavaPlugin {
                 getLogger().info("PlaceholderAPI entegrasyonu aktif.");
             }
 
+            // Discord Webhook
+            discordWebhookManager.start();
+
+            // Periyodik görev: saldırı modunu otomatik kapat
+            getServer().getScheduler().runTaskTimerAsynchronously(this,
+                () -> attackModeManager.update(), 20L, 20L); // her saniye kontrol
+
             // Web Panel
             if (getConfig().getBoolean("web-panel.aktif", false)) {
                 this.webPanel = new com.atomguard.web.WebPanel(this);

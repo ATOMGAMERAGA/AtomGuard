@@ -2,7 +2,7 @@ package com.atomguard;
 
 public final class BuildInfo {
 
-    public static final String NAME = "Atom Guard";
+    public static final String NAME = "AtomGuard";
     public static final String VERSION = "${project.version}";
     public static final String BUILD_DATE = "${build.timestamp}";
     public static final String MINECRAFT_VERSION = "1.21.4";
@@ -10,8 +10,8 @@ public final class BuildInfo {
     public static final String JAVA_VERSION = "21";
 
     public static final int VERSION_MAJOR = 1;
-    public static final int VERSION_MINOR = 0;
-    public static final int VERSION_PATCH = 0;
+    public static final int VERSION_MINOR = 1;
+    public static final int VERSION_PATCH = 1;
     public static final String VERSION_TAG = "";
 
     public static String getFullVersion() {

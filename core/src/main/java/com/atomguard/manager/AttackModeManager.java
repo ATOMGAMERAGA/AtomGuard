@@ -16,7 +16,7 @@ public class AttackModeManager {
     private final AtomGuard plugin;
 
     private final AtomicInteger connectionCounter = new AtomicInteger(0);
-    private long lastReset = System.currentTimeMillis();
+    private volatile long lastReset = System.currentTimeMillis();
 
     private volatile boolean attackMode = false;
     private long attackModeStartTime = 0;
@@ -26,7 +26,8 @@ public class AttackModeManager {
     private final int threshold;
     private final int durationSeconds;
 
-    // Verified IPs (players that successfully joined before)
+    // Verified IPs (players that successfully joined before) — max 50 000 entries
+    private static final int MAX_VERIFIED_IPS = 50_000;
     private final Set<String> verifiedIps = ConcurrentHashMap.newKeySet();
 
     // Action config
@@ -203,6 +204,14 @@ public class AttackModeManager {
      */
     public void recordVerifiedIp(String ip) {
         if (ip != null) {
+            // Sınır aşılınca eski girdileri temizle (approximate LRU)
+            if (verifiedIps.size() >= MAX_VERIFIED_IPS) {
+                java.util.Iterator<String> it = verifiedIps.iterator();
+                for (int i = 0; i < 1000 && it.hasNext(); i++) {
+                    it.next();
+                    it.remove();
+                }
+            }
             verifiedIps.add(ip);
         }
     }

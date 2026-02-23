@@ -13,29 +13,29 @@ softdepend:
 
 commands:
   atomguard:
-    description: "Atom Guard ana komutu"
-    usage: "/<command> [reload|status|toggle|info|health]"
+    description: "AtomGuard main command"
+    usage: "/<command> [reload|status|toggle|stats|info|health]"
     permission: atomguard.admin
     aliases: [ag]
   panic:
-    description: "Sunucuyu bot saldırısı sırasında korumaya alır"
+    description: "Enable panic mode during bot attacks"
     usage: "/<command>"
     permission: atomguard.panic
     aliases: [panik]
 
 permissions:
   atomguard.admin:
-    description: "Tüm Atom Guard komutlarına erişim"
+    description: "Access to all AtomGuard commands"
     default: op
   atomguard.bypass:
-    description: "Tüm exploit kontrollerini atla"
+    description: "Bypass all exploit checks"
     default: false
   atomguard.reload:
-    description: "Config yeniden yükleme izni"
+    description: "Permission to reload config"
     default: op
   atomguard.notify:
-    description: "Exploit bildirimlerini alma izni"
+    description: "Receive exploit notifications"
     default: op
   atomguard.panic:
-    description: "Panic modu izni"
+    description: "Permission to use panic mode"
     default: op

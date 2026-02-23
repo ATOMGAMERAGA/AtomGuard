@@ -28,7 +28,7 @@ jobs:
 
       - name: Generate Checksums
         run: |
-          find core/target velocity/target -name "AtomGuard-*.jar" -not -name "*-sources*" -exec sha256sum {} + > SHA256SUMS
+          find core/target api/target velocity/target -name "AtomGuard-*.jar" -not -name "*-sources*" -not -name "*-original*" -exec sha256sum {} + > SHA256SUMS
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -36,24 +36,34 @@ jobs:
           files: |
             core/target/AtomGuard-core-*.jar
             velocity/target/AtomGuard-velocity-*.jar
+            api/target/AtomGuard-api-*.jar
             SHA256SUMS
           generate_release_notes: true
           draft: false
           prerelease: false
-          name: Atom Guard ${{ github.ref_name }}
+          name: AtomGuard ${{ github.ref_name }}
           body: |
-            ## 🛡️ Atom Guard ${{ github.ref_name }}
-            
+            ## 🛡️ AtomGuard ${{ github.ref_name }}
+
             Advanced Minecraft Server Security & Exploit Protection.
-            
+
             ### 📦 Installation
             1. Stop your server.
             2. Delete any old `AtomGuard` or `AtomSMPFixer` JARs from the plugins folder.
-            3. Upload the new `AtomGuard-${{ github.ref_name }}.jar`.
-            4. Start your server.
-            
+            3. Upload the new `AtomGuard-core-${{ github.ref_name }}.jar` to your Paper server's plugins folder.
+            4. (Optional) Upload `AtomGuard-velocity-${{ github.ref_name }}.jar` to your Velocity proxy's plugins folder.
+            5. Start your server.
+
+            ### 📦 Files
+            | File | Description |
+            |------|-------------|
+            | `AtomGuard-core-*.jar` | Paper/Spigot server plugin |
+            | `AtomGuard-velocity-*.jar` | Velocity proxy plugin |
+            | `AtomGuard-api-*.jar` | Developer API (for third-party integrations) |
+            | `SHA256SUMS` | SHA-256 checksums for verification |
+
             ### 🔐 Checksums (SHA-256)
             See `SHA256SUMS` file for verification.
-            
+
             ---
-            *Made with ❤️ by AtomGuard Team Team*
+            *Made with ❤️ by AtomGuard Team*

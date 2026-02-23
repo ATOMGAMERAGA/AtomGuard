@@ -13,7 +13,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Modern SubCommand architecture for AtomGuard v1.0.0
+ * Modern SubCommand architecture for AtomGuard.
  */
 public class AtomGuardCommand implements CommandExecutor, TabCompleter {
 
@@ -28,7 +28,6 @@ public class AtomGuardCommand implements CommandExecutor, TabCompleter {
     private void registerSubCommands() {
         register(new HealthCommand(plugin));
         // Other subcommands would be registered here in a full migration
-        // For this v4.0.0 release, we keep the main logic here but allow SubCommands to hook in
     }
 
     private void register(SubCommand cmd) {
@@ -59,7 +58,7 @@ public class AtomGuardCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Legacy fallbacks for main logic (will be moved to classes in v4.1)
+        // Legacy fallbacks for main logic (TODO: migrate to SubCommand classes in a future release)
         switch (sub) {
             case "reload" -> handleReload(sender);
             case "status" -> handleStatus(sender);
