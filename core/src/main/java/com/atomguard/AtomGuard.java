@@ -54,11 +54,12 @@ public class AtomGuard extends JavaPlugin {
         try {
             // Managers
             this.configManager = new ConfigManager(this);
+            configManager.load(); // Config diğer manager'lardan önce yüklenmeli
             this.messageManager = new MessageManager(this);
-            
+
             // Initialize Storage Provider
             initializeStorage();
-            
+
             this.logManager = new LogManager(this);
             this.statisticsManager = new StatisticsManager(this);
             this.redisManager = new RedisManager(this);
@@ -74,7 +75,6 @@ public class AtomGuard extends JavaPlugin {
             this.intelligenceEngine = new TrafficIntelligenceEngine(this);
 
             // Initialize Managers
-            configManager.load();
             logManager.start();
             redisManager.start();
             statisticsManager.start();
