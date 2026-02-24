@@ -208,6 +208,7 @@ public class PlayerProfile {
     public String getClientBrand() { return clientBrand; }
     public String getHandshakeHostname() { return handshakeHostname; }
     public int getTicksSinceJoin() { return ticksSinceJoin.get(); }
+    public long getFirstJoinTime() { return firstJoinTime.get(); }
     public long getHandshakeTime() { return handshakeTime.get(); }
     public long getLastPingTime() { return lastPingTime.get(); }
     public boolean hasSentClientSettings() { return sentClientSettings; }

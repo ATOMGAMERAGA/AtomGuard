@@ -22,14 +22,18 @@ public class ConnectionRateCheck extends AbstractCheck {
         long now = System.currentTimeMillis();
         long windowMs = module.getConfigInt("kontroller.baglanti-hizi.pencere-suresi-ms", 10000);
 
+        // Bağlantı timestamp'ini sadece pre-login aşamasında (henüz join olmamış) ekle.
+        // Periodic (in-game) değerlendirmede tekrar ekleme — false positive önleme.
+        boolean isPreLogin = profile.getFirstJoinTime() == 0;
+
         // Global rate
-        globalTimestamps.addLast(now);
+        if (isPreLogin) globalTimestamps.addLast(now);
         cleanOldEntries(globalTimestamps, now, windowMs);
         int globalRate = globalTimestamps.size();
 
         // Per-IP rate
         Deque<Long> ipDeque = perIpTimestamps.computeIfAbsent(ip, k -> new ConcurrentLinkedDeque<>());
-        ipDeque.addLast(now);
+        if (isPreLogin) ipDeque.addLast(now);
         cleanOldEntries(ipDeque, now, windowMs);
         int ipRate = ipDeque.size();
 

@@ -58,6 +58,7 @@ public class ThreatScoreCalculator {
         profile.updateMaxThreatScore(totalScore);
 
         // Trigger Event if score changed significantly or reached threshold
+        // ThreatScoreChangedEvent async-only — VerificationManager zaten async context'te çalışıyor
         if (oldScore != totalScore && profile.getUuid() != null) {
             org.bukkit.entity.Player player = org.bukkit.Bukkit.getPlayer(profile.getUuid());
             if (player != null) {
