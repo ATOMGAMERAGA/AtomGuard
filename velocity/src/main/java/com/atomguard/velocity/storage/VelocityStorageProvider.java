@@ -147,6 +147,7 @@ public class VelocityStorageProvider implements IStorageProvider {
 
     public void logAuditEvent(String eventType, String ip, String username,
                                String module, String detail, String severity) {
+        if (!isConnected()) return;
         executor.execute(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(
@@ -166,6 +167,7 @@ public class VelocityStorageProvider implements IStorageProvider {
     }
 
     public void saveAttackSnapshot(com.atomguard.velocity.data.AttackSnapshot snapshot) {
+        if (!isConnected()) return;
         executor.execute(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(
@@ -184,6 +186,7 @@ public class VelocityStorageProvider implements IStorageProvider {
     }
 
     public void saveBehaviorProfile(com.atomguard.velocity.data.PlayerBehaviorProfile profile) {
+        if (!isConnected()) return;
         executor.execute(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(
@@ -207,6 +210,7 @@ public class VelocityStorageProvider implements IStorageProvider {
     }
 
     public CompletableFuture<Map<String, JSONObject>> loadBehaviorProfiles() {
+        if (!isConnected()) return CompletableFuture.completedFuture(new HashMap<>());
         return CompletableFuture.supplyAsync(() -> {
             Map<String, JSONObject> profiles = new HashMap<>();
             try (Connection conn = dataSource.getConnection();
@@ -224,6 +228,7 @@ public class VelocityStorageProvider implements IStorageProvider {
     }
 
     public void saveIPReputation(String ip, int score) {
+        if (!isConnected()) return;
         executor.execute(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(
@@ -238,6 +243,7 @@ public class VelocityStorageProvider implements IStorageProvider {
     }
 
     public CompletableFuture<Map<String, Integer>> loadIPReputations() {
+        if (!isConnected()) return CompletableFuture.completedFuture(new HashMap<>());
         return CompletableFuture.supplyAsync(() -> {
             Map<String, Integer> reputations = new HashMap<>();
             try (Connection conn = dataSource.getConnection();
@@ -255,6 +261,7 @@ public class VelocityStorageProvider implements IStorageProvider {
     }
 
     public void saveWhitelistIP(String ip, String reason) {
+        if (!isConnected()) return;
         executor.execute(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(
@@ -270,6 +277,7 @@ public class VelocityStorageProvider implements IStorageProvider {
     }
 
     public CompletableFuture<Set<String>> loadWhitelist() {
+        if (!isConnected()) return CompletableFuture.completedFuture(new HashSet<>());
         return CompletableFuture.supplyAsync(() -> {
             Set<String> ips = new HashSet<>();
             try (Connection conn = dataSource.getConnection();
@@ -288,6 +296,7 @@ public class VelocityStorageProvider implements IStorageProvider {
 
     public void batchInsertAudit(List<com.atomguard.velocity.audit.AuditLogger.AuditEntry> entries) {
         if (entries == null || entries.isEmpty()) return;
+        if (!isConnected()) return;
         
         executor.execute(() -> {
             try (Connection conn = dataSource.getConnection()) {
@@ -319,6 +328,7 @@ public class VelocityStorageProvider implements IStorageProvider {
     // ═══════════════════════════════════════
 
     public CompletableFuture<Void> saveVerifiedPlayer(String ip, String username, long verifiedAt) {
+        if (!isConnected()) return CompletableFuture.completedFuture(null);
         return CompletableFuture.runAsync(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(
@@ -340,6 +350,7 @@ public class VelocityStorageProvider implements IStorageProvider {
 
     @Override
     public CompletableFuture<Void> savePlayerData(@NotNull UUID uuid, @NotNull Map<String, Object> data) {
+        if (!isConnected()) return CompletableFuture.completedFuture(null);
         return CompletableFuture.runAsync(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(
@@ -356,6 +367,7 @@ public class VelocityStorageProvider implements IStorageProvider {
 
     @Override
     public CompletableFuture<Map<String, Object>> loadPlayerData(@NotNull UUID uuid) {
+        if (!isConnected()) return CompletableFuture.completedFuture(new HashMap<>());
         return CompletableFuture.supplyAsync(() -> {
             Map<String, Object> data = new HashMap<>();
             try (Connection conn = dataSource.getConnection();
@@ -378,6 +390,7 @@ public class VelocityStorageProvider implements IStorageProvider {
 
     @Override
     public CompletableFuture<Void> saveStatistics(@NotNull Map<String, Object> statistics) {
+        if (!isConnected()) return CompletableFuture.completedFuture(null);
         return CompletableFuture.runAsync(() -> {
             try (Connection conn = dataSource.getConnection()) {
                 conn.setAutoCommit(false);
@@ -402,6 +415,7 @@ public class VelocityStorageProvider implements IStorageProvider {
 
     @Override
     public CompletableFuture<Map<String, Object>> loadStatistics() {
+        if (!isConnected()) return CompletableFuture.completedFuture(new HashMap<>());
         return CompletableFuture.supplyAsync(() -> {
             Map<String, Object> stats = new HashMap<>();
             try (Connection conn = dataSource.getConnection();
@@ -419,6 +433,7 @@ public class VelocityStorageProvider implements IStorageProvider {
 
     @Override
     public CompletableFuture<Void> saveBlockedIP(@NotNull String ipAddress, @NotNull String reason, long expiry) {
+        if (!isConnected()) return CompletableFuture.completedFuture(null);
         return CompletableFuture.runAsync(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(
@@ -436,6 +451,7 @@ public class VelocityStorageProvider implements IStorageProvider {
 
     @Override
     public CompletableFuture<Void> removeBlockedIP(@NotNull String ipAddress) {
+        if (!isConnected()) return CompletableFuture.completedFuture(null);
         return CompletableFuture.runAsync(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement("DELETE FROM ag_bans WHERE ip = ?")) {
@@ -449,6 +465,7 @@ public class VelocityStorageProvider implements IStorageProvider {
 
     @Override
     public CompletableFuture<Set<String>> getBlockedIPs() {
+        if (!isConnected()) return CompletableFuture.completedFuture(new HashSet<>());
         return CompletableFuture.supplyAsync(() -> {
             Set<String> ips = new HashSet<>();
             try (Connection conn = dataSource.getConnection();
@@ -467,6 +484,7 @@ public class VelocityStorageProvider implements IStorageProvider {
     }
 
     public CompletableFuture<Map<String, Long>> loadActiveBansWithExpiry() {
+        if (!isConnected()) return CompletableFuture.completedFuture(new HashMap<>());
         return CompletableFuture.supplyAsync(() -> {
             Map<String, Long> bans = new HashMap<>();
             try (Connection conn = dataSource.getConnection();
@@ -485,6 +503,7 @@ public class VelocityStorageProvider implements IStorageProvider {
     }
 
     public CompletableFuture<Set<String>> loadVerifiedPlayers() {
+        if (!isConnected()) return CompletableFuture.completedFuture(new HashSet<>());
         return CompletableFuture.supplyAsync(() -> {
             Set<String> ips = new HashSet<>();
             try (Connection conn = dataSource.getConnection();
