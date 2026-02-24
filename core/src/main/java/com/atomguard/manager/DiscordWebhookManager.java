@@ -1,6 +1,8 @@
 package com.atomguard.manager;
 
 import com.atomguard.AtomGuard;
+import com.atomguard.forensics.AttackSnapshot;
+import com.atomguard.intelligence.IntelligenceAlert;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -150,6 +152,51 @@ public class DiscordWebhookManager {
         sendEmbed("PANIK MODU",
                 String.format("Calistiran: **%s**\nYasaklanan: **%d** oyuncu", executorName, bannedCount),
                 0xFF0000); // Red
+    }
+
+    /**
+     * Tehdit istihbarat uyarısı bildirimi.
+     */
+    public void notifyIntelligenceAlert(IntelligenceAlert alert) {
+        if (!enabled) return;
+        int color = switch (alert.getLevel()) {
+            case ELEVATED -> 0xFFFF00;
+            case HIGH -> 0xFFA500;
+            case CRITICAL -> 0xFF0000;
+        };
+        sendEmbed("Tehdit İstihbaratı Uyarısı",
+                String.format("Seviye: **%s**\nMetrik: `%s`\nZ-Score: **%.2f**\n%s",
+                        alert.getLevel().name(), alert.getMetric(),
+                        alert.getZScore(), alert.getDetails()),
+                color);
+    }
+
+    /**
+     * Adli analiz raporu bildirimi.
+     */
+    public void notifyForensicsReport(AttackSnapshot snap) {
+        if (!enabled) return;
+        sendEmbed("Saldırı Kaydı Tamamlandı",
+                String.format("ID: `%s`\nSüre: **%ds**\nPeak: **%d bağlantı/s**\nEngellenen: **%d**\nSınıflandırma: %s",
+                        snap.getShortId(),
+                        snap.getDurationSeconds(),
+                        snap.getPeakConnectionRate(),
+                        snap.getTotalBlocked(),
+                        snap.getClassification().name()),
+                0x5865F2); // Discord indigo
+    }
+
+    /**
+     * Honeypot tuzağı bildirimi.
+     *
+     * @param ip   Yakalanan IP adresi
+     * @param port Bağlantının gerçekleştiği honeypot portu
+     */
+    public void notifyHoneypotTrap(String ip, int port) {
+        if (!enabled) return;
+        sendEmbed("Honeypot Tuzagi",
+                String.format("IP: `%s` yakalandi\nPort: **%d**\nBu IP kara listeye alindi.", ip, port),
+                0xFF6600); // Turuncu
     }
 
     // ═══════════════════════════════════════

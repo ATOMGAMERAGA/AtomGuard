@@ -1,11 +1,11 @@
 # ╔══════════════════════════════════════════════╗
 # ║           Atom Guard Yapılandırma            ║
 # ║   Server Security Plugin — Paper 1.21.4      ║
-# ║   v1.1.0 — DDoS Modülü Yeniden Yazımı       ║
+# ║   v1.2.0 — Tehdit İstihbaratı & Adli Analiz ║
 # ╚══════════════════════════════════════════════╝
 
 # Config Versiyonu (Değiştirmeyin)
-config-version: "1.1.0"
+config-version: "1.2.0"
 
 # Genel Ayarlar
 genel:
@@ -639,9 +639,95 @@ moduller:
       saldiri-logu: true
       kara-liste-logu: true
 
+  # Bal Kupu (Honeypot) Modülü
+  bal-kupu:
+    aktif: false
+    # Honeypot port (ana sunucu portu dışında bir port)
+    port: 25566
+    # Maksimum eş zamanlı bağlantı
+    max-baglanti: 100
+    # Bağlantı zaman aşımı (ms)
+    zaman-asimi-ms: 5000
+    # Sahte MOTD metni
+    sahte-motd: "§aMinecraft Server §8| §7Online"
+    # Sahte online oyuncu sayısı
+    sahte-online: 5
+    # Sahte maksimum oyuncu sayısı
+    sahte-max: 20
+    # Yakalanan IP'yi kara listeye ekle
+    kara-listeye-ekle: true
+    # Kara liste süresi (dakika)
+    kara-liste-suresi-dk: 1440
+    # Discord bildirimi gönder
+    discord-bildirim: true
+    # Honeypot istatistik dosyası
+    istatistik-dosyasi: "honeypot-stats.json"
+
   # Panik Modu (/panic)
   panik-modu:
     # Minimum oynama süresi (dakika) - Altındaki herkes banlanır
     min-oynama-suresi: 30
     # Log dosyası adı
     log-dosyasi: "panic-bans.log"
+
+# ═══════════════════════════════════════
+# Tehdit İstihbarat Motoru v1.2.0
+# Adaptif EMA tabanlı trafik profili + Z-Score anomali tespiti
+# ═══════════════════════════════════════
+tehdit-istihbarati:
+  # Sistemi aktif et
+  aktif: true
+  # Öğrenme modu: açıkken sadece veri toplar, anomali uyarısı vermez
+  ogrenme-modu: false
+  # Öğrenme süresi (saat) — bu kadar süre sonra baseline güvenilir sayılır
+  ogrenme-suresi-saat: 48
+  # Baseline için minimum örnek sayısı
+  min-ornek-sayisi: 10
+  # EMA katsayısı (0.001-1.0) — küçük = yavaş öğrenme, kararlı profil
+  ema-alpha: 0.1
+  # Hassasiyet çarpanı (0.1-5.0) — büyütmek daha hassas tespit sağlar
+  hassasiyet-carpani: 1.0
+  # Aynı uyarının tekrar gönderilmeden önce bekleme süresi (saniye)
+  uyari-bekleme-saniye: 300
+  # Gerçek zamanlı tampon boyutu (dakika cinsinden son N örnek)
+  tampon-boyutu: 60
+
+# ═══════════════════════════════════════
+# Oyuncu Güven Skoru v1.2.0
+# 0-100 arası güven puanı, bypass hakları
+# ═══════════════════════════════════════
+guven-skoru:
+  # Sistemi aktif et
+  aktif: true
+  # Yeni oyuncuların başlangıç puanı (0-100)
+  baslangic-puani: 30
+  # TRUSTED (60+) oyuncular saldırı modunu atlar
+  saldiri-modu-bypass-min: 60
+  # VETERAN (85+) oyuncular bot kontrolünü atlar
+  bot-kontrol-bypass-min: 85
+  # VETERAN (85+) oyuncular VPN kontrolünü atlar
+  vpn-kontrol-bypass-min: 85
+  # İhlal başına skor cezası (son ihlaller için)
+  ihlal-basi-ceza: 5
+  # Temiz seans başına bonus
+  temiz-seans-basi-bonus: 2
+  # Otomatik kaydetme aralığı (dakika)
+  otomatik-kaydetme-dakika: 5
+  # Veri dosyası adı
+  veri-dosyasi: "trust-scores.json"
+
+# ═══════════════════════════════════════
+# Adli Analiz (Saldırı Tekrarı) v1.2.0
+# Saldırı anlık görüntüleri, zaman çizelgesi, JSON export
+# ═══════════════════════════════════════
+adli-analiz:
+  # Sistemi aktif et
+  aktif: true
+  # Saklanacak maksimum anlık görüntü sayısı
+  max-anlık-goruntuler: 50
+  # Anlık görüntü kayıt dizini
+  kayit-dizini: "forensics"
+  # JSON formatında dışa aktarma
+  json-export: true
+  # Periyodik metrik kayıt aralığı (saniye)
+  metrik-kayit-aralik-saniye: 10

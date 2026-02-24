@@ -147,6 +147,19 @@ public class BukkitListener implements Listener {
         if (offlineModule != null && player.getAddress() != null) {
             offlineModule.onPlayerLogin(player.getUniqueId(), player.getAddress().getAddress());
         }
+
+        // Trust Score — join kaydı
+        if (plugin.getTrustScoreManager() != null) {
+            plugin.getTrustScoreManager().recordJoin(player);
+        }
+
+        // Intelligence Engine — join kaydı
+        if (plugin.getIntelligenceEngine() != null) {
+            plugin.getIntelligenceEngine().recordJoin();
+            if (player.getAddress() != null) {
+                plugin.getIntelligenceEngine().recordUniqueIp();
+            }
+        }
     }
 
     /**
@@ -193,6 +206,16 @@ public class BukkitListener implements Listener {
         // Heuristic Profile Temizliği
         if (plugin.getHeuristicEngine() != null) {
             plugin.getHeuristicEngine().removeProfile(player.getUniqueId());
+        }
+
+        // Trust Score — quit kaydı
+        if (plugin.getTrustScoreManager() != null) {
+            plugin.getTrustScoreManager().recordQuit(player);
+        }
+
+        // Intelligence Engine — leave kaydı
+        if (plugin.getIntelligenceEngine() != null) {
+            plugin.getIntelligenceEngine().recordLeave();
         }
     }
 }

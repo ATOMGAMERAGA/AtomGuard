@@ -3,6 +3,29 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [1.2.0] - 2026-02-24
+
+### ✨ Yeni Özellikler
+
+- **Tehdit İstihbarat Motoru** (`com.atomguard.intelligence`): 168 saatlik (24×7) EMA tabanlı trafik profili. Z-Score anomali tespiti (ELEVATED/HIGH/CRITICAL). 3 ardışık dakika gereksinimi ile yanlış pozitif koruması. Kritik anomalide otomatik saldırı modu aktivasyonu. `/ag intel <status|reset>` komutu.
+- **Oyuncu Güven Skoru** (`com.atomguard.trust`): 0-100 arası puan, 4 kademe (Yeni/Düzenli/Güvenilir/Deneyimli). EMA formülü ile oynama süresi, temiz seans, ihlal geçmişi ağırlıklandırılır. TRUSTED+ oyuncular saldırı modunu, VETERAN+ bot/VPN kontrollerini atlar. Gson tabanlı `trust-scores.json` kalıcılığı. `/ag trust <info|set|reset|top>` komutu.
+- **Adli Analiz & Saldırı Tekrarı** (`com.atomguard.forensics`): Saldırı anlık görüntüsü (UUID, zaman çizelgesi, peak rate, engellenen IP/modül istatistikleri). 4 önem seviyesi (LOW/MEDIUM/HIGH/CRITICAL). `forensics/attack-<uuid>.json` otomatik export. `AttackSnapshotCompleteEvent` API eventi. `/ag replay <list|latest|<id>|export>` komutu.
+- **Config Migrasyon Sistemi** (`com.atomguard.migration`): Semantik versiyonlama ile zincirleme migrasyon. Her adım öncesi otomatik yedek (`config.yml.backup-<version>-<ts>`). 1.0.0→1.1.0→1.1.1→1.2.0 migrasyon zinciri.
+- **Bal Kupu (Honeypot) Modülü** (`com.atomguard.module.honeypot`): Sahte TCP Minecraft sunucusu (SLP protokolü). Bot tarayıcılarını otomatik kara listeye ekler. `HoneypotTrapEvent` API eventi. `/ag honeypot <status|stats>` komutu.
+
+### 🔌 API Güncellemeleri
+
+- Yeni API eventi: `HoneypotTrapEvent`, `IntelligenceAlertEvent`, `AttackSnapshotCompleteEvent`
+- `AtomGuardAPI`: `getTrustScoreManager()`, `getForensicsManager()`, `getIntelligenceEngine()` getter'ları
+
+### 🔧 İyileştirmeler
+
+- `DiscordWebhookManager`: `notifyIntelligenceAlert()` ve `notifyForensicsReport()` metodları eklendi
+- `AbstractModule.blockExploit()`: Trust Score ihlal kaydı ve Forensics engel kaydı entegre edildi
+- `AttackModeManager`: Forensics ve Intelligence Engine hook'ları eklendi
+- `BukkitListener`: Trust Score ve Intelligence Engine join/quit hook'ları eklendi
+- Tüm yeni sistemler için `config.yml` ve `messages_tr.yml` bölümleri eklendi
+
 ## [1.1.1] - 2026-02-23
 
 ### 🔒 Güvenlik Düzeltmeleri

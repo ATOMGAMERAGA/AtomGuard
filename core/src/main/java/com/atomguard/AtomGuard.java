@@ -4,12 +4,17 @@ import com.atomguard.command.AtomGuardCommand;
 import com.atomguard.command.AtomGuardTabCompleter;
 import com.atomguard.command.PanicCommand;
 import com.atomguard.data.VerifiedPlayerCache;
+import com.atomguard.forensics.ForensicsManager;
 import com.atomguard.heuristic.HeuristicEngine;
+import com.atomguard.intelligence.TrafficIntelligenceEngine;
 import com.atomguard.listener.*;
 import com.atomguard.manager.*;
+import com.atomguard.migration.ConfigMigrationManager;
 import com.atomguard.module.*;
 import com.atomguard.module.antibot.AntiBotModule;
+import com.atomguard.module.honeypot.HoneypotModule;
 import com.atomguard.reputation.IPReputationManager;
+import com.atomguard.trust.TrustScoreManager;
 import com.atomguard.web.WebPanel;
 import com.github.retrooper.packetevents.PacketEvents;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -34,6 +39,10 @@ public class AtomGuard extends JavaPlugin {
     private com.atomguard.web.WebPanel webPanel;
 
     private com.atomguard.api.storage.IStorageProvider storageProvider;
+    private TrustScoreManager trustScoreManager;
+    private ForensicsManager forensicsManager;
+    private TrafficIntelligenceEngine intelligenceEngine;
+    private ConfigMigrationManager migrationManager;
 
     @Override
     public void onLoad() {
@@ -59,6 +68,10 @@ public class AtomGuard extends JavaPlugin {
             this.reputationManager = new IPReputationManager(this);
             this.heuristicEngine = new HeuristicEngine(this);
             this.verifiedPlayerCache = new VerifiedPlayerCache(this);
+            this.migrationManager = new ConfigMigrationManager(this);
+            this.trustScoreManager = new TrustScoreManager(this);
+            this.forensicsManager = new ForensicsManager(this);
+            this.intelligenceEngine = new TrafficIntelligenceEngine(this);
 
             // Initialize Managers
             configManager.load();
@@ -66,7 +79,10 @@ public class AtomGuard extends JavaPlugin {
             redisManager.start();
             statisticsManager.start();
             verifiedPlayerCache.start();
-            
+            trustScoreManager.start();
+            forensicsManager.start();
+            intelligenceEngine.start();
+
             // Register Modules BEFORE enabling them
             registerModules();
             moduleManager.enableAllModules();
@@ -156,6 +172,9 @@ public class AtomGuard extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (intelligenceEngine != null) intelligenceEngine.stop();
+        if (forensicsManager != null) forensicsManager.stop();
+        if (trustScoreManager != null) trustScoreManager.stop();
         if (storageProvider != null) storageProvider.disconnect();
         if (webPanel != null) webPanel.stop();
         if (moduleManager != null) moduleManager.disableAllModules();
@@ -215,6 +234,7 @@ public class AtomGuard extends JavaPlugin {
         moduleManager.registerModule(new MuleDuplicationModule(this));
         moduleManager.registerModule(new BookCrasherModule(this));
         moduleManager.registerModule(new MapLabelCrasherModule(this));
+        moduleManager.registerModule(new HoneypotModule(this));
     }
 
     public static AtomGuard getInstance() { return instance; }
@@ -231,4 +251,9 @@ public class AtomGuard extends JavaPlugin {
     public VerifiedPlayerCache getVerifiedPlayerCache() { return verifiedPlayerCache; }
     public PacketListener getPacketListener() { return packetListener; }
     public com.atomguard.web.WebPanel getWebPanel() { return webPanel; }
+    public com.atomguard.api.storage.IStorageProvider getStorageProvider() { return storageProvider; }
+    public TrustScoreManager getTrustScoreManager() { return trustScoreManager; }
+    public ForensicsManager getForensicsManager() { return forensicsManager; }
+    public TrafficIntelligenceEngine getIntelligenceEngine() { return intelligenceEngine; }
+    public ConfigMigrationManager getMigrationManager() { return migrationManager; }
 }

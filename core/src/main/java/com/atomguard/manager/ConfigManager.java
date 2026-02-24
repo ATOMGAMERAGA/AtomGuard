@@ -20,7 +20,7 @@ import java.util.logging.Level;
  * Thread-safe ve performanslı config yönetimi sağlar
  *
  * @author AtomGuard Team
- * @version 1.1.1
+ * @version 1.2.0
  */
 public class ConfigManager {
 
@@ -62,41 +62,19 @@ public class ConfigManager {
     }
 
     private void checkConfigVersion() {
-        String currentVersion = "1.1.1";
+        String currentVersion = "1.2.0";
         String configVersion = config.getString("config-version", "1.0.0");
 
         if (!configVersion.equals(currentVersion)) {
-            plugin.getLogger().info("Config versiyonu eski (" + configVersion + "), güncelleniyor...");
-            
-            migrateConfig(configVersion, currentVersion);
-            
+            plugin.getLogger().info("Config versiyonu eski (" + configVersion + " → " + currentVersion + "), güncelleniyor...");
+
+            if (plugin.getMigrationManager() != null) {
+                plugin.getMigrationManager().migrate(config, configVersion, currentVersion);
+            }
+
             config.set("config-version", currentVersion);
             saveConfig();
         }
-    }
-
-    private void migrateConfig(String from, String target) {
-        // Backup oluştur
-        File backup = new File(plugin.getDataFolder(), "config.yml.bak-" + from);
-        try {
-            config.save(backup);
-        } catch (IOException e) {
-            plugin.getLogger().warning("Konfigürasyon yedeği oluşturulamadı.");
-        }
-
-        // Zincirleme migration (Örnek yapı)
-        String current = from;
-        
-        if (current.equals("0.9.0")) {
-            // 0.9.0 -> 1.0.0 değişiklikleri
-            if (!config.contains("heuristic.action")) {
-                config.set("heuristic.action", "KICK");
-            }
-            current = "1.0.0";
-        }
-        
-        // Gelecekteki versiyonlar buraya eklenecek
-        // if (current.equals("1.0.0")) { ... current = "1.1.0"; }
     }
 
     /**

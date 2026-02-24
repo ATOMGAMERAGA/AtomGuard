@@ -22,7 +22,7 @@ import java.util.logging.Level;
  * Günlük dosyalar oluşturur ve eski logları temizler
  *
  * @author AtomGuard Team
- * @version 1.1.1
+ * @version 1.2.0
  */
 public class LogManager {
 

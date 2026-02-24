@@ -2,6 +2,10 @@ package com.atomguard.command;
 
 import com.atomguard.AtomGuard;
 import com.atomguard.command.impl.HealthCommand;
+import com.atomguard.command.impl.HoneypotCommand;
+import com.atomguard.command.impl.IntelCommand;
+import com.atomguard.command.impl.ReplayCommand;
+import com.atomguard.command.impl.TrustCommand;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -27,7 +31,10 @@ public class AtomGuardCommand implements CommandExecutor, TabCompleter {
 
     private void registerSubCommands() {
         register(new HealthCommand(plugin));
-        // Other subcommands would be registered here in a full migration
+        register(new HoneypotCommand(plugin));
+        register(new TrustCommand(plugin));
+        register(new ReplayCommand(plugin));
+        register(new IntelCommand(plugin));
     }
 
     private void register(SubCommand cmd) {
@@ -137,8 +144,13 @@ public class AtomGuardCommand implements CommandExecutor, TabCompleter {
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
         if (args.length == 1) {
-            List<String> completions = new ArrayList<>(List.of("reload", "status", "toggle", "stats", "info", "health"));
+            List<String> completions = new ArrayList<>(List.of("reload", "status", "toggle", "stats", "info", "health", "honeypot", "trust", "replay", "intel"));
             return completions.stream().filter(s -> s.startsWith(args[0].toLowerCase())).collect(Collectors.toList());
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("honeypot")) {
+            return List.of("status", "stats").stream()
+                    .filter(s -> s.startsWith(args[1].toLowerCase()))
+                    .collect(Collectors.toList());
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("toggle")) {
             return plugin.getModuleManager().getModuleNames().stream()

@@ -75,6 +75,14 @@ public class AttackModeManager {
             peakRate = currentRate;
         }
 
+        // Notify intelligence engine and forensics manager
+        if (plugin.getIntelligenceEngine() != null) {
+            plugin.getIntelligenceEngine().recordConnection(null);
+        }
+        if (attackMode && plugin.getForensicsManager() != null) {
+            plugin.getForensicsManager().recordConnection(null);
+        }
+
         if (currentRate >= threshold) {
             // Trigger DDoS Event (every time threshold reached, even if already in attack mode)
             plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -95,6 +103,11 @@ public class AttackModeManager {
 
         plugin.getLogger().warning("!!! ATTACK MODE ACTIVATED !!! Connection rate: " + triggerRate + "/sec");
         plugin.getLogManager().warning("System entered ATTACK MODE due to high connection rate.");
+
+        // Forensics
+        if (plugin.getForensicsManager() != null && plugin.getForensicsManager().isEnabled()) {
+            plugin.getForensicsManager().onAttackStart(triggerRate);
+        }
 
         // Trigger API Event
         plugin.getServer().getPluginManager().callEvent(new com.atomguard.api.event.AttackModeToggleEvent(true, triggerRate));
@@ -172,6 +185,11 @@ public class AttackModeManager {
         if (plugin.getStatisticsManager() != null) {
             plugin.getStatisticsManager().recordAttack(
                     attackModeStartTime, endTime, peakRate, blockedDuringAttack);
+        }
+
+        // Forensics
+        if (plugin.getForensicsManager() != null && plugin.getForensicsManager().isEnabled()) {
+            plugin.getForensicsManager().onAttackEnd();
         }
 
         this.attackMode = false;

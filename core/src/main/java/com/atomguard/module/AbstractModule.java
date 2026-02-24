@@ -117,6 +117,19 @@ public abstract class AbstractModule implements IModule {
         if (plugin.getHeuristicEngine() != null) {
             plugin.getHeuristicEngine().getProfile(player.getUniqueId()).addSuspicion(1.0); // Baz suspisyon artışı
         }
+
+        // Trust Score ihlal kaydı
+        if (plugin.getTrustScoreManager() != null) {
+            plugin.getTrustScoreManager().recordViolation(player.getUniqueId(), getName());
+        }
+
+        // Forensics — modül engel kaydı
+        if (plugin.getForensicsManager() != null && plugin.getForensicsManager().isRecording()) {
+            plugin.getForensicsManager().recordModuleBlock(getName());
+            if (player.getAddress() != null) {
+                plugin.getForensicsManager().recordBlock(player.getAddress().getAddress().getHostAddress());
+            }
+        }
     }
 
     /**

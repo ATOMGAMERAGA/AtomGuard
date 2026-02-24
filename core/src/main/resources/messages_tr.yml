@@ -194,3 +194,46 @@ antivpn:
   yok-engel: "<gray>Henüz engellenen IP yok."
   ve-daha: "<gray>  ... ve {sayi} daha"
   recent-satir: "<dark_gray>[{tarih}] <red>{ip} <gray>— <white>{oyuncu} <gray>— <yellow>{sebep}"
+
+# ═══════════════════════════════════════
+# Tehdit İstihbaratı Mesajları
+# ═══════════════════════════════════════
+istihbarat:
+  komut-aciklama: "Tehdit istihbarat motoru durumu ve yönetimi"
+  kullanim: "/ag intel <status|reset>"
+  devre-disi: "<red>Tehdit istihbarat motoru devre dışı."
+  profiller-sifirlandi: "<green>✓ Tüm trafik profilleri sıfırlandı."
+
+# ═══════════════════════════════════════
+# Güven Skoru Mesajları
+# ═══════════════════════════════════════
+guven:
+  komut-aciklama: "Oyuncu güven skoru görüntüleme ve yönetimi"
+  kullanim: "/ag trust <info <oyuncu>|set <oyuncu> <puan>|reset <oyuncu>|top>"
+  oyuncu-bulunamadi: "<red>Oyuncu bulunamadı: {oyuncu}"
+  profil-yok: "<red>{oyuncu} için güven profili bulunamadı."
+  skor-guncellendi: "<green>✓ {oyuncu} güven skoru {puan} olarak ayarlandı."
+  profil-sifirlandi: "<green>✓ {oyuncu} güven profili sıfırlandı."
+  devre-disi: "<red>Güven skoru sistemi devre dışı."
+  gecersiz-puan: "<red>Geçersiz puan. 0-100 arasında bir değer girin."
+
+# ═══════════════════════════════════════
+# Adli Analiz Mesajları
+# ═══════════════════════════════════════
+adli-analiz:
+  komut-aciklama: "Saldırı kayıtlarını görüntüle ve dışa aktar"
+  kullanim: "/ag replay <list|latest|<id>|export <id>>"
+  devre-disi: "<red>Adli analiz sistemi devre dışı."
+  kayit-yok: "<gray>Henüz kayıtlı saldırı yok."
+  bulunamadi: "<red>✗ Saldırı kaydı bulunamadı: {id}"
+
+# ═══════════════════════════════════════
+# Bal Kupu (Honeypot) Mesajları
+# ═══════════════════════════════════════
+bal-kupu:
+  modul-adi: "Bal Kupu"
+  basladi: "<green>Honeypot sunucusu başlatıldı: port {port}"
+  durdu: "<yellow>Honeypot sunucusu durduruldu."
+  yakalandi: "<red>Honeypot: {ip} yakalandı (port {port})"
+  komut-aciklama: "Honeypot yönetimi"
+  kullanim: "/ag honeypot <status|stats>"
