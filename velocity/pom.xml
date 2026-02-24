@@ -116,10 +116,6 @@
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <relocations>
                                 <relocation>
-                                    <pattern>org.sqlite</pattern>
-                                    <shadedPattern>com.atomguard.velocity.lib.sqlite</shadedPattern>
-                                </relocation>
-                                <relocation>
                                     <pattern>com.zaxxer.hikari</pattern>
                                     <shadedPattern>com.atomguard.velocity.lib.hikari</shadedPattern>
                                 </relocation>
