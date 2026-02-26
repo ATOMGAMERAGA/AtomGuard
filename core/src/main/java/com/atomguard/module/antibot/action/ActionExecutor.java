@@ -17,12 +17,8 @@ public class ActionExecutor {
     public void executeInitial(AsyncPlayerPreLoginEvent event, PlayerProfile profile, ThreatScoreCalculator.ThreatResult result) {
         switch (result.getAction()) {
             case DELAY -> {
-                if (module.getConfigBoolean("saldiri-modu.baglanti-kuyrugu", true)) {
-                    long delayMs = module.getConfigInt("saldiri-modu.kuyruk-gecikme-ms", 2000);
-                    try {
-                        Thread.sleep(delayMs);
-                    } catch (InterruptedException ignored) {}
-                }
+                // Bağlantı kuyruğu — Thread.sleep kaldırıldı (FP-16: login timeout'a neden oluyordu)
+                // Yüksek risk eşiğine ulaşmayan bağlantılar sessizce geçirilir
             }
             case KICK -> {
                 event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, 

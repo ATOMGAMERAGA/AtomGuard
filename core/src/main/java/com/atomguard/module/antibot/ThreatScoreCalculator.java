@@ -58,14 +58,19 @@ public class ThreatScoreCalculator {
         profile.updateMaxThreatScore(totalScore);
 
         // Trigger Event if score changed significantly or reached threshold
-        // ThreatScoreChangedEvent async-only — VerificationManager zaten async context'te çalışıyor
+        // Bukkit API çağrıları main thread'de yapılmalı (Paper 1.21.4 thread safety)
         if (oldScore != totalScore && profile.getUuid() != null) {
-            org.bukkit.entity.Player player = org.bukkit.Bukkit.getPlayer(profile.getUuid());
-            if (player != null) {
-                org.bukkit.Bukkit.getPluginManager().callEvent(
-                    new com.atomguard.api.event.ThreatScoreChangedEvent(player, oldScore, totalScore, "AntiBot Analysis")
-                );
-            }
+            UUID eventUuid = profile.getUuid();
+            int finalOldScore = oldScore;
+            int finalNewScore = totalScore;
+            org.bukkit.Bukkit.getScheduler().runTask(module.getPlugin(), () -> {
+                org.bukkit.entity.Player p = org.bukkit.Bukkit.getPlayer(eventUuid);
+                if (p != null) {
+                    org.bukkit.Bukkit.getPluginManager().callEvent(
+                        new com.atomguard.api.event.ThreatScoreChangedEvent(p, finalOldScore, finalNewScore, "AntiBot Analysis")
+                    );
+                }
+            });
         }
 
         // Action thresholds

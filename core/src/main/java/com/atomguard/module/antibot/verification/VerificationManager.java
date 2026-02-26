@@ -48,7 +48,7 @@ public class VerificationManager {
                     module.getWhitelistManager().evaluateForWhitelist(profile);
                 }
             }
-        }.runTaskTimerAsynchronously(module.getPlugin(), 1L, 1L);
+        }.runTaskTimerAsynchronously(module.getPlugin(), 20L, 40L);
         
         verificationTasks.put(player.getUniqueId(), task);
     }
