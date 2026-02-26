@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="https://r.resimlink.com/pTtW512LDN9.png" alt="AtomGuard" width="220">
+<img src="https://r.resimlink.com/pTtW512LDN9.png" alt="AtomGuard" width="200">
 
 <br>
 
-<h1>⚛️ AtomGuard</h1>
+# ⚛️ AtomGuard
 
-<p><i>Advanced Minecraft Server Security — Paper 1.21.4 + Velocity</i></p>
+*Advanced Minecraft Server Security — Paper 1.21.4 + Velocity*
 
 <br>
 
@@ -19,74 +19,63 @@
 
 <br>
 
-> **44+ security modules · DDoS & flood protection · Multi-layer bot detection**
-> **7-provider VPN filtering · Kernel-level IPTables · Full exploit & crash fixes**
+**44+ security modules · DDoS & flood protection · Multi-layer bot detection**
+**7-provider VPN filtering · Kernel-level IPTables · Full exploit & crash fixes**
+**Threat Intelligence · Player Trust Score · Forensic Analysis · Honeypot**
 
 </div>
-
-<br>
 
 ---
 
-<div align="center">
-
-## 🗺️ Coverage
-
-</div>
+## 🗺️ What AtomGuard Covers
 
 AtomGuard defends every stage of the connection lifecycle — from the very first TCP packet to in-game actions.
 
-<br>
+**🔌 Before Handshake**
+- DDoS throttling · SYN flood blocking · Ping flood detection · Rate limiting
 
-<div align="center">
+**🤝 During Connection**
+- Bot scoring · VPN filtering · Country blocking · Protocol validation
 
-| 🔌 Before Handshake | 🤝 During Connection | 🎮 After Login | 🌐 Network-Wide |
-|:---:|:---:|:---:|:---:|
-| DDoS throttling | Bot scoring | Crash fixes | Redis sync |
-| SYN flood blocking | VPN filtering | Exploit patches | Shared banlists |
-| Ping flood detection | Country blocking | Dupe prevention | Attack mode |
-| Rate limiting | Protocol validation | Performance limits | Discord alerts |
+**🎮 After Login**
+- Crash fixes · Exploit patches · Dupe prevention · Performance limits
 
-</div>
-
-<br>
+**🌐 Network-Wide**
+- Redis sync · Shared banlists · Attack mode · Discord alerts
 
 ---
-
-<div align="center">
 
 ## 🛡️ Velocity Proxy Module
 
 *Stop threats before they ever reach your backend servers*
 
-</div>
-
 <br>
 
 ### ⚔️ DDoS & Flood Protection
 
-**SmartThrottle Engine** — adapts in real time across four threat levels:
+**SmartThrottle Engine** — adapts in real time across five threat levels:
 
 <div align="center">
 
-`🟢 Normal` → `🟡 Careful` → `🟠 Aggressive` → `🔴 Lockdown`
+`🟢 Normal` → `🟡 Elevated` → `🟠 High` → `🔴 Critical` → `⛔ Lockdown`
 
 </div>
 
-<br>
-
-- **SYN Flood Detector** — instantly blocks IPs exceeding 50 connections/second
+- **SYN Flood Detector** — instantly blocks IPs exceeding the connection threshold per second
 - **Slowloris Detector** — identifies and kills slow-drip connection drain attacks
+- **TrafficAnomalyDetector** — Z-score, slow-ramp, and pulse attack detection
+- **ConnectionFingerprinter** — protocol + hostname + timing fingerprint to detect bot armies
+- **SubnetAnalyzer** — coordinated botnet detection at /24 and /16 level
 - **Ping Flood Guard** — caps per-IP ping request rate
-- **Sliding-Window Rate Limits** — enforced simultaneously at per-IP, per-subnet, and global levels
+- **Sliding-Window Rate Limits** — enforced at per-IP, per-subnet, and global levels simultaneously
+- **VerifiedPlayerShield** — guarantees a slot for clean players during CRITICAL/LOCKDOWN
+- **AttackSessionRecorder** — full session log from start to end, JSON export
 
 <br>
 
 ### 🤖 Bot Detection
 
-Threat score built from **7 weighted behavioral signals:**
-
-<div align="center">
+Threat score built from **8 weighted behavioral signals:**
 
 | Signal | Weight |
 |:---|:---:|
@@ -98,25 +87,15 @@ Threat score built from **7 weighted behavioral signals:**
 | Username Pattern | `10%` |
 | Protocol Version | `10%` |
 
-</div>
-
-<br>
-
 **Score → Action mapping:**
-
-<div align="center">
 
 | Score | Result |
 |:---:|:---|
 | `< 40` | ✅ Pass |
 | `40 – 60` | ⚠️ Flagged |
-| `60 – 75` | 🔐 CAPTCHA — limbo server + math challenge |
+| `60 – 75` | 🔐 CAPTCHA — limbo + math challenge |
 | `75 – 90` | 🚫 Kick |
 | `90+` | 🔨 Auto-ban |
-
-</div>
-
-<br>
 
 - **Brand Analyzer** — whitelists Fabric, Forge, Lunar, Badlion, LabyMod, OptiFine, Sodium; blocks crasher & bot clients
 - **Nickname Blocker** — regex patterns, prefix/suffix lists, length limits, special-character analysis
@@ -126,9 +105,7 @@ Threat score built from **7 weighted behavioral signals:**
 
 ### 🌐 VPN & Proxy Detection
 
-Parallel queries with **consensus voting** — minimum 2 positive hits required to block. Fail-open on timeout, so legitimate players are never affected by a slow API.
-
-<div align="center">
+Parallel queries with **consensus voting** — minimum 2 positive hits required to block. Fail-open on timeout.
 
 | # | Provider | Method |
 |:---:|:---|:---|
@@ -140,18 +117,12 @@ Parallel queries with **consensus voting** — minimum 2 positive hits required 
 | 6 | **AbuseIPDB** | Abuse history scoring |
 | 7 | **IPApi** | ASN + hosting provider check |
 
-</div>
-
-<br>
-
 - **Ip2Proxy Offline DB** — local queries, never hits API rate limits
 - **ASN Bulk Blocking** — block entire hosting provider ASNs in one rule
-- **Residential Bypass** — prevents false positives from legitimate ISPs
-- **Result Cache** — verified clean IPs are cached indefinitely
+- **Residential Bypass** — prevents false positives from legitimate ISPs (e.g. Turkish ISPs)
+- **Result Cache** — verified clean IPs cached and skip re-checking entirely
 
 <br>
-
-### 🌍 Additional Protections
 
 <details>
 <summary><b>🌍 Country / Geo Filtering</b></summary>
@@ -167,7 +138,7 @@ MaxMind GeoIP2 integration — **whitelist or blacklist** entire countries. Auto
 
 <br>
 
-- **IP Reputation Engine** — scores decay over time; successful logins grant a −15 point reward
+- **IP Reputation Engine** — scores decay every 5 min; successful logins grant a −15 point reward
 - **Auto-Ban Engine** — rule-based permanent or temporary banning; first 3 violations are grace-period exempt
 - **TempBan Manager** — automatic expiry and cleanup
 - **Account Firewall** — Mojang API verification, account age check, cracked-account policy
@@ -219,17 +190,11 @@ Block IPs at the **kernel level** — bypasses the JVM entirely for the fastest 
 
 </details>
 
-<br>
-
 ---
-
-<div align="center">
 
 ## 🔨 Core Plugin
 
 *44+ modules for crash fixes, exploit patches, and bot detection*
-
-</div>
 
 <br>
 
@@ -299,14 +264,10 @@ Block IPs at the **kernel level** — bypasses the JVM entirely for the fastest 
 
 ### 🤖 AtomShield™ Core
 
-<div align="center">
+**9 behavioral signals analyzed per player:**
 
 `Connection Rate` · `Gravity Validation` · `Packet Timing` · `Ping & Handshake`
 `Protocol` · `Username Pattern` · `First-Join Behavior` · `Post-Join Behavior` · `Heuristic Profiling`
-
-</div>
-
-<br>
 
 - Builds a per-player behavioral profile and flags statistical anomalies in real time
 - Suspicious players receive challenges before being whitelisted
@@ -314,26 +275,65 @@ Block IPs at the **kernel level** — bypasses the JVM entirely for the fastest 
 
 <br>
 
-### ⚡ Integrations
+### 🧠 Threat Intelligence Engine *(v1.2.0)*
 
-<div align="center">
+- **168-hour EMA traffic profile** — baseline built from 7 days of rolling traffic data
+- **Z-Score anomaly detection** — ELEVATED / HIGH / CRITICAL threat levels
+- **3-minute confirmation window** — consecutive minutes required before escalation (prevents false positives)
+- **Auto attack-mode activation** on CRITICAL anomaly
+- Command: `/ag intel <status|reset>`
+
+<br>
+
+### 🏅 Player Trust Score *(v1.2.0)*
+
+Four trust tiers based on play history:
+
+| Tier | Description | Benefit |
+|:---|:---|:---|
+| 🆕 New | Fresh account | Full checks applied |
+| 📅 Regular | Some history | Standard protection |
+| ✅ Trusted | Clean record | Skips attack mode checks |
+| ⭐ Veteran | Long history | Skips bot & VPN checks |
+
+- EMA-weighted formula: playtime + clean sessions + violation history
+- Persistent storage via `trust-scores.json`
+- Command: `/ag trust <info|set|reset|top>`
+
+<br>
+
+### 🔬 Forensic Analysis *(v1.2.0)*
+
+- **Attack snapshots** — UUID, timeline, peak rate, blocked IPs, module stats
+- **4 severity levels** — LOW / MEDIUM / HIGH / CRITICAL
+- **Auto-export** to `forensics/attack-<uuid>.json`
+- **`AttackSnapshotCompleteEvent`** API event
+- Command: `/ag replay <list|latest|<id>|export>`
+
+<br>
+
+### 🍯 Honeypot Module *(v1.2.0)*
+
+- **Fake TCP Minecraft server** (SLP protocol) — lures bot scanners
+- **Auto-blacklist** IPs that probe the honeypot
+- **`HoneypotTrapEvent`** API event
+- Command: `/ag honeypot <status|stats>`
+
+<br>
+
+### ⚡ Integrations
 
 | Integration | Details |
 |:---|:---|
 | MySQL + HikariCP | Connection-pool database, shaded — zero classpath conflicts |
 | Redis Pub/Sub | Network-wide synchronization |
-| Discord Webhooks | Instant alerts for every blocked event |
+| Discord Webhooks | Instant alerts for every blocked event + intelligence + forensics |
 | Web Panel | Browser-based live statistics dashboard |
+| Config Migration | Automatic migration chain with pre-migration backups |
 | Async Logging | 7-day log rotation, fully off-thread |
 | Hot Reload | Config changes applied without restart |
 
-</div>
-
-<br>
-
 ---
-
-<div align="center">
 
 ## 📦 Requirements
 
@@ -347,17 +347,9 @@ Block IPs at the **kernel level** — bypasses the JVM entirely for the fastest 
 | Redis | 7.x | ⚠️ Optional |
 | MaxMind License | — | ⚠️ GeoIP only |
 
-</div>
-
-<br>
-
 ---
 
-<div align="center">
-
 ## 🚀 Quick Start
-
-</div>
 
 **Paper Server**
 ```
@@ -375,43 +367,42 @@ Block IPs at the **kernel level** — bypasses the JVM entirely for the fastest 
 4. (Optional) Enable redis section on both sides
 ```
 
-<br>
-
 ---
 
-<div align="center">
-
 ## 💻 Commands & Permissions
+
+**Core Commands**
 
 | Command | Description | Permission |
 |:---|:---|:---|
 | `/atomguard status` | Live module overview | `atomguard.admin` |
 | `/atomguard reload` | Hot-reload config | `atomguard.reload` |
 | `/atomguard stats` | Statistics dashboard | `atomguard.admin` |
+| `/ag intel <status\|reset>` | Threat intelligence status | `atomguard.admin` |
+| `/ag trust <info\|set\|reset\|top>` | Player trust scores | `atomguard.admin` |
+| `/ag replay <list\|latest\|export>` | Forensic attack replay | `atomguard.admin` |
+| `/ag honeypot <status\|stats>` | Honeypot module info | `atomguard.admin` |
 | `/panic` | Emergency lockdown | `atomguard.panic` |
+
+**Permissions**
 
 | Permission | Effect |
 |:---|:---|
 | `atomguard.bypass` | Bypasses all protections |
 | `atomguard.notify` | Receives exploit alerts in chat |
-
-</div>
-
-<br>
+| `atomguard.admin` | Full access to all commands |
+| `atomguard.reload` | Config reload only |
+| `atomguard.panic` | Emergency lockdown |
 
 ---
 
-<div align="center">
-
 ## 🔌 Developer API
-
-</div>
 
 ```xml
 <dependency>
     <groupId>com.atomguard</groupId>
     <artifactId>AtomGuard-api</artifactId>
-    <version>1.0.0</version>
+    <version>1.2.2</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -425,6 +416,13 @@ int score = rep.getScore(player.getAddress().getAddress());
 IModuleManager modules = AtomGuardAPI.getInstance().getModuleManager();
 modules.setEnabled("bot-koruma", false);
 
+// Trust score system (v1.2.0+)
+AtomGuardAPI.getInstance().getTrustScoreManager();
+
+// Forensics & intelligence (v1.2.0+)
+AtomGuardAPI.getInstance().getForensicsManager();
+AtomGuardAPI.getInstance().getIntelligenceEngine();
+
 // Listen for blocked exploits
 @EventHandler
 public void onExploitBlocked(ExploitBlockedEvent event) {
@@ -433,9 +431,9 @@ public void onExploitBlocked(ExploitBlockedEvent event) {
 }
 ```
 
-Available events: `ExploitBlockedEvent` · `AttackModeToggleEvent` · `PlayerReputationCheckEvent` · `ModuleToggleEvent`
-
-<br>
+**Available Events:**
+`ExploitBlockedEvent` · `AttackModeToggleEvent` · `PlayerReputationCheckEvent` · `ModuleToggleEvent`
+`ThreatScoreChangedEvent` · `HoneypotTrapEvent` · `IntelligenceAlertEvent` · `AttackSnapshotCompleteEvent`
 
 ---
 
