@@ -7,8 +7,10 @@ pipeline {
     }
 
     environment {
-        GITHUB_TOKEN = credentials('github-token')
-        REPO         = 'ATOMGAMERAGA/AtomGuard'
+        GITHUB_TOKEN   = credentials('github-token')
+        MODRINTH_TOKEN = credentials('modrinth-token')
+        REPO           = 'ATOMGAMERAGA/AtomGuard'
+        MODRINTH_ID    = credentials('modrinth-project-id')
     }
 
     options {
@@ -20,18 +22,18 @@ pipeline {
 
     stages {
 
-        // ─────────────────────────────────────────────
+        // ═════════════════════════════════════════════
         //  1. CHECKOUT
-        // ─────────────────────────────────────────────
+        // ═════════════════════════════════════════════
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        // ─────────────────────────────────────────────
-        //  2. SÜRÜM & GIT BİLGİLERİNİ ÇEK
-        // ─────────────────────────────────────────────
+        // ═════════════════════════════════════════════
+        //  2. SÜRÜM & GIT BİLGİLERİ
+        // ═════════════════════════════════════════════
         stage('Resolve Version') {
             steps {
                 script {
@@ -62,13 +64,13 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    // ── Commit sayısı (build numarası olarak) ──
+                    // ── Commit sayısı ──
                     env.COMMIT_COUNT = sh(
                         script: "git rev-list --count HEAD",
                         returnStdout: true
                     ).trim()
 
-                    // ── Bu commit bir tag mi? ──
+                    // ── Tag kontrolü ──
                     def tagCheck = sh(
                         script: "git describe --exact-match --tags HEAD 2>/dev/null || echo ''",
                         returnStdout: true
@@ -83,7 +85,7 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    // ── Release türünü belirle ──
+                    // ── Release türü ──
                     if (env.IS_TAG == 'true') {
                         env.RELEASE_TYPE    = 'stable'
                         env.RELEASE_VERSION = env.BASE_VERSION
@@ -119,18 +121,18 @@ pipeline {
             }
         }
 
-        // ─────────────────────────────────────────────
+        // ═════════════════════════════════════════════
         //  3. BUILD
-        // ─────────────────────────────────────────────
+        // ═════════════════════════════════════════════
         stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests -B -q'
             }
         }
 
-        // ─────────────────────────────────────────────
+        // ═════════════════════════════════════════════
         //  4. ARTIFACT DOĞRULAMA
-        // ─────────────────────────────────────────────
+        // ═════════════════════════════════════════════
         stage('Verify Artifacts') {
             steps {
                 script {
@@ -150,7 +152,7 @@ pipeline {
                     ).trim()
 
                     if (!env.CORE_JAR || !env.VELOCITY_JAR) {
-                        error "❌ JAR dosyaları bulunamadı! Build başarısız."
+                        error "❌ JAR dosyaları bulunamadı!"
                     }
 
                     sh """
@@ -163,9 +165,9 @@ pipeline {
             }
         }
 
-        // ─────────────────────────────────────────────
-        //  5. JAR'LARI YENİDEN ADLANDIR
-        // ─────────────────────────────────────────────
+        // ═════════════════════════════════════════════
+        //  5. ARTIFACT'LARI YENİDEN ADLANDIR
+        // ═════════════════════════════════════════════
         stage('Rename Artifacts') {
             when {
                 expression { env.RELEASE_TYPE != 'none' }
@@ -188,9 +190,9 @@ pipeline {
             }
         }
 
-        // ─────────────────────────────────────────────
-        //  6. CHECKSUM OLUŞTUR
-        // ─────────────────────────────────────────────
+        // ═════════════════════════════════════════════
+        //  6. CHECKSUM
+        // ═════════════════════════════════════════════
         stage('Generate Checksums') {
             when {
                 expression { env.RELEASE_TYPE != 'none' }
@@ -205,16 +207,16 @@ pipeline {
             }
         }
 
-        // ─────────────────────────────────────────────
-        //  7. RELEASE NOTES OLUŞTUR
-        // ─────────────────────────────────────────────
+        // ═════════════════════════════════════════════
+        //  7. RELEASE NOTES
+        // ═════════════════════════════════════════════
         stage('Generate Release Notes') {
             when {
                 expression { env.RELEASE_TYPE != 'none' }
             }
             steps {
                 script {
-                    // CHANGELOG.md'den ilgili versiyonun notlarını çek
+                    // CHANGELOG.md'den notları çek
                     env.CHANGELOG_NOTES = sh(
                         script: """
                             awk -v ver="${env.BASE_VERSION}" '
@@ -236,7 +238,14 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    // ── STABLE RELEASE ──
+                    // ── Modrinth changelog (Markdown) ──
+                    if (env.RELEASE_TYPE == 'stable') {
+                        env.MODRINTH_CHANGELOG = env.CHANGELOG_NOTES ?: "AtomGuard v${env.BASE_VERSION} yayınlandı."
+                    } else {
+                        env.MODRINTH_CHANGELOG = "**Dev Build #${env.COMMIT_COUNT}**\n\n${env.RECENT_COMMITS ?: 'Geliştirme sürümü.'}"
+                    }
+
+                    // ── GitHub Release Notes ──
                     if (env.RELEASE_TYPE == 'stable') {
                         def notes = """## 🛡️ AtomGuard v${env.BASE_VERSION}
 
@@ -262,18 +271,16 @@ pipeline {
 ${env.CHANGELOG_NOTES ?: '_Bu sürüm için changelog girilmemiş._'}
 
 ### 🔒 Doğrulama
-
-İndirdiğiniz dosyaların bütünlüğünü kontrol edin:
 ```bash
 sha256sum -c SHA256SUMS.txt
 ```
 
 ---
-🔧 Build #${env.BUILD_NUMBER} | Java 21 | Commit [\`${env.GIT_COMMIT_SHORT}\`](https://github.com/${env.REPO}/commit/${env.GIT_COMMIT_SHORT})"""
+🔧 Build #${env.BUILD_NUMBER} | Java 21 | Commit [\`${env.GIT_COMMIT_SHORT}\`](https://github.com/${env.REPO}/commit/${env.GIT_COMMIT_SHORT})
+📦 [Modrinth](https://modrinth.com/plugin/atomguard)"""
 
                         writeFile file: 'release-artifacts/RELEASE_NOTES.md', text: notes
 
-                    // ── DEV BUILD ──
                     } else {
                         def notes = """## 🔧 AtomGuard v${env.BASE_VERSION} — Dev Build #${env.COMMIT_COUNT}
 
@@ -291,7 +298,7 @@ sha256sum -c SHA256SUMS.txt
 ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
 
 ---
-🔧 Build #${env.BUILD_NUMBER} | Branch: \`${env.BRANCH_NAME_CLEAN}\` | Commit [\`${env.GIT_COMMIT_SHORT}\`](https://github.com/${env.REPO}/commit/${env.GIT_COMMIT_SHORT}) | ${env.GIT_COMMIT_DATE}"""
+🔧 Build #${env.BUILD_NUMBER} | Branch: \`${env.BRANCH_NAME_CLEAN}\` | Commit [\`${env.GIT_COMMIT_SHORT}\`](https://github.com/${env.REPO}/commit/${env.GIT_COMMIT_SHORT})"""
 
                         writeFile file: 'release-artifacts/RELEASE_NOTES.md', text: notes
                     }
@@ -299,9 +306,9 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
             }
         }
 
-        // ─────────────────────────────────────────────
+        // ═════════════════════════════════════════════
         //  8. GITHUB CLI KURULUMU
-        // ─────────────────────────────────────────────
+        // ═════════════════════════════════════════════
         stage('Setup GitHub CLI') {
             when {
                 expression { env.RELEASE_TYPE != 'none' }
@@ -320,16 +327,16 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                         && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
                             | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
                         && apt-get update && apt-get install gh -y
-                        echo "✅ GitHub CLI kuruldu: $(gh --version | head -1)"
+                        echo "✅ GitHub CLI kuruldu"
                     fi
                 '''
             }
         }
 
-        // ─────────────────────────────────────────────
-        //  9. STABLE RELEASE (tag push)
-        // ─────────────────────────────────────────────
-        stage('Publish Stable Release') {
+        // ═════════════════════════════════════════════
+        //  9. GITHUB — STABLE RELEASE
+        // ═════════════════════════════════════════════
+        stage('GitHub: Stable Release') {
             when {
                 expression { env.RELEASE_TYPE == 'stable' }
             }
@@ -338,22 +345,19 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                     sh """
                         export GH_TOKEN=\${GITHUB_TOKEN}
 
-                        echo "🚀 Stable Release: ${env.TAG_NAME}"
+                        echo "🚀 GitHub Stable Release: ${env.TAG_NAME}"
 
-                        # Mevcut release varsa sil
                         gh release delete ${env.TAG_NAME} --repo ${env.REPO} --yes 2>/dev/null || true
 
-                        # Aynı base version'daki tüm dev build'leri temizle
-                        echo "🧹 Dev build'ler temizleniyor..."
+                        # Aynı base version'daki dev build'leri temizle
                         gh release list --repo ${env.REPO} --limit 100 2>/dev/null \
                             | grep -oP "v${env.BASE_VERSION}-dev\\.\\d+" \
                             | while read devtag; do
-                                echo "   🗑️ Siliniyor: \$devtag"
+                                echo "   🗑️ \$devtag siliniyor"
                                 gh release delete "\$devtag" --repo ${env.REPO} --yes 2>/dev/null || true
                                 git push origin :refs/tags/"\$devtag" 2>/dev/null || true
                             done
 
-                        # Release oluştur
                         gh release create ${env.TAG_NAME} \
                             --repo ${env.REPO} \
                             --title "${env.RELEASE_TITLE}" \
@@ -364,16 +368,15 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                             release-artifacts/${env.API_RELEASE} \
                             release-artifacts/SHA256SUMS.txt
                     """
-
-                    echo "✅ https://github.com/${env.REPO}/releases/tag/${env.TAG_NAME}"
+                    echo "✅ GitHub: https://github.com/${env.REPO}/releases/tag/${env.TAG_NAME}"
                 }
             }
         }
 
-        // ─────────────────────────────────────────────
-        //  10. DEV BUILD RELEASE (main commit)
-        // ─────────────────────────────────────────────
-        stage('Publish Dev Build') {
+        // ═════════════════════════════════════════════
+        //  10. GITHUB — DEV BUILD
+        // ═════════════════════════════════════════════
+        stage('GitHub: Dev Build') {
             when {
                 expression { env.RELEASE_TYPE == 'dev' }
             }
@@ -382,23 +385,21 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                     sh """
                         export GH_TOKEN=\${GITHUB_TOKEN}
 
-                        echo "🔧 Dev Build: ${env.TAG_NAME}"
+                        echo "🔧 GitHub Dev Build: ${env.TAG_NAME}"
 
-                        # Eski dev build'leri temizle — son 5 hariç
+                        # Son 5 hariç eski dev build'leri sil
                         gh release list --repo ${env.REPO} --limit 50 2>/dev/null \
                             | grep -oP "v${env.BASE_VERSION}-dev\\.\\d+" \
                             | tail -n +6 \
                             | while read oldtag; do
-                                echo "   🗑️ Eski build siliniyor: \$oldtag"
+                                echo "   🗑️ \$oldtag siliniyor"
                                 gh release delete "\$oldtag" --repo ${env.REPO} --yes 2>/dev/null || true
                                 git push origin :refs/tags/"\$oldtag" 2>/dev/null || true
                             done
 
-                        # Aynı tag varsa sil
                         gh release delete ${env.TAG_NAME} --repo ${env.REPO} --yes 2>/dev/null || true
                         git push origin :refs/tags/${env.TAG_NAME} 2>/dev/null || true
 
-                        # Pre-release olarak oluştur
                         gh release create ${env.TAG_NAME} \
                             --repo ${env.REPO} \
                             --title "${env.RELEASE_TITLE}" \
@@ -409,21 +410,152 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                             release-artifacts/${env.API_RELEASE} \
                             release-artifacts/SHA256SUMS.txt
                     """
+                    echo "✅ GitHub: https://github.com/${env.REPO}/releases/tag/${env.TAG_NAME}"
+                }
+            }
+        }
 
-                    echo "✅ https://github.com/${env.REPO}/releases/tag/${env.TAG_NAME}"
+        // ═════════════════════════════════════════════
+        //  11. MODRINTH — CORE PLUGIN YAYINLA
+        // ═════════════════════════════════════════════
+        stage('Modrinth: Core Plugin') {
+            when {
+                expression { env.RELEASE_TYPE != 'none' }
+            }
+            steps {
+                script {
+                    def versionType = env.RELEASE_TYPE == 'stable' ? 'release' : 'alpha'
+                    def versionName = env.RELEASE_TYPE == 'stable'
+                        ? "AtomGuard v${env.BASE_VERSION} (Paper/Spigot)"
+                        : "AtomGuard v${env.BASE_VERSION}-dev.${env.COMMIT_COUNT} (Paper/Spigot)"
+                    def versionNumber = env.RELEASE_TYPE == 'stable'
+                        ? "${env.BASE_VERSION}+core"
+                        : "${env.BASE_VERSION}-dev.${env.COMMIT_COUNT}+core"
+
+                    // Changelog'u dosyaya yaz (JSON escape için)
+                    writeFile file: 'release-artifacts/modrinth-changelog-core.txt', text: env.MODRINTH_CHANGELOG
+
+                    sh """
+                        echo "📦 Modrinth: Core Plugin yayınlanıyor..."
+
+                        # Changelog'u JSON-safe yap
+                        CHANGELOG_ESCAPED=\$(python3 -c "
+import json, sys
+with open('release-artifacts/modrinth-changelog-core.txt', 'r') as f:
+    print(json.dumps(f.read()))
+" 2>/dev/null || echo '"AtomGuard ${env.RELEASE_VERSION}"')
+
+                        # Modrinth API — Core version oluştur
+                        HTTP_CODE=\$(curl -s -o /tmp/modrinth-core-response.json -w "%{http_code}" \\
+                            -X POST "https://api.modrinth.com/v2/version" \\
+                            -H "Authorization: \${MODRINTH_TOKEN}" \\
+                            -F "data={
+                                \\"name\\": \\"${versionName}\\",
+                                \\"version_number\\": \\"${versionNumber}\\",
+                                \\"changelog\\": \${CHANGELOG_ESCAPED},
+                                \\"dependencies\\": [
+                                    {
+                                        \\"project_id\\": \\"hkfCOMjf\\",
+                                        \\"dependency_type\\": \\"required\\"
+                                    }
+                                ],
+                                \\"game_versions\\": [\\"1.21.4\\"],
+                                \\"version_type\\": \\"${versionType}\\",
+                                \\"loaders\\": [\\"paper\\", \\"spigot\\", \\"bukkit\\"],
+                                \\"featured\\": ${env.RELEASE_TYPE == 'stable'},
+                                \\"project_id\\": \\"\${MODRINTH_ID}\\",
+                                \\"file_parts\\": [\\"core-jar\\"],
+                                \\"primary_file\\": \\"core-jar\\"
+                            };type=application/json" \\
+                            -F "core-jar=@release-artifacts/${env.CORE_RELEASE};type=application/java-archive")
+
+                        echo "   HTTP Status: \$HTTP_CODE"
+
+                        if [ "\$HTTP_CODE" -eq 200 ]; then
+                            CORE_VERSION_ID=\$(python3 -c "import json; print(json.load(open('/tmp/modrinth-core-response.json'))['id'])" 2>/dev/null || echo "unknown")
+                            echo "   ✅ Core yayınlandı! Version ID: \$CORE_VERSION_ID"
+                        else
+                            echo "   ⚠️ Core yayınlanamadı! Response:"
+                            cat /tmp/modrinth-core-response.json
+                            echo ""
+                        fi
+                    """
+                }
+            }
+        }
+
+        // ═════════════════════════════════════════════
+        //  12. MODRINTH — VELOCITY PLUGIN YAYINLA
+        // ═════════════════════════════════════════════
+        stage('Modrinth: Velocity Plugin') {
+            when {
+                expression { env.RELEASE_TYPE != 'none' }
+            }
+            steps {
+                script {
+                    def versionType = env.RELEASE_TYPE == 'stable' ? 'release' : 'alpha'
+                    def versionName = env.RELEASE_TYPE == 'stable'
+                        ? "AtomGuard v${env.BASE_VERSION} (Velocity)"
+                        : "AtomGuard v${env.BASE_VERSION}-dev.${env.COMMIT_COUNT} (Velocity)"
+                    def versionNumber = env.RELEASE_TYPE == 'stable'
+                        ? "${env.BASE_VERSION}+velocity"
+                        : "${env.BASE_VERSION}-dev.${env.COMMIT_COUNT}+velocity"
+
+                    writeFile file: 'release-artifacts/modrinth-changelog-velocity.txt', text: env.MODRINTH_CHANGELOG
+
+                    sh """
+                        echo "📦 Modrinth: Velocity Plugin yayınlanıyor..."
+
+                        CHANGELOG_ESCAPED=\$(python3 -c "
+import json, sys
+with open('release-artifacts/modrinth-changelog-velocity.txt', 'r') as f:
+    print(json.dumps(f.read()))
+" 2>/dev/null || echo '"AtomGuard Velocity ${env.RELEASE_VERSION}"')
+
+                        # Modrinth API — Velocity version oluştur
+                        HTTP_CODE=\$(curl -s -o /tmp/modrinth-velocity-response.json -w "%{http_code}" \\
+                            -X POST "https://api.modrinth.com/v2/version" \\
+                            -H "Authorization: \${MODRINTH_TOKEN}" \\
+                            -F "data={
+                                \\"name\\": \\"${versionName}\\",
+                                \\"version_number\\": \\"${versionNumber}\\",
+                                \\"changelog\\": \${CHANGELOG_ESCAPED},
+                                \\"dependencies\\": [],
+                                \\"game_versions\\": [\\"1.21.4\\"],
+                                \\"version_type\\": \\"${versionType}\\",
+                                \\"loaders\\": [\\"velocity\\"],
+                                \\"featured\\": false,
+                                \\"project_id\\": \\"\${MODRINTH_ID}\\",
+                                \\"file_parts\\": [\\"velocity-jar\\"],
+                                \\"primary_file\\": \\"velocity-jar\\"
+                            };type=application/json" \\
+                            -F "velocity-jar=@release-artifacts/${env.VELOCITY_RELEASE};type=application/java-archive")
+
+                        echo "   HTTP Status: \$HTTP_CODE"
+
+                        if [ "\$HTTP_CODE" -eq 200 ]; then
+                            VEL_VERSION_ID=\$(python3 -c "import json; print(json.load(open('/tmp/modrinth-velocity-response.json'))['id'])" 2>/dev/null || echo "unknown")
+                            echo "   ✅ Velocity yayınlandı! Version ID: \$VEL_VERSION_ID"
+                        else
+                            echo "   ⚠️ Velocity yayınlanamadı! Response:"
+                            cat /tmp/modrinth-velocity-response.json
+                            echo ""
+                        fi
+                    """
                 }
             }
         }
     }
 
-    // ─────────────────────────────────────────────
+    // ═════════════════════════════════════════════
     //  POST ACTIONS
-    // ─────────────────────────────────────────────
+    // ═════════════════════════════════════════════
     post {
         success {
             script {
                 def emoji = env.RELEASE_TYPE == 'stable' ? '🚀' : (env.RELEASE_TYPE == 'dev' ? '🔧' : '✅')
-                def releaseUrl = env.TAG_NAME ? "https://github.com/${env.REPO}/releases/tag/${env.TAG_NAME}" : 'N/A'
+                def ghUrl = env.TAG_NAME ? "https://github.com/${env.REPO}/releases/tag/${env.TAG_NAME}" : 'N/A'
+                def mrUrl = (env.RELEASE_TYPE != 'none') ? "https://modrinth.com/plugin/atomguard/versions" : 'N/A'
                 echo """
                 ╔═══════════════════════════════════════════════════╗
                 ║  ${emoji} AtomGuard BUILD SUCCESS
@@ -431,7 +563,8 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                 ║  Version  : ${env.RELEASE_VERSION}
                 ║  Type     : ${env.RELEASE_TYPE}
                 ║  Commit   : ${env.GIT_COMMIT_SHORT} — ${env.GIT_COMMIT_MSG}
-                ║  Release  : ${releaseUrl}
+                ║  GitHub   : ${ghUrl}
+                ║  Modrinth : ${mrUrl}
                 ╚═══════════════════════════════════════════════════╝
                 """
             }

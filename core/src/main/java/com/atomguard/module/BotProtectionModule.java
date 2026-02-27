@@ -18,7 +18,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -314,7 +316,7 @@ public class BotProtectionModule extends AbstractModule implements Listener {
         Player player = event.getPlayer();
         onlinePlayerNames.add(player.getName());
 
-        if (getConfigBoolean("dogrulama.aktif", true)) {
+        if (getConfigBoolean("dogrulama.aktif", false)) {
             if (player.hasPermission("atomguard.bypass")) return;
 
             pendingVerification.add(player.getUniqueId());
@@ -379,6 +381,25 @@ public class BotProtectionModule extends AbstractModule implements Listener {
         }
     }
     
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onCommand(PlayerCommandPreprocessEvent event) {
+        if (!isEnabled()) return;
+        Player player = event.getPlayer();
+        if (pendingVerification.remove(player.getUniqueId())) {
+            ipOffenseCount.remove(player.getAddress().getAddress().getHostAddress());
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&',
+                getConfigString("dogrulama.dogrulandi-mesaji", "&aDoğrulama başarılı!")));
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onChat(AsyncPlayerChatEvent event) {
+        if (!isEnabled()) return;
+        Player player = event.getPlayer();
+        pendingVerification.remove(player.getUniqueId());
+        // Sohbet düşük risklidir — sessizce doğrula, IP sayacı sıfırlanmaz
+    }
+
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         pendingVerification.remove(event.getPlayer().getUniqueId());

@@ -3,6 +3,18 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [1.2.3] - 2026-02-27
+
+### 🐛 Hata Düzeltmeleri
+
+- **BotProtectionModule — Yanlış "Timed Out" Atması**: `dogrulama.aktif` varsayılanı `true`'dan `false`'a değiştirildi. Saldırı modunda `bot-korumasi` modülünün otomatik devreye girmesi kaldırıldı (artık `otomatik-moduller` listesinde yok). Hareket tabanlı doğrulama artık sohbet ve komut kullanımını da doğrulama olarak kabul ediyor (`PlayerCommandPreprocessEvent` ve `AsyncPlayerChatEvent` eklendi).
+- **ActionExecutor — KEEP_ALIVE Race Condition**: `executePeriodic`'te kara listeye alma sırası düzeltildi. Artık önce oyuncu atılır (`player.kick()`), ardından 1 tick gecikmeyle IP kara listeye eklenir. Önceki sıralamada (kara liste → kick) KEEP_ALIVE yanıtları iptal edildiğinden sunucu "Timed Out" mesajı gösteriyordu.
+
+### 🔧 İyileştirmeler
+
+- `moduller.bot-korumasi` config bölümü eklendi (varsayılan devre dışı, tam dokümantasyonlu)
+- `attack-mode.aksiyonlar.otomatik-moduller`'den `bot-korumasi` kaldırıldı; AtomShield protokol koruması `bot-koruma` (AntiBotModule) üzerinden zaten aktif
+
 ## [1.2.0] - 2026-02-24
 
 ### ✨ Yeni Özellikler
@@ -25,6 +37,20 @@ Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 - `AttackModeManager`: Forensics ve Intelligence Engine hook'ları eklendi
 - `BukkitListener`: Trust Score ve Intelligence Engine join/quit hook'ları eklendi
 - Tüm yeni sistemler için `config.yml` ve `messages_tr.yml` bölümleri eklendi
+
+## [1.2.3] - 2026-02-27
+
+### ✨ Yeni Özellikler
+
+- 
+
+### 🔧 İyileştirmeler
+
+- 
+
+### 🐛 Hata Düzeltmeleri
+
+- 
 
 ## [1.1.1] - 2026-02-23
 
@@ -59,6 +85,20 @@ Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 - `VelocityBuildInfo.java` versiyon `1.0.0` → `1.1.1`
 
 ---
+
+## [1.2.3] - 2026-02-27
+
+### ✨ Yeni Özellikler
+
+- 
+
+### 🔧 İyileştirmeler
+
+- 
+
+### 🐛 Hata Düzeltmeleri
+
+- 
 
 ## [1.1.0] - 2026-02-20
 
@@ -173,6 +213,20 @@ Normal oyuncuların hatalı olarak engellenmesine yol açan köklü sorunlar gid
 - `basarili-login-bonus: 15`
 
 ---
+
+## [1.2.3] - 2026-02-27
+
+### ✨ Yeni Özellikler
+
+- 
+
+### 🔧 İyileştirmeler
+
+- 
+
+### 🐛 Hata Düzeltmeleri
+
+- 
 
 ## [1.0.0] - 2026-02-17
 

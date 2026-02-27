@@ -195,7 +195,6 @@ attack-mode:
     otomatik-modul-etkinlestir: true
     # Otomatik etkinleştirilecek modüller
     otomatik-moduller:
-      - "bot-korumasi"
       - "paket-exploit"
       - "jeton-kovasi"
     # Sadece doğrulanmış IP'lere izin ver (çok katı)
@@ -669,6 +668,30 @@ moduller:
     min-oynama-suresi: 30
     # Log dosyası adı
     log-dosyasi: "panic-bans.log"
+
+  # Bot Koruma Modülü (Legacy — AtomShield protokol kontrolleri)
+  # Bu modül yalnızca saldırı analizinde AtomShield protokol özelliklerini sağlar.
+  # Doğrulama sistemi için AntiBotModule (bot-koruma) kullanın.
+  bot-korumasi:
+    aktif: false
+    dogrulama:
+      aktif: false
+    atom-shield:
+      protokol:
+        aktif: true
+        sifreleme-gecikmesi: true
+        min-login-gecikmesi: 0
+      handshake:
+        aktif: true
+        hostname-zorunlu: false
+        port-kontrolu: true
+      davranissal:
+        rotasyon-analizi: true
+        yercekimi-testi: false
+    benzer-isim-kontrolu:
+      aktif: true
+      karakter-farki: 2
+      max-benzer-sayisi: 15
 
 # ═══════════════════════════════════════
 # Tehdit İstihbarat Motoru v1.2.0

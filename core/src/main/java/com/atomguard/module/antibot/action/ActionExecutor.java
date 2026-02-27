@@ -42,10 +42,18 @@ public class ActionExecutor {
                 @Override
                 public void run() {
                     if (result.getAction() == ActionType.BLACKLIST) {
-                        module.getBlacklistManager().blacklist(profile.getIpAddress(), 
-                            module.getConfigInt("kara-liste.varsayilan-sure-dk", 60) * 60000L, 
-                            "High threat score during play: " + result.getScore());
+                        // Önce oyuncuyu at (bağlantı kesilme sebebini görsün)
                         player.kick(module.getPlugin().getMessageManager().getMessage("antibot.kara-liste-mesaji"));
+                        // Kara listeye alma 1 tick sonra — kick paketi önce gönderilsin
+                        String ip = profile.getIpAddress();
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                module.getBlacklistManager().blacklist(ip,
+                                    module.getConfigInt("kara-liste.varsayilan-sure-dk", 60) * 60000L,
+                                    "High threat score during play: " + result.getScore());
+                            }
+                        }.runTaskLater(module.getPlugin(), 1L);
                     } else {
                         player.kick(module.getPlugin().getMessageManager().getMessage("antibot.kick-mesaji"));
                     }
