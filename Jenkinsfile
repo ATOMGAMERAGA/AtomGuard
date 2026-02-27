@@ -448,7 +448,7 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                         name          : versionName,
                         version_number: versionNumber,
                         changelog     : env.MODRINTH_CHANGELOG ?: "AtomGuard ${env.RELEASE_VERSION}",
-                        dependencies  : [[project_id: 'hkfCOMjf', dependency_type: 'required']],
+                        dependencies  : [[project_id: 'HYKaKraK', dependency_type: 'required']],
                         game_versions : ['1.21.4'],
                         version_type  : versionType,
                         loaders       : ['paper', 'spigot', 'bukkit'],
