@@ -306,34 +306,7 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
         }
 
         // ═════════════════════════════════════════════
-        //  8. GITHUB CLI KURULUMU
-        // ═════════════════════════════════════════════
-        stage('Setup GitHub CLI') {
-            when {
-                expression { env.RELEASE_TYPE != 'none' }
-            }
-            steps {
-                sh '''
-                    if command -v gh >/dev/null 2>&1; then
-                        echo "✅ GitHub CLI: $(gh --version | head -1)"
-                    else
-                        echo "📥 GitHub CLI kuruluyor..."
-                        (type -p wget >/dev/null 2>&1 || (apt-get update && apt-get install wget -y)) \
-                        && mkdir -p -m 755 /etc/apt/keyrings \
-                        && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-                            | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
-                        && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
-                        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-                            | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-                        && apt-get update && apt-get install gh -y
-                        echo "✅ GitHub CLI kuruldu: $(gh --version | head -1)"
-                    fi
-                '''
-            }
-        }
-
-        // ═════════════════════════════════════════════
-        //  9. GITHUB — STABLE RELEASE
+        //  8. GITHUB — STABLE RELEASE (curl/python3)
         // ═════════════════════════════════════════════
         stage('GitHub: Stable Release') {
             when {
@@ -342,30 +315,61 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
             steps {
                 script {
                     sh """
-                        export GH_TOKEN=\${GITHUB_TOKEN}
-
                         echo "🚀 GitHub Stable Release: ${env.TAG_NAME}"
 
-                        gh release delete ${env.TAG_NAME} --repo ${env.REPO} --yes 2>/dev/null || true
+                        # Mevcut release varsa sil
+                        OLD_ID=\$(curl -sf -H "Authorization: token \${GITHUB_TOKEN}" \
+                            "https://api.github.com/repos/${env.REPO}/releases/tags/${env.TAG_NAME}" \
+                            | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null || echo "")
+                        if [ -n "\$OLD_ID" ] && [ "\$OLD_ID" != "None" ]; then
+                            curl -sf -X DELETE -H "Authorization: token \${GITHUB_TOKEN}" \
+                                "https://api.github.com/repos/${env.REPO}/releases/\$OLD_ID" || true
+                            echo "   Eski release silindi: \$OLD_ID"
+                        fi
 
-                        # Aynı base version'daki dev build'leri temizle
-                        gh release list --repo ${env.REPO} --limit 100 2>/dev/null \
-                            | grep -oP "v${env.BASE_VERSION}-dev\\.\\d+" \
-                            | while read devtag; do
-                                echo "   🗑️ \$devtag siliniyor"
-                                gh release delete "\$devtag" --repo ${env.REPO} --yes 2>/dev/null || true
-                                git push origin :refs/tags/"\$devtag" 2>/dev/null || true
-                            done
+                        # Aynı base version dev build'lerini temizle
+                        curl -sf -H "Authorization: token \${GITHUB_TOKEN}" \
+                            "https://api.github.com/repos/${env.REPO}/releases?per_page=50" 2>/dev/null \
+                            | python3 -c "
+import json, sys, subprocess
+releases = json.load(sys.stdin)
+for r in releases:
+    tag = r.get('tag_name','')
+    if tag.startswith('v${env.BASE_VERSION}-dev.'):
+        rid = r['id']
+        print('   Dev build siliniyor: ' + tag)
+        subprocess.run(['curl','-sf','-X','DELETE','-H','Authorization: token \${GITHUB_TOKEN}',
+            'https://api.github.com/repos/${env.REPO}/releases/'+str(rid)], capture_output=True)
+" 2>/dev/null || true
 
-                        gh release create ${env.TAG_NAME} \
-                            --repo ${env.REPO} \
-                            --title "${env.RELEASE_TITLE}" \
-                            --notes-file release-artifacts/RELEASE_NOTES.md \
-                            --latest \
-                            release-artifacts/${env.CORE_RELEASE} \
-                            release-artifacts/${env.VELOCITY_RELEASE} \
-                            release-artifacts/${env.API_RELEASE} \
-                            release-artifacts/SHA256SUMS.txt
+                        # Release JSON oluştur
+                        python3 -c "
+import json
+notes = open('release-artifacts/RELEASE_NOTES.md').read()
+data = {'tag_name':'${env.TAG_NAME}','name':'${env.RELEASE_TITLE}','body':notes,'draft':False,'prerelease':False,'make_latest':'true'}
+open('/tmp/gh_release_payload.json','w').write(json.dumps(data))
+print('Payload hazırlandı')
+"
+                        # Release oluştur
+                        RESP=\$(curl -sf -X POST \
+                            -H "Authorization: token \${GITHUB_TOKEN}" \
+                            -H "Content-Type: application/json" \
+                            "https://api.github.com/repos/${env.REPO}/releases" \
+                            --data-binary @/tmp/gh_release_payload.json)
+                        NEW_ID=\$(echo "\$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])" 2>/dev/null)
+                        echo "   ✅ Release oluşturuldu (ID: \$NEW_ID)"
+
+                        # Dosyaları yükle
+                        UPLOAD_URL="https://uploads.github.com/repos/${env.REPO}/releases/\$NEW_ID/assets"
+                        for f in release-artifacts/${env.CORE_RELEASE} release-artifacts/${env.VELOCITY_RELEASE} release-artifacts/${env.API_RELEASE} release-artifacts/SHA256SUMS.txt; do
+                            fn=\$(basename "\$f")
+                            echo "   📤 Yükleniyor: \$fn"
+                            curl -sf -X POST \
+                                -H "Authorization: token \${GITHUB_TOKEN}" \
+                                -H "Content-Type: application/octet-stream" \
+                                "\${UPLOAD_URL}?name=\$fn" \
+                                --data-binary "@\$f" > /dev/null && echo "   ✅ \$fn" || echo "   ⚠️  \$fn yüklenemedi"
+                        done
                     """
                     echo "✅ GitHub: https://github.com/${env.REPO}/releases/tag/${env.TAG_NAME}"
                 }
@@ -373,7 +377,7 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
         }
 
         // ═════════════════════════════════════════════
-        //  10. GITHUB — DEV BUILD
+        //  9. GITHUB — DEV BUILD (curl/python3)
         // ═════════════════════════════════════════════
         stage('GitHub: Dev Build') {
             when {
@@ -382,32 +386,59 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
             steps {
                 script {
                     sh """
-                        export GH_TOKEN=\${GITHUB_TOKEN}
-
                         echo "🔧 GitHub Dev Build: ${env.TAG_NAME}"
 
                         # Son 5 hariç eski dev build'leri sil
-                        gh release list --repo ${env.REPO} --limit 50 2>/dev/null \
-                            | grep -oP "v${env.BASE_VERSION}-dev\\.\\d+" \
-                            | tail -n +6 \
-                            | while read oldtag; do
-                                echo "   🗑️ \$oldtag siliniyor"
-                                gh release delete "\$oldtag" --repo ${env.REPO} --yes 2>/dev/null || true
-                                git push origin :refs/tags/"\$oldtag" 2>/dev/null || true
-                            done
+                        curl -sf -H "Authorization: token \${GITHUB_TOKEN}" \
+                            "https://api.github.com/repos/${env.REPO}/releases?per_page=50" 2>/dev/null \
+                            | python3 -c "
+import json, sys, subprocess
+releases = json.load(sys.stdin)
+dev_releases = [r for r in releases if r.get('tag_name','').startswith('v${env.BASE_VERSION}-dev.')]
+for r in dev_releases[5:]:
+    rid = r['id']
+    tag = r['tag_name']
+    print('   Eski dev siliniyor: ' + tag)
+    subprocess.run(['curl','-sf','-X','DELETE','-H','Authorization: token \${GITHUB_TOKEN}',
+        'https://api.github.com/repos/${env.REPO}/releases/'+str(rid)], capture_output=True)
+" 2>/dev/null || true
 
-                        gh release delete ${env.TAG_NAME} --repo ${env.REPO} --yes 2>/dev/null || true
-                        git push origin :refs/tags/${env.TAG_NAME} 2>/dev/null || true
+                        # Mevcut release varsa sil
+                        OLD_ID=\$(curl -sf -H "Authorization: token \${GITHUB_TOKEN}" \
+                            "https://api.github.com/repos/${env.REPO}/releases/tags/${env.TAG_NAME}" \
+                            | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null || echo "")
+                        if [ -n "\$OLD_ID" ] && [ "\$OLD_ID" != "None" ]; then
+                            curl -sf -X DELETE -H "Authorization: token \${GITHUB_TOKEN}" \
+                                "https://api.github.com/repos/${env.REPO}/releases/\$OLD_ID" || true
+                        fi
 
-                        gh release create ${env.TAG_NAME} \
-                            --repo ${env.REPO} \
-                            --title "${env.RELEASE_TITLE}" \
-                            --notes-file release-artifacts/RELEASE_NOTES.md \
-                            --prerelease \
-                            release-artifacts/${env.CORE_RELEASE} \
-                            release-artifacts/${env.VELOCITY_RELEASE} \
-                            release-artifacts/${env.API_RELEASE} \
-                            release-artifacts/SHA256SUMS.txt
+                        # Release JSON oluştur
+                        python3 -c "
+import json
+notes = open('release-artifacts/RELEASE_NOTES.md').read()
+data = {'tag_name':'${env.TAG_NAME}','name':'${env.RELEASE_TITLE}','body':notes,'draft':False,'prerelease':True}
+open('/tmp/gh_release_payload.json','w').write(json.dumps(data))
+print('Payload hazırlandı')
+"
+                        RESP=\$(curl -sf -X POST \
+                            -H "Authorization: token \${GITHUB_TOKEN}" \
+                            -H "Content-Type: application/json" \
+                            "https://api.github.com/repos/${env.REPO}/releases" \
+                            --data-binary @/tmp/gh_release_payload.json)
+                        NEW_ID=\$(echo "\$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])" 2>/dev/null)
+                        echo "   ✅ Dev release oluşturuldu (ID: \$NEW_ID)"
+
+                        # Dosyaları yükle
+                        UPLOAD_URL="https://uploads.github.com/repos/${env.REPO}/releases/\$NEW_ID/assets"
+                        for f in release-artifacts/${env.CORE_RELEASE} release-artifacts/${env.VELOCITY_RELEASE} release-artifacts/${env.API_RELEASE} release-artifacts/SHA256SUMS.txt; do
+                            fn=\$(basename "\$f")
+                            echo "   📤 Yükleniyor: \$fn"
+                            curl -sf -X POST \
+                                -H "Authorization: token \${GITHUB_TOKEN}" \
+                                -H "Content-Type: application/octet-stream" \
+                                "\${UPLOAD_URL}?name=\$fn" \
+                                --data-binary "@\$f" > /dev/null && echo "   ✅ \$fn" || echo "   ⚠️  \$fn yüklenemedi"
+                        done
                     """
                     echo "✅ GitHub: https://github.com/${env.REPO}/releases/tag/${env.TAG_NAME}"
                 }
