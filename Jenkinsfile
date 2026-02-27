@@ -233,7 +233,7 @@ pipeline {
                     // Son 10 commit
                     env.RECENT_COMMITS = sh(
                         script: """
-                            git log --oneline -10 --pretty=format:'- [\`%h\`](https://github.com/${env.REPO}/commit/%H) %s (%an)' 2>/dev/null || echo ""
+                            git log --oneline -10 --pretty=format:'- [`%h`](https://github.com/${env.REPO}/commit/%H) %s (%an)' 2>/dev/null || echo ""
                         """,
                         returnStdout: true
                     ).trim()
