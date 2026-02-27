@@ -257,9 +257,9 @@ pipeline {
 
 | Platform | Dosya | Hedef Klasör |
 |----------|-------|-------------|
-| Paper / Spigot | \`${env.CORE_RELEASE}\` | \`plugins/\` |
-| Velocity Proxy | \`${env.VELOCITY_RELEASE}\` | \`plugins/\` |
-| API (Geliştirici) | \`${env.API_RELEASE}\` | Maven dependency |
+| Paper / Spigot | `${env.CORE_RELEASE}` | `plugins/` |
+| Velocity Proxy | `${env.VELOCITY_RELEASE}` | `plugins/` |
+| API (Geliştirici) | `${env.API_RELEASE}` | Maven dependency |
 
 1. Sunucuyu durdur
 2. Eski AtomGuard JAR dosyalarını sil
@@ -276,7 +276,7 @@ sha256sum -c SHA256SUMS.txt
 ```
 
 ---
-🔧 Build #${env.BUILD_NUMBER} | Java 21 | Commit [\`${env.GIT_COMMIT_SHORT}\`](https://github.com/${env.REPO}/commit/${env.GIT_COMMIT_SHORT})
+🔧 Build #${env.BUILD_NUMBER} | Java 21 | Commit [`${env.GIT_COMMIT_SHORT}`](https://github.com/${env.REPO}/commit/${env.GIT_COMMIT_SHORT})
 📦 [Modrinth](https://modrinth.com/plugin/atomguard)"""
 
                         writeFile file: 'release-artifacts/RELEASE_NOTES.md', text: notes
@@ -290,15 +290,15 @@ sha256sum -c SHA256SUMS.txt
 
 | Platform | Dosya |
 |----------|-------|
-| Paper / Spigot | \`${env.CORE_RELEASE}\` |
-| Velocity Proxy | \`${env.VELOCITY_RELEASE}\` |
+| Paper / Spigot | `${env.CORE_RELEASE}` |
+| Velocity Proxy | `${env.VELOCITY_RELEASE}` |
 
 ### 📝 Son Değişiklikler
 
 ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
 
 ---
-🔧 Build #${env.BUILD_NUMBER} | Branch: \`${env.BRANCH_NAME_CLEAN}\` | Commit [\`${env.GIT_COMMIT_SHORT}\`](https://github.com/${env.REPO}/commit/${env.GIT_COMMIT_SHORT})"""
+🔧 Build #${env.BUILD_NUMBER} | Branch: `${env.BRANCH_NAME_CLEAN}` | Commit [`${env.GIT_COMMIT_SHORT}`](https://github.com/${env.REPO}/commit/${env.GIT_COMMIT_SHORT})"""
 
                         writeFile file: 'release-artifacts/RELEASE_NOTES.md', text: notes
                     }
