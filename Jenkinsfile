@@ -314,11 +314,11 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
             }
             steps {
                 sh '''
-                    if command -v gh &> /dev/null; then
+                    if command -v gh >/dev/null 2>&1; then
                         echo "✅ GitHub CLI: $(gh --version | head -1)"
                     else
                         echo "📥 GitHub CLI kuruluyor..."
-                        (type -p wget >/dev/null || (apt-get update && apt-get install wget -y)) \
+                        (type -p wget >/dev/null 2>&1 || (apt-get update && apt-get install wget -y)) \
                         && mkdir -p -m 755 /etc/apt/keyrings \
                         && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
                             | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
@@ -326,7 +326,7 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                         && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
                             | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
                         && apt-get update && apt-get install gh -y
-                        echo "✅ GitHub CLI kuruldu"
+                        echo "✅ GitHub CLI kuruldu: $(gh --version | head -1)"
                     fi
                 '''
             }
@@ -580,7 +580,7 @@ with open('release-artifacts/modrinth-changelog-velocity.txt', 'r') as f:
             """
         }
         always {
-            cleanWs()
+            deleteDir()
         }
     }
 }
