@@ -3,6 +3,19 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [1.2.4] - 2026-02-27
+
+### 🐛 Hata Düzeltmeleri
+
+- **AntiBotModule — NPE Düzeltme**: `getOrCreateProfile()` ve `handleIncomingPacket()` içinde `user.getAddress()` null döndürebiliyordu; pre-login paket işleyicilerinde sunucu çöküyordu. Null kontrolü eklendi, null durumda `"0.0.0.0"` kullanılıyor.
+- **PlayerProfile — Thread Safety**: PacketEvents thread'leriyle paylaşılan 8 alan (`sentClientSettings`, `sentPositionPacket`, `interactedWithInventory`, `interactedWithWorld`, `lastSeen`, `cachedFirstJoinScore`, `currentThreatScore`, `successfulSessionCount`) `volatile` yapıldı. `maxThreatScore` check-then-set yarış koşulu `AtomicInteger.updateAndGet()` ile çözüldü.
+- **AttackModeManager — Race Condition**: `attackModeStartTime` alanı birden fazla thread'den erişilirken `volatile` değildi; attack mode süre hesaplamaları yanlış olabiliyordu. `volatile` yapıldı.
+- **AntiBotModule — Hatalı Offline Kontrol**: `cleanupProfiles()` içinde `Bukkit.getOfflinePlayer(uuid).isOnline()` güvenilmezdi (disk erişimi yapar, pahalı). `Bukkit.getPlayer(uuid) == null` ile değiştirildi.
+
+### 🔧 İyileştirmeler
+
+- `CHANGELOG.md` içindeki yinelenen boş `[1.2.3]` bölümleri temizlendi.
+
 ## [1.2.3] - 2026-02-27
 
 ### 🐛 Hata Düzeltmeleri
@@ -38,20 +51,6 @@ Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 - `BukkitListener`: Trust Score ve Intelligence Engine join/quit hook'ları eklendi
 - Tüm yeni sistemler için `config.yml` ve `messages_tr.yml` bölümleri eklendi
 
-## [1.2.3] - 2026-02-27
-
-### ✨ Yeni Özellikler
-
-- 
-
-### 🔧 İyileştirmeler
-
-- 
-
-### 🐛 Hata Düzeltmeleri
-
-- 
-
 ## [1.1.1] - 2026-02-23
 
 ### 🔒 Güvenlik Düzeltmeleri
@@ -85,20 +84,6 @@ Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 - `VelocityBuildInfo.java` versiyon `1.0.0` → `1.1.1`
 
 ---
-
-## [1.2.3] - 2026-02-27
-
-### ✨ Yeni Özellikler
-
-- 
-
-### 🔧 İyileştirmeler
-
-- 
-
-### 🐛 Hata Düzeltmeleri
-
-- 
 
 ## [1.1.0] - 2026-02-20
 
@@ -213,20 +198,6 @@ Normal oyuncuların hatalı olarak engellenmesine yol açan köklü sorunlar gid
 - `basarili-login-bonus: 15`
 
 ---
-
-## [1.2.3] - 2026-02-27
-
-### ✨ Yeni Özellikler
-
-- 
-
-### 🔧 İyileştirmeler
-
-- 
-
-### 🐛 Hata Düzeltmeleri
-
-- 
 
 ## [1.0.0] - 2026-02-17
 

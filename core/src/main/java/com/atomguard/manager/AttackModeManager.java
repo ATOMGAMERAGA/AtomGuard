@@ -19,7 +19,7 @@ public class AttackModeManager {
     private volatile long lastReset = System.currentTimeMillis();
 
     private volatile boolean attackMode = false;
-    private long attackModeStartTime = 0;
+    private volatile long attackModeStartTime = 0;
     private volatile int peakRate = 0;
     private volatile long blockedDuringAttack = 0;
 

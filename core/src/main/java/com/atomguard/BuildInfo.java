@@ -11,7 +11,7 @@ public final class BuildInfo {
 
     public static final int VERSION_MAJOR = 1;
     public static final int VERSION_MINOR = 2;
-    public static final int VERSION_PATCH = 3;
+    public static final int VERSION_PATCH = 4;
     public static final String VERSION_TAG = "";
 
     public static String getFullVersion() {

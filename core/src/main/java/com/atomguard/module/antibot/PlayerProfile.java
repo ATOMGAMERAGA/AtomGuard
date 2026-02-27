@@ -19,7 +19,7 @@ public class PlayerProfile {
     private String username;
     private final String ipAddress;
     private final long firstSeen;
-    private long lastSeen;
+    private volatile long lastSeen;
     
     // Identity
     private int protocolVersion;
@@ -36,10 +36,10 @@ public class PlayerProfile {
     private final AtomicLong firstJoinTime = new AtomicLong(0);
     
     // Flags
-    private boolean sentClientSettings = false;
-    private boolean sentPositionPacket = false;
-    private boolean interactedWithInventory = false;
-    private boolean interactedWithWorld = false;
+    private volatile boolean sentClientSettings = false;
+    private volatile boolean sentPositionPacket = false;
+    private volatile boolean interactedWithInventory = false;
+    private volatile boolean interactedWithWorld = false;
     
     // Movement and analysis data
     private final Deque<Double> recentYPositions = new ConcurrentLinkedDeque<>();
@@ -53,10 +53,10 @@ public class PlayerProfile {
     private final AtomicLong lastKeepAliveSent = new AtomicLong(0);
     private final Deque<Long> keepAliveResponseTimes = new ConcurrentLinkedDeque<>();
     
-    private int cachedFirstJoinScore = 0;
-    private int currentThreatScore = 0;
-    private int maxThreatScore = 0;
-    private int successfulSessionCount = 0; // In a real scenario, this would persist
+    private volatile int cachedFirstJoinScore = 0;
+    private volatile int currentThreatScore = 0;
+    private final java.util.concurrent.atomic.AtomicInteger maxThreatScore = new java.util.concurrent.atomic.AtomicInteger(0);
+    private volatile int successfulSessionCount = 0; // In a real scenario, this would persist
 
     public PlayerProfile(@Nullable UUID uuid, @Nullable String username, String ipAddress) {
         this.uuid = uuid;
@@ -259,8 +259,8 @@ public class PlayerProfile {
     public boolean hasInteractedWithWorld() { return interactedWithWorld; }
     public int getCachedFirstJoinScore() { return cachedFirstJoinScore; }
     public void setCachedFirstJoinScore(int score) { this.cachedFirstJoinScore = score; }
-    public int getMaxThreatScore() { return maxThreatScore; }
-    public void updateMaxThreatScore(int score) { if (score > maxThreatScore) maxThreatScore = score; }
+    public int getMaxThreatScore() { return maxThreatScore.get(); }
+    public void updateMaxThreatScore(int score) { maxThreatScore.updateAndGet(current -> Math.max(current, score)); }
     public int getCurrentThreatScore() { return currentThreatScore; }
     public void setCurrentThreatScore(int score) { this.currentThreatScore = score; }
     public int getSuccessfulSessionCount() { return successfulSessionCount; }

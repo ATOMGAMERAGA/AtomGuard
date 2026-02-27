@@ -91,8 +91,9 @@ public class AntiBotModule extends AbstractModule implements Listener {
         User user = event.getUser();
         if (user == null) return;
         
-        String ip = user.getAddress().getAddress().getHostAddress();
-        
+        java.net.InetSocketAddress handlerAddr = user.getAddress();
+        String ip = (handlerAddr != null) ? handlerAddr.getAddress().getHostAddress() : "0.0.0.0";
+
         // Check blacklist first
         if (blacklistManager.isBlacklisted(ip)) {
             event.setCancelled(true);
@@ -210,15 +211,16 @@ public class AntiBotModule extends AbstractModule implements Listener {
 
     private void cleanupProfiles() {
         long now = System.currentTimeMillis();
-        playerProfiles.entrySet().removeIf(entry -> !Bukkit.getOfflinePlayer(entry.getKey()).isOnline() && (now - entry.getValue().getLastSeen()) > 300000);
+        playerProfiles.entrySet().removeIf(entry -> Bukkit.getPlayer(entry.getKey()) == null && (now - entry.getValue().getLastSeen()) > 300000);
         ipProfiles.entrySet().removeIf(entry -> (now - entry.getValue().getLastSeen()) > 600000);
     }
 
     private PlayerProfile getOrCreateProfile(User user) {
         if (user == null) return null;
-        
+
         UUID uuid = user.getUUID();
-        String ip = user.getAddress().getAddress().getHostAddress();
+        java.net.InetSocketAddress addr = user.getAddress();
+        String ip = (addr != null) ? addr.getAddress().getHostAddress() : "0.0.0.0";
         
         if (uuid != null) {
             return playerProfiles.computeIfAbsent(uuid, k -> new PlayerProfile(uuid, null, ip));
