@@ -313,54 +313,58 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                 expression { env.RELEASE_TYPE == 'stable' }
             }
             steps {
-                script {
-                    // Groovy ile JSON payload oluştur (python3 gerekmez)
-                    def notes = readFile('release-artifacts/RELEASE_NOTES.md')
-                    def payload = groovy.json.JsonOutput.toJson([
-                        tag_name   : env.TAG_NAME,
-                        name       : env.RELEASE_TITLE,
-                        body       : notes,
-                        draft      : false,
-                        prerelease : false,
-                        make_latest: 'true'
-                    ])
-                    writeFile file: '/tmp/gh_stable_payload.json', text: payload
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    script {
+                        def notes = readFile('release-artifacts/RELEASE_NOTES.md')
+                        def payload = groovy.json.JsonOutput.toJson([
+                            tag_name   : env.TAG_NAME,
+                            name       : env.RELEASE_TITLE,
+                            body       : notes,
+                            draft      : false,
+                            prerelease : false,
+                            make_latest: 'true'
+                        ])
+                        writeFile file: '/tmp/gh_stable_payload.json', text: payload
 
-                    sh """
-                        echo "🚀 GitHub Stable Release: ${env.TAG_NAME}"
+                        sh """
+                            echo "🚀 GitHub Stable Release: ${env.TAG_NAME}"
 
-                        # Mevcut release varsa sil
-                        OLD_ID=\$(curl -sf -H "Authorization: token \${GITHUB_TOKEN}" \
-                            "https://api.github.com/repos/${env.REPO}/releases/tags/${env.TAG_NAME}" \
-                            | grep -oP '"id":\\K[0-9]+' | head -1 || echo "")
-                        if [ -n "\$OLD_ID" ]; then
-                            curl -sf -X DELETE -H "Authorization: token \${GITHUB_TOKEN}" \
-                                "https://api.github.com/repos/${env.REPO}/releases/\$OLD_ID" || true
-                            echo "   Eski release silindi: \$OLD_ID"
-                        fi
+                            # Mevcut release varsa sil
+                            OLD_RESP=\$(curl -s -H "Authorization: token \${GITHUB_TOKEN}" \
+                                "https://api.github.com/repos/${env.REPO}/releases/tags/${env.TAG_NAME}" || echo "")
+                            OLD_ID=\$(echo "\$OLD_RESP" | grep -oP '"id":\\K[0-9]+' | head -1 || echo "")
+                            if [ -n "\$OLD_ID" ]; then
+                                curl -s -X DELETE -H "Authorization: token \${GITHUB_TOKEN}" \
+                                    "https://api.github.com/repos/${env.REPO}/releases/\$OLD_ID" || true
+                                echo "   Eski release silindi: \$OLD_ID"
+                            fi
 
-                        # Release oluştur
-                        RESP=\$(curl -sf -X POST \
-                            -H "Authorization: token \${GITHUB_TOKEN}" \
-                            -H "Content-Type: application/json" \
-                            "https://api.github.com/repos/${env.REPO}/releases" \
-                            --data-binary @/tmp/gh_stable_payload.json)
-                        NEW_ID=\$(echo "\$RESP" | grep -oP '"id":\\K[0-9]+' | head -1)
-                        echo "   ✅ Release oluşturuldu (ID: \$NEW_ID)"
-
-                        # Dosyaları yükle
-                        UPLOAD_URL="https://uploads.github.com/repos/${env.REPO}/releases/\$NEW_ID/assets"
-                        for f in release-artifacts/${env.CORE_RELEASE} release-artifacts/${env.VELOCITY_RELEASE} release-artifacts/${env.API_RELEASE} release-artifacts/SHA256SUMS.txt; do
-                            fn=\$(basename "\$f")
-                            echo "   📤 Yükleniyor: \$fn"
-                            curl -sf -X POST \
+                            # Release oluştur
+                            RESP=\$(curl -s -X POST \
                                 -H "Authorization: token \${GITHUB_TOKEN}" \
-                                -H "Content-Type: application/octet-stream" \
-                                "\${UPLOAD_URL}?name=\$fn" \
-                                --data-binary "@\$f" > /dev/null && echo "   ✅ \$fn" || echo "   ⚠️  \$fn yüklenemedi"
-                        done
-                    """
-                    echo "✅ GitHub: https://github.com/${env.REPO}/releases/tag/${env.TAG_NAME}"
+                                -H "Content-Type: application/json" \
+                                "https://api.github.com/repos/${env.REPO}/releases" \
+                                --data-binary @/tmp/gh_stable_payload.json)
+                            NEW_ID=\$(echo "\$RESP" | grep -oP '"id":\\K[0-9]+' | head -1)
+                            if [ -z "\$NEW_ID" ]; then
+                                echo "   ⚠️ Release oluşturulamadı: \$RESP"
+                                exit 1
+                            fi
+                            echo "   ✅ Release oluşturuldu (ID: \$NEW_ID)"
+
+                            # Dosyaları yükle
+                            UPLOAD_URL="https://uploads.github.com/repos/${env.REPO}/releases/\$NEW_ID/assets"
+                            for f in release-artifacts/${env.CORE_RELEASE} release-artifacts/${env.VELOCITY_RELEASE} release-artifacts/${env.API_RELEASE} release-artifacts/SHA256SUMS.txt; do
+                                fn=\$(basename "\$f")
+                                curl -s -X POST \
+                                    -H "Authorization: token \${GITHUB_TOKEN}" \
+                                    -H "Content-Type: application/octet-stream" \
+                                    "\${UPLOAD_URL}?name=\$fn" \
+                                    --data-binary "@\$f" > /dev/null && echo "   ✅ \$fn" || echo "   ⚠️  \$fn"
+                            done
+                        """
+                        echo "✅ GitHub: https://github.com/${env.REPO}/releases/tag/${env.TAG_NAME}"
+                    }
                 }
             }
         }
@@ -373,49 +377,50 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                 expression { env.RELEASE_TYPE == 'dev' }
             }
             steps {
-                script {
-                    def notes = readFile('release-artifacts/RELEASE_NOTES.md')
-                    def payload = groovy.json.JsonOutput.toJson([
-                        tag_name   : env.TAG_NAME,
-                        name       : env.RELEASE_TITLE,
-                        body       : notes,
-                        draft      : false,
-                        prerelease : true
-                    ])
-                    writeFile file: '/tmp/gh_dev_payload.json', text: payload
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    script {
+                        def notes = readFile('release-artifacts/RELEASE_NOTES.md')
+                        def payload = groovy.json.JsonOutput.toJson([
+                            tag_name   : env.TAG_NAME,
+                            name       : env.RELEASE_TITLE,
+                            body       : notes,
+                            draft      : false,
+                            prerelease : true
+                        ])
+                        writeFile file: '/tmp/gh_dev_payload.json', text: payload
 
-                    sh """
-                        echo "🔧 GitHub Dev Build: ${env.TAG_NAME}"
+                        sh """
+                            echo "🔧 GitHub Dev Build: ${env.TAG_NAME}"
 
-                        # Mevcut release varsa sil
-                        OLD_ID=\$(curl -sf -H "Authorization: token \${GITHUB_TOKEN}" \
-                            "https://api.github.com/repos/${env.REPO}/releases/tags/${env.TAG_NAME}" \
-                            | grep -oP '"id":\\K[0-9]+' | head -1 || echo "")
-                        if [ -n "\$OLD_ID" ]; then
-                            curl -sf -X DELETE -H "Authorization: token \${GITHUB_TOKEN}" \
-                                "https://api.github.com/repos/${env.REPO}/releases/\$OLD_ID" || true
-                        fi
+                            OLD_RESP=\$(curl -s -H "Authorization: token \${GITHUB_TOKEN}" \
+                                "https://api.github.com/repos/${env.REPO}/releases/tags/${env.TAG_NAME}" || echo "")
+                            OLD_ID=\$(echo "\$OLD_RESP" | grep -oP '"id":\\K[0-9]+' | head -1 || echo "")
+                            if [ -n "\$OLD_ID" ]; then
+                                curl -s -X DELETE -H "Authorization: token \${GITHUB_TOKEN}" \
+                                    "https://api.github.com/repos/${env.REPO}/releases/\$OLD_ID" || true
+                            fi
 
-                        RESP=\$(curl -sf -X POST \
-                            -H "Authorization: token \${GITHUB_TOKEN}" \
-                            -H "Content-Type: application/json" \
-                            "https://api.github.com/repos/${env.REPO}/releases" \
-                            --data-binary @/tmp/gh_dev_payload.json)
-                        NEW_ID=\$(echo "\$RESP" | grep -oP '"id":\\K[0-9]+' | head -1)
-                        echo "   ✅ Dev release oluşturuldu (ID: \$NEW_ID)"
-
-                        UPLOAD_URL="https://uploads.github.com/repos/${env.REPO}/releases/\$NEW_ID/assets"
-                        for f in release-artifacts/${env.CORE_RELEASE} release-artifacts/${env.VELOCITY_RELEASE} release-artifacts/${env.API_RELEASE} release-artifacts/SHA256SUMS.txt; do
-                            fn=\$(basename "\$f")
-                            echo "   📤 Yükleniyor: \$fn"
-                            curl -sf -X POST \
+                            RESP=\$(curl -s -X POST \
                                 -H "Authorization: token \${GITHUB_TOKEN}" \
-                                -H "Content-Type: application/octet-stream" \
-                                "\${UPLOAD_URL}?name=\$fn" \
-                                --data-binary "@\$f" > /dev/null && echo "   ✅ \$fn" || echo "   ⚠️  \$fn yüklenemedi"
-                        done
-                    """
-                    echo "✅ GitHub: https://github.com/${env.REPO}/releases/tag/${env.TAG_NAME}"
+                                -H "Content-Type: application/json" \
+                                "https://api.github.com/repos/${env.REPO}/releases" \
+                                --data-binary @/tmp/gh_dev_payload.json)
+                            NEW_ID=\$(echo "\$RESP" | grep -oP '"id":\\K[0-9]+' | head -1)
+                            if [ -z "\$NEW_ID" ]; then echo "   ⚠️ Release oluşturulamadı"; exit 1; fi
+                            echo "   ✅ Dev release oluşturuldu (ID: \$NEW_ID)"
+
+                            UPLOAD_URL="https://uploads.github.com/repos/${env.REPO}/releases/\$NEW_ID/assets"
+                            for f in release-artifacts/${env.CORE_RELEASE} release-artifacts/${env.VELOCITY_RELEASE} release-artifacts/${env.API_RELEASE} release-artifacts/SHA256SUMS.txt; do
+                                fn=\$(basename "\$f")
+                                curl -s -X POST \
+                                    -H "Authorization: token \${GITHUB_TOKEN}" \
+                                    -H "Content-Type: application/octet-stream" \
+                                    "\${UPLOAD_URL}?name=\$fn" \
+                                    --data-binary "@\$f" > /dev/null && echo "   ✅ \$fn" || echo "   ⚠️  \$fn"
+                            done
+                        """
+                        echo "✅ GitHub: https://github.com/${env.REPO}/releases/tag/${env.TAG_NAME}"
+                    }
                 }
             }
         }
