@@ -306,7 +306,7 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
         }
 
         // ═════════════════════════════════════════════
-        //  8. GITHUB — STABLE RELEASE (curl/python3)
+        //  8. GITHUB — STABLE RELEASE (Groovy JsonOutput + curl)
         // ═════════════════════════════════════════════
         stage('GitHub: Stable Release') {
             when {
@@ -314,49 +314,38 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
             }
             steps {
                 script {
+                    // Groovy ile JSON payload oluştur (python3 gerekmez)
+                    def notes = readFile('release-artifacts/RELEASE_NOTES.md')
+                    def payload = groovy.json.JsonOutput.toJson([
+                        tag_name   : env.TAG_NAME,
+                        name       : env.RELEASE_TITLE,
+                        body       : notes,
+                        draft      : false,
+                        prerelease : false,
+                        make_latest: 'true'
+                    ])
+                    writeFile file: '/tmp/gh_stable_payload.json', text: payload
+
                     sh """
                         echo "🚀 GitHub Stable Release: ${env.TAG_NAME}"
 
                         # Mevcut release varsa sil
                         OLD_ID=\$(curl -sf -H "Authorization: token \${GITHUB_TOKEN}" \
                             "https://api.github.com/repos/${env.REPO}/releases/tags/${env.TAG_NAME}" \
-                            | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null || echo "")
-                        if [ -n "\$OLD_ID" ] && [ "\$OLD_ID" != "None" ]; then
+                            | grep -oP '"id":\\K[0-9]+' | head -1 || echo "")
+                        if [ -n "\$OLD_ID" ]; then
                             curl -sf -X DELETE -H "Authorization: token \${GITHUB_TOKEN}" \
                                 "https://api.github.com/repos/${env.REPO}/releases/\$OLD_ID" || true
                             echo "   Eski release silindi: \$OLD_ID"
                         fi
 
-                        # Aynı base version dev build'lerini temizle
-                        curl -sf -H "Authorization: token \${GITHUB_TOKEN}" \
-                            "https://api.github.com/repos/${env.REPO}/releases?per_page=50" 2>/dev/null \
-                            | python3 -c "
-import json, sys, subprocess
-releases = json.load(sys.stdin)
-for r in releases:
-    tag = r.get('tag_name','')
-    if tag.startswith('v${env.BASE_VERSION}-dev.'):
-        rid = r['id']
-        print('   Dev build siliniyor: ' + tag)
-        subprocess.run(['curl','-sf','-X','DELETE','-H','Authorization: token \${GITHUB_TOKEN}',
-            'https://api.github.com/repos/${env.REPO}/releases/'+str(rid)], capture_output=True)
-" 2>/dev/null || true
-
-                        # Release JSON oluştur
-                        python3 -c "
-import json
-notes = open('release-artifacts/RELEASE_NOTES.md').read()
-data = {'tag_name':'${env.TAG_NAME}','name':'${env.RELEASE_TITLE}','body':notes,'draft':False,'prerelease':False,'make_latest':'true'}
-open('/tmp/gh_release_payload.json','w').write(json.dumps(data))
-print('Payload hazırlandı')
-"
                         # Release oluştur
                         RESP=\$(curl -sf -X POST \
                             -H "Authorization: token \${GITHUB_TOKEN}" \
                             -H "Content-Type: application/json" \
                             "https://api.github.com/repos/${env.REPO}/releases" \
-                            --data-binary @/tmp/gh_release_payload.json)
-                        NEW_ID=\$(echo "\$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])" 2>/dev/null)
+                            --data-binary @/tmp/gh_stable_payload.json)
+                        NEW_ID=\$(echo "\$RESP" | grep -oP '"id":\\K[0-9]+' | head -1)
                         echo "   ✅ Release oluşturuldu (ID: \$NEW_ID)"
 
                         # Dosyaları yükle
@@ -377,7 +366,7 @@ print('Payload hazırlandı')
         }
 
         // ═════════════════════════════════════════════
-        //  9. GITHUB — DEV BUILD (curl/python3)
+        //  9. GITHUB — DEV BUILD (Groovy JsonOutput + curl)
         // ═════════════════════════════════════════════
         stage('GitHub: Dev Build') {
             when {
@@ -385,50 +374,36 @@ print('Payload hazırlandı')
             }
             steps {
                 script {
+                    def notes = readFile('release-artifacts/RELEASE_NOTES.md')
+                    def payload = groovy.json.JsonOutput.toJson([
+                        tag_name   : env.TAG_NAME,
+                        name       : env.RELEASE_TITLE,
+                        body       : notes,
+                        draft      : false,
+                        prerelease : true
+                    ])
+                    writeFile file: '/tmp/gh_dev_payload.json', text: payload
+
                     sh """
                         echo "🔧 GitHub Dev Build: ${env.TAG_NAME}"
-
-                        # Son 5 hariç eski dev build'leri sil
-                        curl -sf -H "Authorization: token \${GITHUB_TOKEN}" \
-                            "https://api.github.com/repos/${env.REPO}/releases?per_page=50" 2>/dev/null \
-                            | python3 -c "
-import json, sys, subprocess
-releases = json.load(sys.stdin)
-dev_releases = [r for r in releases if r.get('tag_name','').startswith('v${env.BASE_VERSION}-dev.')]
-for r in dev_releases[5:]:
-    rid = r['id']
-    tag = r['tag_name']
-    print('   Eski dev siliniyor: ' + tag)
-    subprocess.run(['curl','-sf','-X','DELETE','-H','Authorization: token \${GITHUB_TOKEN}',
-        'https://api.github.com/repos/${env.REPO}/releases/'+str(rid)], capture_output=True)
-" 2>/dev/null || true
 
                         # Mevcut release varsa sil
                         OLD_ID=\$(curl -sf -H "Authorization: token \${GITHUB_TOKEN}" \
                             "https://api.github.com/repos/${env.REPO}/releases/tags/${env.TAG_NAME}" \
-                            | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null || echo "")
-                        if [ -n "\$OLD_ID" ] && [ "\$OLD_ID" != "None" ]; then
+                            | grep -oP '"id":\\K[0-9]+' | head -1 || echo "")
+                        if [ -n "\$OLD_ID" ]; then
                             curl -sf -X DELETE -H "Authorization: token \${GITHUB_TOKEN}" \
                                 "https://api.github.com/repos/${env.REPO}/releases/\$OLD_ID" || true
                         fi
 
-                        # Release JSON oluştur
-                        python3 -c "
-import json
-notes = open('release-artifacts/RELEASE_NOTES.md').read()
-data = {'tag_name':'${env.TAG_NAME}','name':'${env.RELEASE_TITLE}','body':notes,'draft':False,'prerelease':True}
-open('/tmp/gh_release_payload.json','w').write(json.dumps(data))
-print('Payload hazırlandı')
-"
                         RESP=\$(curl -sf -X POST \
                             -H "Authorization: token \${GITHUB_TOKEN}" \
                             -H "Content-Type: application/json" \
                             "https://api.github.com/repos/${env.REPO}/releases" \
-                            --data-binary @/tmp/gh_release_payload.json)
-                        NEW_ID=\$(echo "\$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])" 2>/dev/null)
+                            --data-binary @/tmp/gh_dev_payload.json)
+                        NEW_ID=\$(echo "\$RESP" | grep -oP '"id":\\K[0-9]+' | head -1)
                         echo "   ✅ Dev release oluşturuldu (ID: \$NEW_ID)"
 
-                        # Dosyaları yükle
                         UPLOAD_URL="https://uploads.github.com/repos/${env.REPO}/releases/\$NEW_ID/assets"
                         for f in release-artifacts/${env.CORE_RELEASE} release-artifacts/${env.VELOCITY_RELEASE} release-artifacts/${env.API_RELEASE} release-artifacts/SHA256SUMS.txt; do
                             fn=\$(basename "\$f")
@@ -446,7 +421,7 @@ print('Payload hazırlandı')
         }
 
         // ═════════════════════════════════════════════
-        //  11. MODRINTH — CORE PLUGIN YAYINLA
+        //  10. MODRINTH — CORE PLUGIN YAYINLA
         // ═════════════════════════════════════════════
         stage('Modrinth: Core Plugin') {
             when {
@@ -454,60 +429,48 @@ print('Payload hazırlandı')
             }
             steps {
                 script {
-                    def versionType = env.RELEASE_TYPE == 'stable' ? 'release' : 'alpha'
-                    def versionName = env.RELEASE_TYPE == 'stable'
+                    def versionType   = env.RELEASE_TYPE == 'stable' ? 'release' : 'alpha'
+                    def versionName   = env.RELEASE_TYPE == 'stable'
                         ? "AtomGuard v${env.BASE_VERSION} (Paper/Spigot)"
                         : "AtomGuard v${env.BASE_VERSION}-dev.${env.COMMIT_COUNT} (Paper/Spigot)"
                     def versionNumber = env.RELEASE_TYPE == 'stable'
                         ? "${env.BASE_VERSION}+core"
                         : "${env.BASE_VERSION}-dev.${env.COMMIT_COUNT}+core"
+                    def featured      = env.RELEASE_TYPE == 'stable'
 
-                    // Changelog'u dosyaya yaz (JSON escape için)
-                    writeFile file: 'release-artifacts/modrinth-changelog-core.txt', text: env.MODRINTH_CHANGELOG
+                    // Groovy ile Modrinth data JSON oluştur
+                    def coreData = groovy.json.JsonOutput.toJson([
+                        name          : versionName,
+                        version_number: versionNumber,
+                        changelog     : env.MODRINTH_CHANGELOG ?: "AtomGuard ${env.RELEASE_VERSION}",
+                        dependencies  : [[project_id: 'hkfCOMjf', dependency_type: 'required']],
+                        game_versions : ['1.21.4'],
+                        version_type  : versionType,
+                        loaders       : ['paper', 'spigot', 'bukkit'],
+                        featured      : featured,
+                        project_id    : env.MODRINTH_ID,
+                        file_parts    : ['core-jar'],
+                        primary_file  : 'core-jar'
+                    ])
+                    writeFile file: '/tmp/modrinth-core-data.json', text: coreData
 
                     sh """
                         echo "📦 Modrinth: Core Plugin yayınlanıyor..."
 
-                        # Changelog'u JSON-safe yap
-                        CHANGELOG_ESCAPED=\$(python3 -c "
-import json, sys
-with open('release-artifacts/modrinth-changelog-core.txt', 'r') as f:
-    print(json.dumps(f.read()))
-" 2>/dev/null || echo '"AtomGuard ${env.RELEASE_VERSION}"')
-
-                        # Modrinth API — Core version oluştur
                         HTTP_CODE=\$(curl -s -o /tmp/modrinth-core-response.json -w "%{http_code}" \\
                             -X POST "https://api.modrinth.com/v2/version" \\
                             -H "Authorization: \${MODRINTH_TOKEN}" \\
-                            -F "data={
-                                \\"name\\": \\"${versionName}\\",
-                                \\"version_number\\": \\"${versionNumber}\\",
-                                \\"changelog\\": \${CHANGELOG_ESCAPED},
-                                \\"dependencies\\": [
-                                    {
-                                        \\"project_id\\": \\"hkfCOMjf\\",
-                                        \\"dependency_type\\": \\"required\\"
-                                    }
-                                ],
-                                \\"game_versions\\": [\\"1.21.4\\"],
-                                \\"version_type\\": \\"${versionType}\\",
-                                \\"loaders\\": [\\"paper\\", \\"spigot\\", \\"bukkit\\"],
-                                \\"featured\\": ${env.RELEASE_TYPE == 'stable'},
-                                \\"project_id\\": \\"\${MODRINTH_ID}\\",
-                                \\"file_parts\\": [\\"core-jar\\"],
-                                \\"primary_file\\": \\"core-jar\\"
-                            };type=application/json" \\
+                            -F "data=</tmp/modrinth-core-data.json;type=application/json" \\
                             -F "core-jar=@release-artifacts/${env.CORE_RELEASE};type=application/java-archive")
 
                         echo "   HTTP Status: \$HTTP_CODE"
 
                         if [ "\$HTTP_CODE" -eq 200 ]; then
-                            CORE_VERSION_ID=\$(python3 -c "import json; print(json.load(open('/tmp/modrinth-core-response.json'))['id'])" 2>/dev/null || echo "unknown")
-                            echo "   ✅ Core yayınlandı! Version ID: \$CORE_VERSION_ID"
+                            VID=\$(grep -oP '"id":"\\K[^"]+' /tmp/modrinth-core-response.json | head -1 || echo "unknown")
+                            echo "   ✅ Core yayınlandı! Version ID: \$VID"
                         else
                             echo "   ⚠️ Core yayınlanamadı! Response:"
                             cat /tmp/modrinth-core-response.json
-                            echo ""
                         fi
                     """
                 }
@@ -515,7 +478,7 @@ with open('release-artifacts/modrinth-changelog-core.txt', 'r') as f:
         }
 
         // ═════════════════════════════════════════════
-        //  12. MODRINTH — VELOCITY PLUGIN YAYINLA
+        //  11. MODRINTH — VELOCITY PLUGIN YAYINLA
         // ═════════════════════════════════════════════
         stage('Modrinth: Velocity Plugin') {
             when {
@@ -523,53 +486,46 @@ with open('release-artifacts/modrinth-changelog-core.txt', 'r') as f:
             }
             steps {
                 script {
-                    def versionType = env.RELEASE_TYPE == 'stable' ? 'release' : 'alpha'
-                    def versionName = env.RELEASE_TYPE == 'stable'
+                    def versionType   = env.RELEASE_TYPE == 'stable' ? 'release' : 'alpha'
+                    def versionName   = env.RELEASE_TYPE == 'stable'
                         ? "AtomGuard v${env.BASE_VERSION} (Velocity)"
                         : "AtomGuard v${env.BASE_VERSION}-dev.${env.COMMIT_COUNT} (Velocity)"
                     def versionNumber = env.RELEASE_TYPE == 'stable'
                         ? "${env.BASE_VERSION}+velocity"
                         : "${env.BASE_VERSION}-dev.${env.COMMIT_COUNT}+velocity"
 
-                    writeFile file: 'release-artifacts/modrinth-changelog-velocity.txt', text: env.MODRINTH_CHANGELOG
+                    def velData = groovy.json.JsonOutput.toJson([
+                        name          : versionName,
+                        version_number: versionNumber,
+                        changelog     : env.MODRINTH_CHANGELOG ?: "AtomGuard ${env.RELEASE_VERSION}",
+                        dependencies  : [],
+                        game_versions : ['1.21.4'],
+                        version_type  : versionType,
+                        loaders       : ['velocity'],
+                        featured      : false,
+                        project_id    : env.MODRINTH_ID,
+                        file_parts    : ['velocity-jar'],
+                        primary_file  : 'velocity-jar'
+                    ])
+                    writeFile file: '/tmp/modrinth-velocity-data.json', text: velData
 
                     sh """
                         echo "📦 Modrinth: Velocity Plugin yayınlanıyor..."
 
-                        CHANGELOG_ESCAPED=\$(python3 -c "
-import json, sys
-with open('release-artifacts/modrinth-changelog-velocity.txt', 'r') as f:
-    print(json.dumps(f.read()))
-" 2>/dev/null || echo '"AtomGuard Velocity ${env.RELEASE_VERSION}"')
-
-                        # Modrinth API — Velocity version oluştur
                         HTTP_CODE=\$(curl -s -o /tmp/modrinth-velocity-response.json -w "%{http_code}" \\
                             -X POST "https://api.modrinth.com/v2/version" \\
                             -H "Authorization: \${MODRINTH_TOKEN}" \\
-                            -F "data={
-                                \\"name\\": \\"${versionName}\\",
-                                \\"version_number\\": \\"${versionNumber}\\",
-                                \\"changelog\\": \${CHANGELOG_ESCAPED},
-                                \\"dependencies\\": [],
-                                \\"game_versions\\": [\\"1.21.4\\"],
-                                \\"version_type\\": \\"${versionType}\\",
-                                \\"loaders\\": [\\"velocity\\"],
-                                \\"featured\\": false,
-                                \\"project_id\\": \\"\${MODRINTH_ID}\\",
-                                \\"file_parts\\": [\\"velocity-jar\\"],
-                                \\"primary_file\\": \\"velocity-jar\\"
-                            };type=application/json" \\
+                            -F "data=</tmp/modrinth-velocity-data.json;type=application/json" \\
                             -F "velocity-jar=@release-artifacts/${env.VELOCITY_RELEASE};type=application/java-archive")
 
                         echo "   HTTP Status: \$HTTP_CODE"
 
                         if [ "\$HTTP_CODE" -eq 200 ]; then
-                            VEL_VERSION_ID=\$(python3 -c "import json; print(json.load(open('/tmp/modrinth-velocity-response.json'))['id'])" 2>/dev/null || echo "unknown")
-                            echo "   ✅ Velocity yayınlandı! Version ID: \$VEL_VERSION_ID"
+                            VID=\$(grep -oP '"id":"\\K[^"]+' /tmp/modrinth-velocity-response.json | head -1 || echo "unknown")
+                            echo "   ✅ Velocity yayınlandı! Version ID: \$VID"
                         else
                             echo "   ⚠️ Velocity yayınlanamadı! Response:"
                             cat /tmp/modrinth-velocity-response.json
-                            echo ""
                         fi
                     """
                 }
