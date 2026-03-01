@@ -153,8 +153,8 @@ if [ -f "CHANGELOG.md" ]; then
     if grep -q "\[${NEW_VERSION}\]" CHANGELOG.md; then
         echo -e "      ${YELLOW}⚠️  [${NEW_VERSION}] zaten CHANGELOG.md'de mevcut, atlanıyor.${NC}"
     else
-        # İlk ## satırından önce yeni bölüm ekle
-        sed -i "/^## \[/i\\
+        # Yalnızca ilk ## [ satırından önce yeni bölüm ekle (0,/pattern/ ile tek eşleşme)
+        sed -i "0,/^## \[/{/^## \[/i\\
 ## [${NEW_VERSION}] - ${TODAY}\\
 \\
 ### ✨ Yeni Özellikler\\
@@ -168,7 +168,8 @@ if [ -f "CHANGELOG.md" ]; then
 ### 🐛 Hata Düzeltmeleri\\
 \\
 - \\
-" CHANGELOG.md
+
+}" CHANGELOG.md
         echo -e "      ${GREEN}✅ CHANGELOG.md → [${NEW_VERSION}] bölümü eklendi${NC}"
     fi
 else
