@@ -38,8 +38,6 @@ public class ExplosionLimiterModule extends AbstractModule implements Listener {
         this.maxPerSecond = getConfigInt("max-patlama-saniye", 10);
         this.maxBlockDamage = getConfigInt("max-blok-hasari", 1000);
 
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
         taskId = plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, 
             () -> explosionCount.set(0), 20L, 20L).getTaskId();
     }

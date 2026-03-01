@@ -108,28 +108,35 @@ public abstract class AbstractModule implements IModule {
         incrementBlockedCount();
         logExploit(player.getName(), details);
 
-        // API Event fire et
-        String ip = player.getAddress() != null ? player.getAddress().getAddress().getHostAddress() : "0.0.0.0";
-        ExploitBlockedEvent event = new ExploitBlockedEvent(getName(), player, player.getName(), ip, details);
-        Bukkit.getPluginManager().callEvent(event);
+        // Ağır işlemleri async'e taşı — Netty thread'i bloklanmasın
+        final java.util.UUID uuid = player.getUniqueId();
+        final String ip = player.getAddress() != null ? player.getAddress().getAddress().getHostAddress() : "0.0.0.0";
+        final String playerName = player.getName();
+        final String moduleName = getName();
 
-        // Heuristic Engine'e bildir
-        if (plugin.getHeuristicEngine() != null) {
-            plugin.getHeuristicEngine().getProfile(player.getUniqueId()).addSuspicion(1.0); // Baz suspisyon artışı
-        }
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            // API Event fire et
+            ExploitBlockedEvent event = new ExploitBlockedEvent(moduleName, player, playerName, ip, details);
+            Bukkit.getPluginManager().callEvent(event);
 
-        // Trust Score ihlal kaydı
-        if (plugin.getTrustScoreManager() != null) {
-            plugin.getTrustScoreManager().recordViolation(player.getUniqueId(), getName());
-        }
-
-        // Forensics — modül engel kaydı
-        if (plugin.getForensicsManager() != null && plugin.getForensicsManager().isRecording()) {
-            plugin.getForensicsManager().recordModuleBlock(getName());
-            if (player.getAddress() != null) {
-                plugin.getForensicsManager().recordBlock(player.getAddress().getAddress().getHostAddress());
+            // Heuristic Engine'e bildir
+            if (plugin.getHeuristicEngine() != null) {
+                plugin.getHeuristicEngine().getProfile(uuid).addSuspicion(1.0);
             }
-        }
+
+            // Trust Score ihlal kaydı
+            if (plugin.getTrustScoreManager() != null) {
+                plugin.getTrustScoreManager().recordViolation(uuid, moduleName);
+            }
+
+            // Forensics — modül engel kaydı
+            if (plugin.getForensicsManager() != null && plugin.getForensicsManager().isRecording()) {
+                plugin.getForensicsManager().recordModuleBlock(moduleName);
+                if (!ip.equals("0.0.0.0")) {
+                    plugin.getForensicsManager().recordBlock(ip);
+                }
+            }
+        });
     }
 
     /**

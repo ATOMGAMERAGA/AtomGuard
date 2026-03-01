@@ -41,7 +41,6 @@ public class ChunkCrashModule extends AbstractModule implements Listener {
     public void onEnable() {
         super.onEnable();
         loadConfig();
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
         // Reset counts every second
         plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, chunkLoadCounts::clear, 20L, 20L);

@@ -36,7 +36,6 @@ public class DuplicationFixModule extends AbstractModule implements Listener {
 
     public void onEnable() {
         super.onEnable();
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     @Override

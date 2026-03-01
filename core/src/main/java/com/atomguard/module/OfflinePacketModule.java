@@ -1,8 +1,6 @@
 package com.atomguard.module;
 
 import com.atomguard.AtomGuard;
-import com.github.retrooper.packetevents.event.PacketListenerAbstract;
-import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import org.bukkit.Bukkit;
@@ -32,8 +30,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class OfflinePacketModule extends AbstractModule {
 
-    private PacketListenerAbstract listener;
-
     // Oyuncu login zamanlarını saklayan map
     private final Map<UUID, Long> loginTimes;
     // Oyuncu IP adreslerini saklayan map
@@ -61,17 +57,8 @@ public class OfflinePacketModule extends AbstractModule {
         // Config değerlerini yükle
         loadConfig();
 
-        // PacketEvents listener'ı oluştur ve kaydet
-        listener = new PacketListenerAbstract(PacketListenerPriority.NORMAL) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                handlePacketReceive(event);
-            }
-        };
-
-        com.github.retrooper.packetevents.PacketEvents.getAPI()
-            .getEventManager()
-            .registerListener(listener);
+        // Merkezi listener kullan
+        registerReceiveHandler(null, this::handlePacketReceive);
 
         // Online oyuncuların bilgilerini kaydet
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -88,13 +75,6 @@ public class OfflinePacketModule extends AbstractModule {
 
     public void onDisable() {
         super.onDisable();
-
-        // PacketEvents listener'ı kaldır
-        if (listener != null) {
-            com.github.retrooper.packetevents.PacketEvents.getAPI()
-                .getEventManager()
-                .unregisterListener(listener);
-        }
 
         // Verileri temizle
         loginTimes.clear();
@@ -161,8 +141,8 @@ public class OfflinePacketModule extends AbstractModule {
         }
 
         // Oyuncunun online olup olmadığını kontrol et
-        Player onlinePlayer = Bukkit.getPlayer(uuid);
-        if (onlinePlayer == null || !onlinePlayer.isOnline()) {
+        // event.getPlayer() zaten Bukkit Player ise online demektir; isOnline() kontrolü yeterli
+        if (!player.isOnline()) {
             incrementBlockedCount();
 
             logExploit(player.getName(),

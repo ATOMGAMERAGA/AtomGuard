@@ -50,9 +50,6 @@ public class InventoryDuplicationModule extends AbstractModule implements Listen
     public void onEnable() {
         super.onEnable();
 
-        // Event listener kaydet
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
         debug("Modul aktiflestirildi.");
     }
 

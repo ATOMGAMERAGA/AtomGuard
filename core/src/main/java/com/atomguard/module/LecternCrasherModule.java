@@ -47,9 +47,6 @@ public class LecternCrasherModule extends AbstractModule implements Listener {
     public void onEnable() {
         super.onEnable();
 
-        // Event listener kaydet
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
         debug("Modül aktifleştirildi.");
     }
 

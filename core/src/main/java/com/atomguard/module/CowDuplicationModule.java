@@ -54,9 +54,6 @@ public class CowDuplicationModule extends AbstractModule implements Listener {
         // Config değerlerini yükle
         loadConfig();
 
-        // Event listener kaydet
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
         debug("Modül aktifleştirildi. Kırkma cooldown: " + shearCooldownMs + "ms");
     }
 

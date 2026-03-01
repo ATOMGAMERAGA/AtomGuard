@@ -144,6 +144,11 @@ public class BukkitListener implements Listener {
             }
         }
 
+        // Bypass permission cache'ini güncelle — ana thread'de güvenli
+        if (plugin.getPacketListener() != null) {
+            plugin.getPacketListener().checkAndCacheBypass(player);
+        }
+
         // OfflinePacketModule'e login bildirimi
         OfflinePacketModule offlineModule = plugin.getModuleManager().getModule(OfflinePacketModule.class);
         if (offlineModule != null && player.getAddress() != null) {
@@ -203,6 +208,11 @@ public class BukkitListener implements Listener {
         AdvancedPayloadModule payloadModule = plugin.getModuleManager().getModule(AdvancedPayloadModule.class);
         if (payloadModule != null) {
             payloadModule.removePlayerData(player.getUniqueId());
+        }
+
+        // Bypass cache temizle
+        if (plugin.getPacketListener() != null) {
+            plugin.getPacketListener().removeBypassCache(player.getUniqueId());
         }
 
         // Heuristic Profile Temizliği

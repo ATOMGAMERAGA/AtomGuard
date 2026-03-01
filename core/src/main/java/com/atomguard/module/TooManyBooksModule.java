@@ -58,9 +58,6 @@ public class TooManyBooksModule extends AbstractModule implements Listener {
         // Book tracker başlat
         this.bookTracker = new ChunkBookTracker();
 
-        // Event listener kaydet
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
         debug("Modül aktifleştirildi. Max kitap/chunk: " + maxBooksPerChunk);
     }
 

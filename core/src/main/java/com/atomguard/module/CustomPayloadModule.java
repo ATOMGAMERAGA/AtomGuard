@@ -1,8 +1,6 @@
 package com.atomguard.module;
 
 import com.atomguard.AtomGuard;
-import com.github.retrooper.packetevents.event.PacketListenerAbstract;
-import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPluginMessage;
@@ -21,8 +19,6 @@ import java.util.Set;
  */
 @Deprecated
 public class CustomPayloadModule extends AbstractModule {
-
-    private PacketListenerAbstract listener;
 
     // İzinli kanallar
     private Set<String> allowedChannels;
@@ -49,17 +45,8 @@ public class CustomPayloadModule extends AbstractModule {
         // Config değerlerini yükle
         loadConfig();
 
-        // PacketEvents listener'ı oluştur ve kaydet
-        listener = new PacketListenerAbstract(PacketListenerPriority.NORMAL) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                handlePacketReceive(event);
-            }
-        };
-
-        com.github.retrooper.packetevents.PacketEvents.getAPI()
-            .getEventManager()
-            .registerListener(listener);
+        // Merkezi listener kullan — sadece PLUGIN_MESSAGE paketleri
+        registerReceiveHandler(PacketType.Play.Client.PLUGIN_MESSAGE, this::handlePacketReceive);
 
         debug("Modül aktifleştirildi. İzinli kanal sayısı: " + allowedChannels.size() +
               ", Max boyut: " + maxPayloadSize + " bytes");
@@ -69,13 +56,6 @@ public class CustomPayloadModule extends AbstractModule {
 
     public void onDisable() {
         super.onDisable();
-
-        // PacketEvents listener'ı kaldır
-        if (listener != null) {
-            com.github.retrooper.packetevents.PacketEvents.getAPI()
-                .getEventManager()
-                .unregisterListener(listener);
-        }
 
         allowedChannels.clear();
 

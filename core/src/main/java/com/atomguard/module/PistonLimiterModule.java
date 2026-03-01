@@ -35,7 +35,6 @@ public class PistonLimiterModule extends AbstractModule implements Listener {
     public void onEnable() {
         super.onEnable();
         this.maxUpdates = getConfigInt("max-piston-hareketi-saniye", 50);
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
         plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, pistonUpdates::clear, 20L, 20L);
     }

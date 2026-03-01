@@ -3,8 +3,6 @@ package com.atomguard.module;
 import com.atomguard.AtomGuard;
 import com.atomguard.util.NBTUtils;
 import com.atomguard.util.RecursiveNBTScanner;
-import com.github.retrooper.packetevents.event.PacketListenerAbstract;
-import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientClickWindow;
@@ -31,8 +29,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public class NBTCrasherModule extends AbstractModule {
 
-    private PacketListenerAbstract listener;
-
     // Config cache
     private int maxNBTTags;
     private int maxNBTDepth;
@@ -55,12 +51,12 @@ public class NBTCrasherModule extends AbstractModule {
         // Config değerlerini yükle
         loadConfig();
 
-        // PERF-01: Merkezi yönlendiriciye kaydol
-        plugin.getPacketListener().registerReceiveHandler(PacketType.Play.Client.CREATIVE_INVENTORY_ACTION, this::handlePacketReceive);
-        plugin.getPacketListener().registerReceiveHandler(PacketType.Play.Client.CLICK_WINDOW, this::handlePacketReceive);
-        plugin.getPacketListener().registerReceiveHandler(PacketType.Play.Client.PLAYER_BLOCK_PLACEMENT, this::handlePacketReceive);
-        plugin.getPacketListener().registerReceiveHandler(PacketType.Play.Client.USE_ITEM, this::handlePacketReceive);
-        plugin.getPacketListener().registerReceiveHandler(PacketType.Play.Client.PICK_ITEM, this::handlePacketReceive);
+        // Merkezi yönlendiriciye kaydol — protected metod ile handler tracking dahil
+        registerReceiveHandler(PacketType.Play.Client.CREATIVE_INVENTORY_ACTION, this::handlePacketReceive);
+        registerReceiveHandler(PacketType.Play.Client.CLICK_WINDOW, this::handlePacketReceive);
+        registerReceiveHandler(PacketType.Play.Client.PLAYER_BLOCK_PLACEMENT, this::handlePacketReceive);
+        registerReceiveHandler(PacketType.Play.Client.USE_ITEM, this::handlePacketReceive);
+        registerReceiveHandler(PacketType.Play.Client.PICK_ITEM, this::handlePacketReceive);
 
         debug("Modül aktifleştirildi. Max NBT: tags=" + maxNBTTags +
               ", depth=" + maxNBTDepth + ", size=" + maxNBTSizeBytes);

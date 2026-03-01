@@ -3,6 +3,25 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [1.2.5] - 2026-03-01
+
+### 🔧 İyileştirmeler
+
+- **AbstractModule — Asenkron Ağır İşlemler**: `blockExploit()` içindeki olay fırlatma, heuristik güncelleme, güven skoru kaydı ve adli analiz kayıt adımları `runTaskAsynchronously` ile ana thread'den kaldırıldı; yüksek trafik altında gecikme azaltıldı.
+- **AtomGuard — Periyodik Temizlik**: Her 5 dakikada bir tüm modüllerin `cleanup()` ve `HeuristicEngine.cleanupOfflinePlayers()` çağrıları yapılıyor; bellek sızıntısı önlendi.
+- **BukkitListener — Bypass Önbelleği**: `PlayerJoinEvent`'te `checkAndCacheBypass()`, `PlayerQuitEvent`'te `removeBypassCache()` çağrıları eklendi; Netty thread'inden permission API çağrısı tamamen kaldırıldı.
+
+### 🐛 Hata Düzeltmeleri
+
+- **AtomGuard — Başlatma Sırası Kritik Hata**: `PacketListener`, `registerModules()` ve `enableAllModules()` çağrılarından **önce** oluşturulmaya başlandı. Eski sıralamada modüller `registerReceiveHandler()` çağırırken `packetListener` null olduğundan sunucu açılışta `NullPointerException` ile çöküyordu.
+- **PacketListener — Netty Thread'den hasPermission() Çağrısı**: `hasBypass()` artık Bukkit permission API'sini çağırmıyor; tamamen önbellek tabanlı. Bypass olmayan oyuncular da `-1L` sentinel değeriyle önbelleğe alınıyor. `synchronized` liste `CopyOnWriteArrayList` ile değiştirildi. `getPlayer()` yalnızca rotasyon/animasyon paketleri için çağrılıyor.
+- **7 Modül — PacketListenerAbstract Bağımsız Kayıt**: `PacketExploitModule`, `PacketDelayModule`, `OfflinePacketModule`, `BookCrasherModule`, `BundleDuplicationModule`, `InvalidSlotModule`, `CustomPayloadModule` kendi `PacketListenerAbstract` örneklerini kaydetmek yerine `registerReceiveHandler()` korumalı metodunu kullanacak şekilde yeniden yazıldı; handler takibi ve merkezi temizlik düzgün çalışıyor.
+- **26 Modül — Çift Bukkit Olay Kaydı**: `AbstractModule.onEnable()` zaten `registerEvents()` çağırdığı halde bu modüller `onEnable()` override'larında ikinci kez manuel kayıt yapıyordu; tüm çift kayıtlar kaldırıldı.
+- **ModuleManager — Başlatma Hatasında Rollback Eksikliği**: `enableAllModules()` ve `enableModule()` içindeki `catch` blokları artık `module.onDisable()` çağırarak yarım kalan modülü geri alıyor; tutarsız aktif-listesi durumu önlendi.
+- **OfflinePacketModule — Güvenilmez Online Kontrolü**: `Bukkit.getPlayer(uuid)` yerine `player.isOnline()` kullanılıyor; null dereference riski ortadan kalktı.
+- **NBTCrasherModule / AdvancedPayloadModule — Yanlış Handler Kaydı**: `plugin.getPacketListener().registerReceiveHandler()` yerine `protected registerReceiveHandler()` kullanılıyor; handler listesi tutarsızlığı ve temizlik hataları giderildi.
+- **NettyCrashModule — Thread Safety**: `pipeline.addAfter()` ve `pipeline.remove()` çağrıları `channel.eventLoop().execute()` içine taşındı; Netty pipeline değişiklikleri artık kanal kendi event loop thread'inde yapılıyor.
+
 ## [1.2.4] - 2026-02-27
 
 ### 🐛 Hata Düzeltmeleri

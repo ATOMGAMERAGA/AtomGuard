@@ -59,9 +59,6 @@ public class ItemSanitizerModule extends AbstractModule implements Listener {
         super.onEnable();
         loadConfig();
 
-        // Bukkit event listener olarak kaydet
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
         debug("Item sanitizer başlatıldı. Büyü toleransı: " + enchantTolerance +
                 ", Max modifier: " + maxAttributeModifiers);
     }

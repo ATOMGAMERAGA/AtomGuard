@@ -122,7 +122,8 @@ public class NettyCrashModule extends AbstractModule implements Listener {
     }
 
     /**
-     * Netty handler'ı oyuncunun pipeline'ına enjekte eder
+     * Netty handler'ı oyuncunun pipeline'ına enjekte eder.
+     * Pipeline modifikasyonu channel.eventLoop().execute() içinde yapılır — race condition önleme.
      */
     private void injectHandler(@NotNull Player player) {
         UUID uuid = player.getUniqueId();
@@ -135,42 +136,54 @@ public class NettyCrashModule extends AbstractModule implements Listener {
                 return;
             }
 
-            ChannelPipeline pipeline = channel.pipeline();
+            // Pipeline modifikasyonunu channel'ın event loop'unda yap — thread-safe
+            channel.eventLoop().execute(() -> {
+                try {
+                    ChannelPipeline pipeline = channel.pipeline();
 
-            // Eski handler varsa kaldır
-            if (pipeline.get(NettyCrashHandler.HANDLER_NAME) != null) {
-                pipeline.remove(NettyCrashHandler.HANDLER_NAME);
-            }
+                    if (pipeline.get(NettyCrashHandler.HANDLER_NAME) != null) {
+                        pipeline.remove(NettyCrashHandler.HANDLER_NAME);
+                    }
 
-            // "decoder" handler'ından SONRA enjekte et
-            if (pipeline.get("decoder") != null) {
-                NettyCrashHandler handler = new NettyCrashHandler(plugin, uuid, player.getName());
-                pipeline.addAfter("decoder", NettyCrashHandler.HANDLER_NAME, handler);
-                injectedPlayers.add(uuid);
-                debug("Netty handler enjekte edildi: " + player.getName());
-            } else {
-                debug("Decoder handler bulunamadı: " + player.getName());
-            }
+                    if (pipeline.get("decoder") != null) {
+                        NettyCrashHandler handler = new NettyCrashHandler(plugin, uuid, player.getName());
+                        pipeline.addAfter("decoder", NettyCrashHandler.HANDLER_NAME, handler);
+                        injectedPlayers.add(uuid);
+                        debug("Netty handler enjekte edildi: " + player.getName());
+                    } else {
+                        debug("Decoder handler bulunamadı: " + player.getName());
+                    }
+                } catch (Exception e) {
+                    error("Handler enjeksiyonu sırasında hata (" + player.getName() + "): " + e.getMessage());
+                }
+            });
 
         } catch (Exception e) {
-            error("Handler enjeksiyonu sırasında hata (" + player.getName() + "): " + e.getMessage());
+            error("Channel alınamadı (" + player.getName() + "): " + e.getMessage());
         }
     }
 
     /**
-     * Netty handler'ı oyuncunun pipeline'ından kaldırır
+     * Netty handler'ı oyuncunun pipeline'ından kaldırır.
+     * Pipeline modifikasyonu channel.eventLoop().execute() içinde yapılır — thread-safe.
      */
     private void removeHandler(@NotNull Player player) {
         try {
             Object channelObj = PacketEvents.getAPI().getPlayerManager().getChannel(player);
             if (!(channelObj instanceof Channel channel)) return;
 
-            ChannelPipeline pipeline = channel.pipeline();
-            if (pipeline.get(NettyCrashHandler.HANDLER_NAME) != null) {
-                pipeline.remove(NettyCrashHandler.HANDLER_NAME);
-            }
+            channel.eventLoop().execute(() -> {
+                try {
+                    ChannelPipeline pipeline = channel.pipeline();
+                    if (pipeline.get(NettyCrashHandler.HANDLER_NAME) != null) {
+                        pipeline.remove(NettyCrashHandler.HANDLER_NAME);
+                    }
+                } catch (Exception e) {
+                    // Oyuncu zaten ayrılmış olabilir — güvenli şekilde atla
+                }
+            });
         } catch (Exception e) {
-            // Oyuncu zaten ayrılmış olabilir — güvenli şekilde atla
+            // Channel alınamadı — oyuncu zaten ayrılmış
         }
     }
 

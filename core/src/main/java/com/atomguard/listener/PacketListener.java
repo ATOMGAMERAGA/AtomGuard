@@ -15,13 +15,14 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
  * Merkezi Paket Yönlendiricisi (PERF-01)
- * 
+ *
  * Tüm modüllerin paket dinleyicilerini tek bir noktada toplar.
- * Her paket için sadece bir kez PacketEvents event bus tetiklenir, 
+ * Her paket için sadece bir kez PacketEvents event bus tetiklenir,
  * ardından ilgili modüllere dağıtılır.
  */
 public class PacketListener extends PacketListenerAbstract {
@@ -29,14 +30,18 @@ public class PacketListener extends PacketListenerAbstract {
     private final AtomGuard plugin;
     private final Map<PacketTypeCommon, List<Consumer<PacketReceiveEvent>>> receiveHandlers = new ConcurrentHashMap<>();
     private final Map<PacketTypeCommon, List<Consumer<PacketSendEvent>>> sendHandlers = new ConcurrentHashMap<>();
-    
-    // Global handlers
-    private final List<Consumer<PacketReceiveEvent>> globalReceiveHandlers = Collections.synchronizedList(new ArrayList<>());
-    private final List<Consumer<PacketSendEvent>> globalSendHandlers = Collections.synchronizedList(new ArrayList<>());
+
+    // Global handlers — CopyOnWriteArrayList: Netty thread'inde synchronized blok gerekmez
+    private final List<Consumer<PacketReceiveEvent>> globalReceiveHandlers = new CopyOnWriteArrayList<>();
+    private final List<Consumer<PacketSendEvent>> globalSendHandlers = new CopyOnWriteArrayList<>();
 
     // PERF-02: Bypass permission cache
+    // null  → henüz kontrol edilmemiş
+    // -1L   → kontrol edildi, bypass yok
+    // >0    → bypass var, cachedUntil zaman damgası
     private final Map<UUID, Long> bypassCache = new ConcurrentHashMap<>();
     private static final long BYPASS_CACHE_DURATION = 30_000; // 30 saniye
+    private static final long NO_BYPASS_SENTINEL = -1L;
 
     public PacketListener(@NotNull AtomGuard plugin) {
         super(PacketListenerPriority.NORMAL);
@@ -50,7 +55,7 @@ public class PacketListener extends PacketListenerAbstract {
         if (type == null) {
             globalReceiveHandlers.add(handler);
         } else {
-            receiveHandlers.computeIfAbsent(type, k -> Collections.synchronizedList(new ArrayList<>())).add(handler);
+            receiveHandlers.computeIfAbsent(type, k -> new CopyOnWriteArrayList<>()).add(handler);
         }
     }
 
@@ -75,7 +80,7 @@ public class PacketListener extends PacketListenerAbstract {
         if (type == null) {
             globalSendHandlers.add(handler);
         } else {
-            sendHandlers.computeIfAbsent(type, k -> Collections.synchronizedList(new ArrayList<>())).add(handler);
+            sendHandlers.computeIfAbsent(type, k -> new CopyOnWriteArrayList<>()).add(handler);
         }
     }
 
@@ -95,7 +100,7 @@ public class PacketListener extends PacketListenerAbstract {
 
     @Override
     public void onPacketReceive(@NotNull PacketReceiveEvent event) {
-        // PERF-02: Bypass kontrolü (Cache-based)
+        // PERF-02: Bypass kontrolü — sadece cache'e bak, hasPermission() ÇAĞIRMA
         if (event.getUser() != null && event.getUser().getUUID() != null) {
             if (hasBypass(event.getUser().getUUID())) return;
         }
@@ -103,82 +108,83 @@ public class PacketListener extends PacketListenerAbstract {
         // Heuristic Engine Entegrasyonu (Geleneksel legacy yapı korunuyor)
         handleLegacyIncoming(event);
 
-        // Global Handlers
-        synchronized (globalReceiveHandlers) {
-            for (Consumer<PacketReceiveEvent> handler : globalReceiveHandlers) {
-                if (event.isCancelled()) break;
-                handler.accept(event);
-            }
+        // Global Handlers — CopyOnWriteArrayList: synchronized blok gereksiz
+        for (Consumer<PacketReceiveEvent> handler : globalReceiveHandlers) {
+            if (event.isCancelled()) break;
+            handler.accept(event);
         }
 
-        // Merkezi Dağıtım (PERF-01)
+        // Merkezi Dağıtım (PERF-01) — CopyOnWriteArrayList: synchronized blok gereksiz
         List<Consumer<PacketReceiveEvent>> handlers = receiveHandlers.get(event.getPacketType());
         if (handlers != null) {
-            synchronized (handlers) {
-                for (Consumer<PacketReceiveEvent> handler : handlers) {
-                    if (event.isCancelled()) break;
-                    handler.accept(event);
-                }
+            for (Consumer<PacketReceiveEvent> handler : handlers) {
+                if (event.isCancelled()) break;
+                handler.accept(event);
             }
         }
     }
 
     @Override
     public void onPacketSend(@NotNull PacketSendEvent event) {
-        // PERF-02: Bypass kontrolü (Cache-based)
+        // PERF-02: Bypass kontrolü
         if (event.getUser() != null && event.getUser().getUUID() != null) {
             if (hasBypass(event.getUser().getUUID())) return;
         }
 
         // Global Handlers
-        synchronized (globalSendHandlers) {
-            for (Consumer<PacketSendEvent> handler : globalSendHandlers) {
-                if (event.isCancelled()) break;
-                handler.accept(event);
-            }
+        for (Consumer<PacketSendEvent> handler : globalSendHandlers) {
+            if (event.isCancelled()) break;
+            handler.accept(event);
         }
 
         List<Consumer<PacketSendEvent>> handlers = sendHandlers.get(event.getPacketType());
         if (handlers != null) {
-            synchronized (handlers) {
-                for (Consumer<PacketSendEvent> handler : handlers) {
-                    if (event.isCancelled()) break;
-                    handler.accept(event);
-                }
+            for (Consumer<PacketSendEvent> handler : handlers) {
+                if (event.isCancelled()) break;
+                handler.accept(event);
             }
         }
     }
 
     /**
-     * Permission cache check for bypass (PERF-02)
+     * Bypass cache kontrolü — Netty thread'inde güvenli, hasPermission() ÇAĞIRMAZ.
+     * Cache güncellemesi ana thread'deki checkAndCacheBypass() ile yapılır.
      */
     private boolean hasBypass(UUID uuid) {
-        Long cachedUntil = bypassCache.get(uuid);
-        if (cachedUntil != null && System.currentTimeMillis() < cachedUntil) {
-            return true;
-        }
-        
-        // Cache miss - asenkron kontrol yapıp cache'e ekle (ana thread'e gitmeden)
-        Player player = plugin.getServer().getPlayer(uuid);
-        if (player != null && player.hasPermission("atomguard.bypass")) {
-            cacheBypassPermission(uuid, true);
-            return true;
-        }
+        Long cached = bypassCache.get(uuid);
+        if (cached == null) return false;              // Henüz kontrol edilmemiş
+        if (cached == NO_BYPASS_SENTINEL) return false; // Kontrol edildi, bypass yok
+        if (System.currentTimeMillis() < cached) return true; // Bypass var, süresi dolmamış
+        // Cache süresi dolmuş — temizle, bir sonraki join'de yeniden kontrol edilecek
+        bypassCache.remove(uuid);
         return false;
     }
 
     /**
-     * PlayerJoinEvent'te veya hasBypass'ta cache'e ekle
+     * PlayerJoinEvent'te ana thread'den çağır — hasPermission() burada güvenle kullanılabilir.
      */
-    public void cacheBypassPermission(UUID uuid, boolean hasBypass) {
-        if (hasBypass) {
-            bypassCache.put(uuid, System.currentTimeMillis() + BYPASS_CACHE_DURATION);
+    public void checkAndCacheBypass(@NotNull Player player) {
+        if (player.hasPermission("atomguard.bypass")) {
+            bypassCache.put(player.getUniqueId(), System.currentTimeMillis() + BYPASS_CACHE_DURATION);
         } else {
-            bypassCache.remove(uuid);
+            bypassCache.put(player.getUniqueId(), NO_BYPASS_SENTINEL);
         }
     }
 
+    /**
+     * PlayerQuitEvent'te cache'den temizle
+     */
+    public void removeBypassCache(@NotNull UUID uuid) {
+        bypassCache.remove(uuid);
+    }
+
     private void handleLegacyIncoming(PacketReceiveEvent event) {
+        if (event.getPacketType() != PacketType.Play.Client.PLAYER_ROTATION
+                && event.getPacketType() != PacketType.Play.Client.PLAYER_POSITION_AND_ROTATION
+                && event.getPacketType() != PacketType.Play.Client.ANIMATION) {
+            return;
+        }
+
         Player player = null;
         if (event.getUser() != null && event.getUser().getUUID() != null) {
             player = plugin.getServer().getPlayer(event.getUser().getUUID());

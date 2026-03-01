@@ -57,8 +57,6 @@ public class RedstoneLimiterModule extends AbstractModule implements Listener {
         super.onEnable();
         loadConfig();
 
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
         // Her saniye sayaçları sıfırla (20 tick = 1 saniye)
         resetTaskId = plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
             chunkUpdateCounts.clear();

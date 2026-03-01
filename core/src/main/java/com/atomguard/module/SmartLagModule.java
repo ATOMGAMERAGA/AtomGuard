@@ -56,7 +56,6 @@ public class SmartLagModule extends AbstractModule implements Listener {
     public void onEnable() {
         super.onEnable();
         loadConfig();
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
         lastTickTime = System.currentTimeMillis();
         

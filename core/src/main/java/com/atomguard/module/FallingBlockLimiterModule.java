@@ -36,7 +36,6 @@ public class FallingBlockLimiterModule extends AbstractModule implements Listene
     public void onEnable() {
         super.onEnable();
         this.maxPerChunk = getConfigInt("max-dusen-blok-chunk", 64);
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
         // Periyodik temizlik
         plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, chunkCounts::clear, 200L, 200L);

@@ -1,10 +1,6 @@
 package com.atomguard.module;
 
 import com.atomguard.AtomGuard;
-import com.atomguard.data.PlayerData;
-import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.event.PacketListenerAbstract;
-import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPluginMessage;
@@ -41,8 +37,6 @@ public class AdvancedPayloadModule extends AbstractModule {
             "wurst", "impact+crash", "liquidbounce+crash"
     );
 
-    private PacketListenerAbstract listener;
-
     /** Oyuncu brand bilgilerini saklar */
     private final Map<UUID, String> playerBrands = new ConcurrentHashMap<>();
 
@@ -66,8 +60,8 @@ public class AdvancedPayloadModule extends AbstractModule {
         super.onEnable();
         loadConfig();
 
-        // PERF-01: Merkezi yönlendiriciye kaydol
-        plugin.getPacketListener().registerReceiveHandler(PacketType.Play.Client.PLUGIN_MESSAGE, this::handlePacketReceive);
+        // Merkezi yönlendiriciye kaydol — protected metod ile handler tracking dahil
+        registerReceiveHandler(PacketType.Play.Client.PLUGIN_MESSAGE, this::handlePacketReceive);
 
         debug("Gelişmiş payload filtresi başlatıldı. Max boyut: " + maxPayloadBytes +
                 " byte, İzinli kanal: " + allowedChannels.size());

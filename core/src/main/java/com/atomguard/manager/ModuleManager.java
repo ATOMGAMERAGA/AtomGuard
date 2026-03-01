@@ -102,6 +102,10 @@ public class ModuleManager implements IModuleManager {
 
             } catch (Exception e) {
                 plugin.getLogger().log(Level.SEVERE, "Modül etkinleştirilirken hata: " + module.getName(), e);
+                // Rollback: yarı-başlatılmış modülü temiz duruma geri al
+                try { module.onDisable(); } catch (Exception ex) {
+                    plugin.getLogger().log(Level.SEVERE, "Modül rollback sırasında hata: " + module.getName(), ex);
+                }
             }
         }
 
@@ -154,6 +158,9 @@ public class ModuleManager implements IModuleManager {
             return true;
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Modül etkinleştirilirken hata: " + moduleName, e);
+            try { module.onDisable(); } catch (Exception ex) {
+                plugin.getLogger().log(Level.SEVERE, "Modül rollback sırasında hata: " + moduleName, ex);
+            }
             return false;
         }
     }

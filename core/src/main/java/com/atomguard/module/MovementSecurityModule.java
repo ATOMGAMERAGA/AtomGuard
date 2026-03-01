@@ -33,7 +33,6 @@ public class MovementSecurityModule extends AbstractModule implements Listener {
         super.onEnable();
         this.maxDistance = getConfigDouble("max-mesafe", 30000000.0);
         this.blockInvalidCoords = getConfigBoolean("gecersiz-koordinat-engelle", true);
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)

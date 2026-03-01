@@ -25,7 +25,6 @@ public class CorePasswordCheckModule extends AbstractModule implements Listener 
     public void onEnable() {
         super.onEnable();
         plugin.getServer().getMessenger().registerOutgoingPluginChannel(plugin, "atomguard:auth");
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
         // Integrate with AuthMe if available
         if (plugin.getServer().getPluginManager().getPlugin("AuthMe") != null) {

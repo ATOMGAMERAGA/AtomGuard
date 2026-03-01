@@ -2,8 +2,6 @@ package com.atomguard.module;
 
 import com.atomguard.AtomGuard;
 import com.atomguard.util.PacketUtils;
-import com.github.retrooper.packetevents.event.PacketListenerAbstract;
-import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientClickWindow;
@@ -27,8 +25,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public class InvalidSlotModule extends AbstractModule {
 
-    private PacketListenerAbstract listener;
-
     // Maksimum slot sayısı (Double Chest + Player Inventory)
     private static final int MAX_SLOT = 90;
     private static final int MIN_SLOT = -999; // -999 outside inventory için kullanılır
@@ -47,17 +43,8 @@ public class InvalidSlotModule extends AbstractModule {
     public void onEnable() {
         super.onEnable();
 
-        // PacketEvents listener'ı oluştur ve kaydet
-        listener = new PacketListenerAbstract(PacketListenerPriority.NORMAL) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                handlePacketReceive(event);
-            }
-        };
-
-        com.github.retrooper.packetevents.PacketEvents.getAPI()
-            .getEventManager()
-            .registerListener(listener);
+        // Merkezi listener kullan — sadece CLICK_WINDOW paketleri
+        registerReceiveHandler(PacketType.Play.Client.CLICK_WINDOW, this::handlePacketReceive);
 
         debug("Modül aktifleştirildi.");
     }
@@ -66,13 +53,6 @@ public class InvalidSlotModule extends AbstractModule {
 
     public void onDisable() {
         super.onDisable();
-
-        // PacketEvents listener'ı kaldır
-        if (listener != null) {
-            com.github.retrooper.packetevents.PacketEvents.getAPI()
-                .getEventManager()
-                .unregisterListener(listener);
-        }
 
         debug("Modül devre dışı bırakıldı.");
     }

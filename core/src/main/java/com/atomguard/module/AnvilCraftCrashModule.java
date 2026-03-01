@@ -25,7 +25,6 @@ public class AnvilCraftCrashModule extends AbstractModule implements Listener {
     public void onEnable() {
         super.onEnable();
         this.maxRenameLength = getConfigInt("anvil-max-isim-uzunlugu", 50);
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

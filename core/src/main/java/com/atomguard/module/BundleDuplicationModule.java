@@ -2,8 +2,6 @@ package com.atomguard.module;
 
 import com.atomguard.AtomGuard;
 import com.atomguard.util.CooldownManager;
-import com.github.retrooper.packetevents.event.PacketListenerAbstract;
-import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientClickWindow;
@@ -29,7 +27,6 @@ import java.util.UUID;
  */
 public class BundleDuplicationModule extends AbstractModule {
 
-    private PacketListenerAbstract listener;
     private CooldownManager cooldownManager;
 
     // Config cache
@@ -56,17 +53,8 @@ public class BundleDuplicationModule extends AbstractModule {
         // Config değerlerini yükle
         loadConfig();
 
-        // PacketEvents listener'ı oluştur ve kaydet
-        listener = new PacketListenerAbstract(PacketListenerPriority.NORMAL) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                handlePacketReceive(event);
-            }
-        };
-
-        com.github.retrooper.packetevents.PacketEvents.getAPI()
-            .getEventManager()
-            .registerListener(listener);
+        // Merkezi listener kullan — sadece CLICK_WINDOW paketleri
+        registerReceiveHandler(PacketType.Play.Client.CLICK_WINDOW, this::handlePacketReceive);
 
         debug("Modül aktifleştirildi. Click cooldown: " + clickCooldownMs +
               "ms, Drop cooldown: " + dropCooldownMs + "ms");
@@ -77,16 +65,8 @@ public class BundleDuplicationModule extends AbstractModule {
     public void onDisable() {
         super.onDisable();
 
-        // Cooldown manager'ı temizle
         if (cooldownManager != null) {
             cooldownManager.clearAll();
-        }
-
-        // PacketEvents listener'ı kaldır
-        if (listener != null) {
-            com.github.retrooper.packetevents.PacketEvents.getAPI()
-                .getEventManager()
-                .unregisterListener(listener);
         }
 
         debug("Modül devre dışı bırakıldı.");

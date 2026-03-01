@@ -83,13 +83,13 @@ public class AtomGuard extends JavaPlugin {
             forensicsManager.start();
             intelligenceEngine.start();
 
-            // Register Modules BEFORE enabling them
-            registerModules();
-            moduleManager.enableAllModules();
-
-            // Listeners
+            // ÖNCE PacketListener oluştur — modüller onEnable()'da registerReceiveHandler() çağırdığından
             this.packetListener = new PacketListener(this);
             PacketEvents.getAPI().getEventManager().registerListener(packetListener);
+
+            // SONRA modülleri kaydet ve etkinleştir
+            registerModules();
+            moduleManager.enableAllModules();
             
             getServer().getPluginManager().registerEvents(new BukkitListener(this), this);
             getServer().getPluginManager().registerEvents(new InventoryListener(this), this);
@@ -120,6 +120,16 @@ public class AtomGuard extends JavaPlugin {
             // Periyodik görev: saldırı modunu otomatik kapat
             getServer().getScheduler().runTaskTimerAsynchronously(this,
                 () -> attackModeManager.update(), 20L, 20L); // her saniye kontrol
+
+            // Periyodik cleanup görevi: bellek sızıntılarını önle
+            getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+                moduleManager.getAllModules().forEach(m -> {
+                    try { m.cleanup(); } catch (Exception e) {
+                        getLogger().warning("Cleanup hatası (" + m.getName() + "): " + e.getMessage());
+                    }
+                });
+                if (heuristicEngine != null) heuristicEngine.cleanupOfflinePlayers();
+            }, 6000L, 6000L); // 5 dakikada bir
 
             // Web Panel
             if (getConfig().getBoolean("web-panel.aktif", false)) {

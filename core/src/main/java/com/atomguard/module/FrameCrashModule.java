@@ -58,9 +58,6 @@ public class FrameCrashModule extends AbstractModule implements Listener {
         // Config değerlerini yükle
         loadConfig();
 
-        // Event listener kaydet
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        
         // CR-05: Periyodik temizlik görevi (5 dakikada bir)
         plugin.getServer().getScheduler().runTaskTimer(plugin, this::cleanup, 6000L, 6000L);
 

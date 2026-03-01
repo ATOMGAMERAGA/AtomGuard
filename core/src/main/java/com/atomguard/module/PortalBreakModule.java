@@ -49,9 +49,6 @@ public class PortalBreakModule extends AbstractModule implements Listener {
         // Config değerlerini yükle
         loadConfig();
 
-        // Event listener kaydet
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
         debug("Modül aktifleştirildi. Mantar: " + blockMushroom + ", Su kovası: " + blockWaterBucket);
     }
 

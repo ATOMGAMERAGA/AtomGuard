@@ -60,7 +60,6 @@ public class StorageEntityLockModule extends AbstractModule implements Listener 
         super.onEnable();
         loadConfig();
 
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
         debug("Depolama entity kilit modülü başlatıldı. Timeout: " + timeoutSeconds + " saniye");
     }
 

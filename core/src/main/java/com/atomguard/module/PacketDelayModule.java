@@ -2,8 +2,6 @@ package com.atomguard.module;
 
 import com.atomguard.AtomGuard;
 import com.atomguard.data.PlayerData;
-import com.github.retrooper.packetevents.event.PacketListenerAbstract;
-import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientClickWindow;
@@ -31,8 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class PacketDelayModule extends AbstractModule {
 
-    private PacketListenerAbstract listener;
-
     // Oyuncu verilerini saklayan map
     private final Map<UUID, PlayerData> playerDataMap;
 
@@ -58,17 +54,8 @@ public class PacketDelayModule extends AbstractModule {
         // Config değerlerini yükle
         loadConfig();
 
-        // PacketEvents listener'ı oluştur ve kaydet
-        listener = new PacketListenerAbstract(PacketListenerPriority.NORMAL) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                handlePacketReceive(event);
-            }
-        };
-
-        com.github.retrooper.packetevents.PacketEvents.getAPI()
-            .getEventManager()
-            .registerListener(listener);
+        // Merkezi listener kullan
+        registerReceiveHandler(null, this::handlePacketReceive);
 
         debug("Modül aktifleştirildi. Max paket/saniye: " + maxPacketsPerSecond);
     }
@@ -77,13 +64,6 @@ public class PacketDelayModule extends AbstractModule {
 
     public void onDisable() {
         super.onDisable();
-
-        // PacketEvents listener'ı kaldır
-        if (listener != null) {
-            com.github.retrooper.packetevents.PacketEvents.getAPI()
-                .getEventManager()
-                .unregisterListener(listener);
-        }
 
         // Player data'yı temizle
         playerDataMap.clear();

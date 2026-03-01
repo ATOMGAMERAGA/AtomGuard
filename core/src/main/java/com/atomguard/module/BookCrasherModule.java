@@ -2,8 +2,6 @@ package com.atomguard.module;
 
 import com.atomguard.AtomGuard;
 import com.atomguard.util.BookUtils;
-import com.github.retrooper.packetevents.event.PacketListenerAbstract;
-import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientEditBook;
@@ -30,8 +28,6 @@ import java.util.List;
  */
 public class BookCrasherModule extends AbstractModule {
 
-    private PacketListenerAbstract listener;
-
     // Config cache
     private int maxTitleLength;
     private int maxPageCount;
@@ -55,17 +51,8 @@ public class BookCrasherModule extends AbstractModule {
         // Config değerlerini yükle
         loadConfig();
 
-        // PacketEvents listener'ı oluştur ve kaydet
-        listener = new PacketListenerAbstract(PacketListenerPriority.NORMAL) {
-            @Override
-            public void onPacketReceive(PacketReceiveEvent event) {
-                handlePacketReceive(event);
-            }
-        };
-
-        com.github.retrooper.packetevents.PacketEvents.getAPI()
-            .getEventManager()
-            .registerListener(listener);
+        // Merkezi listener kullan — sadece EDIT_BOOK paketleri
+        registerReceiveHandler(PacketType.Play.Client.EDIT_BOOK, this::handlePacketReceive);
 
         debug("Modül aktifleştirildi. Max sayfa: " + maxPageCount +
               ", Max boyut: " + maxTotalBookSize);
@@ -75,13 +62,6 @@ public class BookCrasherModule extends AbstractModule {
 
     public void onDisable() {
         super.onDisable();
-
-        // PacketEvents listener'ı kaldır
-        if (listener != null) {
-            com.github.retrooper.packetevents.PacketEvents.getAPI()
-                .getEventManager()
-                .unregisterListener(listener);
-        }
 
         debug("Modül devre dışı bırakıldı.");
     }

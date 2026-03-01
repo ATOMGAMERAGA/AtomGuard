@@ -50,7 +50,6 @@ public class ShulkerByteModule extends AbstractModule implements Listener {
         super.onEnable();
         loadConfig();
 
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
         debug("Shulker byte modülü başlatıldı. Max boyut: " + maxBytes + " byte");
     }
 

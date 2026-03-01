@@ -49,9 +49,6 @@ public class MapLabelCrasherModule extends AbstractModule implements Listener {
         // Config değerlerini yükle
         loadConfig();
 
-        // Event listener kaydet
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
         debug("Modül aktifleştirildi. Etiketler devre dışı: " + disableLabels);
     }
 

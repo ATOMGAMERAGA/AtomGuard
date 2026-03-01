@@ -64,9 +64,6 @@ public class CreativeItemsModule extends AbstractModule implements Listener {
         // Config değerlerini yükle
         loadConfig();
 
-        // Event listener kaydet
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
         debug("Modül aktifleştirildi. Blacklist sayısı: " + blacklistedItems.size());
     }
 

@@ -59,7 +59,6 @@ public class BundleLockModule extends AbstractModule implements Listener {
         super.onEnable();
         loadConfig();
 
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
         debug("Bundle kilit modülü başlatıldı. Kilit süresi: " + lockDurationTicks + " tick");
     }
 
