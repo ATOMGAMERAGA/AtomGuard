@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Monitors connection rates and triggers "Attack Mode" (Lockdown).
@@ -16,7 +17,7 @@ public class AttackModeManager {
     private final AtomGuard plugin;
 
     private final AtomicInteger connectionCounter = new AtomicInteger(0);
-    private volatile long lastReset = System.currentTimeMillis();
+    private final AtomicLong lastReset = new AtomicLong(System.currentTimeMillis());
 
     private volatile boolean attackMode = false;
     private volatile long attackModeStartTime = 0;
@@ -62,10 +63,12 @@ public class AttackModeManager {
     public void recordConnection() {
         long now = System.currentTimeMillis();
 
-        // Reset counter every second
-        if (now - lastReset >= 1000) {
-            connectionCounter.set(0);
-            lastReset = now;
+        // CAS ile atomik reset — TOCTOU race condition önleme
+        long lastResetVal = lastReset.get();
+        if (now - lastResetVal >= 1000) {
+            if (lastReset.compareAndSet(lastResetVal, now)) {
+                connectionCounter.set(0);
+            }
         }
 
         int currentRate = connectionCounter.incrementAndGet();

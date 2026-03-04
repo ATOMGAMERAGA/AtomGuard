@@ -45,6 +45,7 @@ public class PanicCommand implements CommandExecutor {
             int playedTicks = p.getStatistic(Statistic.PLAY_ONE_MINUTE);
             
             if (playedTicks < minTicks) {
+                if (p.getAddress() == null || p.getAddress().getAddress() == null) continue;
                 String ip = p.getAddress().getAddress().getHostAddress();
                 String name = p.getName();
 

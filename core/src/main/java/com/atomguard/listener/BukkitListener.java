@@ -124,7 +124,7 @@ public class BukkitListener implements Listener {
         }
 
         // Record verified IP (player successfully joined)
-        if (player.getAddress() != null) {
+        if (player.getAddress() != null && player.getAddress().getAddress() != null) {
             String ip = player.getAddress().getAddress().getHostAddress();
             plugin.getAttackModeManager().recordVerifiedIp(ip);
 
@@ -151,7 +151,7 @@ public class BukkitListener implements Listener {
 
         // OfflinePacketModule'e login bildirimi
         OfflinePacketModule offlineModule = plugin.getModuleManager().getModule(OfflinePacketModule.class);
-        if (offlineModule != null && player.getAddress() != null) {
+        if (offlineModule != null && player.getAddress() != null && player.getAddress().getAddress() != null) {
             offlineModule.onPlayerLogin(player.getUniqueId(), player.getAddress().getAddress());
         }
 

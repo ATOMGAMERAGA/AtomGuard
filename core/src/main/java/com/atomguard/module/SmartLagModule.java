@@ -41,6 +41,7 @@ public class SmartLagModule extends AbstractModule implements Listener {
     private final Set<Long> frozenChunks = ConcurrentHashMap.newKeySet(); // ChunkKey hash'leri
     private boolean isFreezingActive = false;
     private int freezeDurationTicks = 100; // 5 saniye dondur
+    private int watchdogTaskId = -1;
 
     // Config
     private int msThreshold; // 50ms
@@ -58,17 +59,21 @@ public class SmartLagModule extends AbstractModule implements Listener {
         loadConfig();
 
         lastTickTime = System.currentTimeMillis();
-        
+
         // Watchdog görevi - Her tick çalışır
-        plugin.getServer().getScheduler().runTaskTimer(plugin, this::tickWatchdog, 1L, 1L);
+        watchdogTaskId = plugin.getServer().getScheduler()
+                .runTaskTimer(plugin, this::tickWatchdog, 1L, 1L).getTaskId();
         
         debug("Akıllı Lag Modülü başlatıldı. Eşik: " + msThreshold + "ms");
     }
 
     @Override
-
     public void onDisable() {
         super.onDisable();
+        if (watchdogTaskId != -1) {
+            plugin.getServer().getScheduler().cancelTask(watchdogTaskId);
+            watchdogTaskId = -1;
+        }
         HandlerList.unregisterAll(this);
         frozenChunks.clear();
     }

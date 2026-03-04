@@ -4,14 +4,18 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ConnectionPipeline {
 
-    private final List<ConnectionCheck> checks = new ArrayList<>();
+    private final CopyOnWriteArrayList<ConnectionCheck> checks = new CopyOnWriteArrayList<>();
 
     public void addCheck(@NotNull ConnectionCheck check) {
         checks.add(check);
-        checks.sort(Comparator.comparingInt(ConnectionCheck::priority));
+        List<ConnectionCheck> sorted = new ArrayList<>(checks);
+        sorted.sort(Comparator.comparingInt(ConnectionCheck::priority));
+        checks.clear();
+        checks.addAll(sorted);
     }
 
     @NotNull

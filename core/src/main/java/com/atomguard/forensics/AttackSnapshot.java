@@ -1,9 +1,10 @@
 package com.atomguard.forensics;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Detaylı saldırı snapshot'ı — saldırı sırasında toplanan tüm verileri içerir.
@@ -29,18 +30,18 @@ public class AttackSnapshot {
     // IP Analizi
     private int uniqueIpCount;
     private int uniqueSubnetCount;
-    private Map<String, Integer> topIps = new LinkedHashMap<>();
-    private Map<String, Integer> topSubnets = new LinkedHashMap<>();
+    private Map<String, Integer> topIps = new ConcurrentHashMap<>();
+    private Map<String, Integer> topSubnets = new ConcurrentHashMap<>();
 
     // Coğrafi Dağılım (GeoIP varsa)
-    private Map<String, Integer> countryDistribution = new LinkedHashMap<>();
+    private Map<String, Integer> countryDistribution = new ConcurrentHashMap<>();
 
     // Modül İstatistikleri
-    private Map<String, Long> moduleBlockCounts = new LinkedHashMap<>();
-    private List<String> triggeredModules = new ArrayList<>();
+    private Map<String, Long> moduleBlockCounts = new ConcurrentHashMap<>();
+    private List<String> triggeredModules = Collections.synchronizedList(new ArrayList<>());
 
     // Zaman Çizelgesi
-    private List<TimelineEvent> timeline = new ArrayList<>();
+    private List<TimelineEvent> timeline = Collections.synchronizedList(new ArrayList<>());
 
     // Sunucu Durumu
     private double avgTps = 20.0;

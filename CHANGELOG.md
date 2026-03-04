@@ -3,6 +3,31 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [1.2.6] - 2026-03-04
+
+### 🔧 İyileştirmeler
+
+- **VelocityStorageProvider — Kod Tekrarı Giderildi**: `saveBehaviorProfile()` ve `saveBehaviorProfileSync()` içindeki JSON inşa mantığı `buildProfileJson()` özel yardımcı metoduna taşındı; bakımı kolaylaştırıldı.
+- **AttackSnapshot — Koleksiyon Optimizasyonu**: Saldırı sırasında yoğun yazma yapılan `timeline` ve `triggeredModules` alanları `CopyOnWriteArrayList`'ten `Collections.synchronizedList(new ArrayList<>())` türüne değiştirildi; GC baskısı azaltıldı.
+- **ConfigManager — Gereksiz Değişken Kaldırıldı**: `loadMessages()` içindeki anlamsız `final String finalFileName = fileName` ataması temizlendi; `fileName` doğrudan kullanılıyor.
+
+### 🐛 Hata Düzeltmeleri
+
+- **VelocityStatisticsManager / TempBanManager — TOCTOU Yarış Koşulu**: `save()` metodlarındaki `Files.exists()` ön kontrolü kaldırıldı; `Files.createDirectories()` doğrudan çağrılıyor (idempotent). Çok iş parçacıklı ortamda dizin oluşturma yarış koşulu giderildi.
+- **WebPanel — Düz Metin Şifre Loglama**: Varsayılan web panel şifresi artık loglara açık metin olarak yazılmıyor; yalnızca ilk 3 karakter ve maskelenmiş kısım gösteriliyor.
+- **AtomGuard — `onDisable()` Kapatma Sırası**: Modüller ve yöneticiler doğru sırayla kapatılıyor (modüller → yöneticiler → depolama → log); `discordWebhookManager.stop()`, `PacketEvents listener unregister`, outgoing/incoming plugin channel unregister eklendi.
+- **RedisManager — Daemon Thread ve PubSub Takılması**: PubSub thread'i daemon olarak işaretlendi; `stop()` artık `activePubSub.unsubscribe()` çağırarak JedisPubSub'ın `subscribe()` blokajını serbest bırakıyor.
+- **AttackModeManager — Sayaç Sıfırlama Thread Safety**: `lastReset` alanı `volatile long`'dan `AtomicLong`'a yükseltildi; `recordConnection()` CAS ile tek thread'in sıfırlama yapmasını garantiliyor.
+- **PanicCommand / BukkitListener — Null Address NPE**: Oyuncu IP adresi null kontrolü eklendi; bağlantı sırasında adresi henüz atanmamış oyuncularda `NullPointerException` önlendi.
+- **ConnectionPipeline — ArrayList Yerine CopyOnWriteArrayList**: Çok iş parçacıklı ortamda eş zamanlı okuma-yazma güvenliği sağlandı.
+- **SmartLagModule — Watchdog Görev Sızıntısı**: `onEnable()` içinde zamanlayıcı görev ID'si kaydediliyor; `onDisable()` bu ID ile `cancelTask()` çağırarak kaynakları doğru serbest bırakıyor.
+- **CorePasswordCheckModule — DoS Güvenlik Açığı**: 128 karakteri aşan şifreler için SHA-256 hesaplaması artık yapılmıyor; uzun girdilerle hash işlemi kötüye kullanımı engellendi.
+- **VelocityStorageProvider — Bağlantı Havuzu Boyutu**: SQLite için `MaximumPoolSize=1` (WAL modu zorunluluğu), MySQL için `MaximumPoolSize=5` olarak düzeltildi; önceki yanlış yapılandırma veritabanı hatalarına yol açabiliyordu.
+- **ConnectionListener — Çevrimdışı Mod UUID Null**: Velocity `PreLoginEvent` çevrimdışı modda UUID'yi null döndürebiliyor; `UUID.nameUUIDFromBytes` ile güvenli yedek atama yapıldı.
+- **ConfigManager — InputStream Kaynağı Sızıntısı**: `loadConfig()` ve `loadMessages()` içindeki `InputStream` / `InputStreamReader` nesneleri try-with-resources ile sarıldı; kaynaklar her durumda kapatılıyor.
+- **IPReputationManager — InputStreamReader Kaynağı Sızıntısı**: İki ayrı `InputStreamReader` kullanımı try-with-resources ile güvence altına alındı.
+- **AtomGuard — BotProtectionModule Kullanımdan Kaldırma**: `@Deprecated` `BotProtectionModule` `registerModules()` içinden kaldırıldı.
+
 ## [1.2.5] - 2026-03-01
 
 ### 🔧 İyileştirmeler

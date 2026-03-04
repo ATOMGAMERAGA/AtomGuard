@@ -62,7 +62,7 @@ public class ConfigManager {
     }
 
     private void checkConfigVersion() {
-        String currentVersion = "1.2.5";
+        String currentVersion = "1.2.6";
         String configVersion = config.getString("config-version", "1.0.0");
 
         if (!configVersion.equals(currentVersion)) {
@@ -91,12 +91,15 @@ public class ConfigManager {
         this.config = YamlConfiguration.loadConfiguration(configFile);
 
         // Varsayılan değerleri yükle
-        InputStream defaultStream = plugin.getResource("config.yml");
-        if (defaultStream != null) {
-            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(
-                new InputStreamReader(defaultStream, StandardCharsets.UTF_8)
-            );
-            config.setDefaults(defaultConfig);
+        try (InputStream defaultStream = plugin.getResource("config.yml")) {
+            if (defaultStream != null) {
+                YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(defaultStream, StandardCharsets.UTF_8)
+                );
+                config.setDefaults(defaultConfig);
+            }
+        } catch (java.io.IOException e) {
+            plugin.getLogger().warning("config.yml varsayılan değerleri yüklenemedi: " + e.getMessage());
         }
     }
 
@@ -126,16 +129,21 @@ public class ConfigManager {
         this.messages = YamlConfiguration.loadConfiguration(messagesFile);
 
         // Varsayılan değerleri yükle
-        InputStream defaultStream = plugin.getResource(fileName);
-        if (defaultStream == null) {
-            defaultStream = plugin.getResource("messages_tr.yml");
-        }
-        
-        if (defaultStream != null) {
-            YamlConfiguration defaultMessages = YamlConfiguration.loadConfiguration(
-                new InputStreamReader(defaultStream, StandardCharsets.UTF_8)
-            );
-            messages.setDefaults(defaultMessages);
+        try {
+            InputStream defaultStream = plugin.getResource(fileName);
+            if (defaultStream == null) {
+                defaultStream = plugin.getResource("messages_tr.yml");
+            }
+            if (defaultStream != null) {
+                try (InputStream stream = defaultStream) {
+                    YamlConfiguration defaultMessages = YamlConfiguration.loadConfiguration(
+                        new InputStreamReader(stream, StandardCharsets.UTF_8)
+                    );
+                    messages.setDefaults(defaultMessages);
+                }
+            }
+        } catch (java.io.IOException e) {
+            plugin.getLogger().warning("Mesaj dosyası varsayılan değerleri yüklenemedi: " + e.getMessage());
         }
     }
 

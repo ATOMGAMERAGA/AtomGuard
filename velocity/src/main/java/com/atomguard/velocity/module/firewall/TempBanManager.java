@@ -45,6 +45,7 @@ public class TempBanManager {
     public void save() {
         try {
             cleanup();
+            Files.createDirectories(banFile.getParent());
             Files.writeString(banFile, gson.toJson(new HashMap<>(bans)), StandardCharsets.UTF_8);
         } catch (IOException e) {
             logger.warn("Geçici yasak listesi kaydedilemedi: {}", e.getMessage());

@@ -43,6 +43,7 @@ public class VelocityStatisticsManager {
 
     public void save() {
         try {
+            Files.createDirectories(statsFile.getParent());
             Map<String, Long> snapshot = new HashMap<>();
             stats.forEach((k, v) -> snapshot.put(k, v.get()));
             Files.writeString(statsFile, gson.toJson(snapshot), StandardCharsets.UTF_8);

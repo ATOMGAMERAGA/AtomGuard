@@ -34,6 +34,9 @@ public class ConnectionListener {
         String ip = event.getConnection().getRemoteAddress().getAddress().getHostAddress();
         String username = event.getUsername();
         UUID uuid = event.getUniqueId();
+        if (uuid == null) {
+            uuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
         String hostname = event.getConnection().getVirtualHost()
                 .map(addr -> addr.getHostString()).orElse(null);
         int port = event.getConnection().getVirtualHost()
@@ -99,7 +102,9 @@ public class ConnectionListener {
     @Subscribe
     public void onDisconnect(DisconnectEvent event) {
         if (event.getPlayer().getRemoteAddress() == null) return;
-        String ip = event.getPlayer().getRemoteAddress().getAddress().getHostAddress();
+        java.net.InetAddress addr = event.getPlayer().getRemoteAddress().getAddress();
+        if (addr == null) return;
+        String ip = addr.getHostAddress();
         UUID uuid = event.getPlayer().getUniqueId();
 
         if (plugin.getAntiBotModule() != null) plugin.getAntiBotModule().recordQuit(ip);

@@ -71,7 +71,8 @@ public class WebPanel {
             pass = generateRandomPassword();
             plugin.getConfig().set("web-panel.kimlik-dogrulama.sifre", pass);
             plugin.saveConfig();
-            plugin.getLogger().warning("Web Panel için varsayılan şifre değiştirildi: " + pass);
+            plugin.getLogger().warning("Web Panel varsayilan sifresi degistirildi. Yeni sifre config.yml dosyasinda saklanmaktadir.");
+            plugin.getLogger().warning("Web Panel sifresi: " + pass.substring(0, 3) + "***" + " (config.yml: web-panel.kimlik-dogrulama.sifre)");
         }
         this.authPass = pass;
         

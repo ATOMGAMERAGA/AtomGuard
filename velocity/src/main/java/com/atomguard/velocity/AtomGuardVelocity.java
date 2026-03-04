@@ -151,10 +151,15 @@ public class AtomGuardVelocity {
             }
         }
 
-        // Persist behavioral profiles
-        if (behaviorManager != null) {
-            behaviorManager.getAllProfiles().forEach(profile -> 
-                storageProvider.saveBehaviorProfile(profile));
+        // Persist behavioral profiles — senkron kaydet (shutdown sırasında executor kapanabilir)
+        if (behaviorManager != null && storageProvider != null && storageProvider.isConnected()) {
+            behaviorManager.getAllProfiles().forEach(profile -> {
+                try {
+                    storageProvider.saveBehaviorProfileSync(profile);
+                } catch (Exception e) {
+                    logger.warn("Profil kaydedilemedi (shutdown): {}", e.getMessage());
+                }
+            });
         }
 
         if (moduleManager != null) moduleManager.disableAll();
@@ -169,6 +174,10 @@ public class AtomGuardVelocity {
     }
 
     private void initializeManagers() throws Exception {
+        if (!java.nio.file.Files.exists(dataDirectory)) {
+            java.nio.file.Files.createDirectories(dataDirectory);
+        }
+
         configManager = new VelocityConfigManager(dataDirectory, logger);
         configManager.load();
         configManager.validateAndMigrate();
@@ -230,7 +239,7 @@ public class AtomGuardVelocity {
             if (rateLimitModule != null) rateLimitModule.cleanup();
             if (reconnectControlModule != null) reconnectControlModule.cleanup();
             
-            logger.info("Periyodik sistem bakımı ve bellek temizliği tamamlandı.");
+            logger.debug("Periyodik sistem bakımı ve bellek temizliği tamamlandı.");
         }).repeat(10, java.util.concurrent.TimeUnit.MINUTES).schedule();
     }
 

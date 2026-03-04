@@ -41,13 +41,14 @@ public class VelocityStorageProvider implements IStorageProvider {
             config.setUsername(plugin.getConfigManager().getString("depolama.mysql.kullanici", "root"));
             config.setPassword(plugin.getConfigManager().getString("depolama.mysql.sifre", ""));
             config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+            config.setMaximumPoolSize(5);
         } else {
             Path dbPath = plugin.getDataDirectory().resolve("atomguard-velocity.db");
             config.setJdbcUrl("jdbc:sqlite:" + dbPath.toAbsolutePath());
             config.setDriverClassName("org.sqlite.JDBC");
+            config.setMaximumPoolSize(1);
+            config.addDataSourceProperty("journal_mode", "WAL");
         }
-
-        config.setMaximumPoolSize(5);
         config.setConnectionTimeout(5000);
         config.setPoolName("atomguard-velocity-pool");
         this.dataSource = new HikariDataSource(config);
@@ -185,28 +186,46 @@ public class VelocityStorageProvider implements IStorageProvider {
         });
     }
 
+    private JSONObject buildProfileJson(com.atomguard.velocity.data.PlayerBehaviorProfile profile) {
+        JSONObject json = new JSONObject();
+        json.put("sessions", profile.getTotalSessions());
+        json.put("logins", profile.getSuccessfulLogins());
+        json.put("fails", profile.getFailedChecks());
+        json.put("first", profile.getFirstSeen());
+        json.put("names", new ArrayList<>(profile.getUsedUsernames()));
+        return json;
+    }
+
     public void saveBehaviorProfile(com.atomguard.velocity.data.PlayerBehaviorProfile profile) {
         if (!isConnected()) return;
         executor.execute(() -> {
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(
                      "REPLACE INTO atomguard_player_data (uuid, data, last_updated) VALUES (?, ?, ?)")) {
-                
-                JSONObject json = new JSONObject();
-                json.put("sessions", profile.getTotalSessions());
-                json.put("logins", profile.getSuccessfulLogins());
-                json.put("fails", profile.getFailedChecks());
-                json.put("first", profile.getFirstSeen());
-                json.put("names", new ArrayList<>(profile.getUsedUsernames()));
-                
+
                 ps.setString(1, profile.getIp()); // IP'yi UUID alanına yazıyoruz
-                ps.setString(2, json.toString());
+                ps.setString(2, buildProfileJson(profile).toString());
                 ps.setLong(3, System.currentTimeMillis());
                 ps.executeUpdate();
             } catch (SQLException e) {
                 logger.error("Davranış profili kaydedilemedi: {}", e.getMessage());
             }
         });
+    }
+
+    public void saveBehaviorProfileSync(com.atomguard.velocity.data.PlayerBehaviorProfile profile) {
+        if (!isConnected()) return;
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                 "REPLACE INTO atomguard_player_data (uuid, data, last_updated) VALUES (?, ?, ?)")) {
+
+            ps.setString(1, profile.getIp());
+            ps.setString(2, buildProfileJson(profile).toString());
+            ps.setLong(3, System.currentTimeMillis());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("Davranış profili kaydedilemedi (sync): {}", e.getMessage());
+        }
     }
 
     public CompletableFuture<Map<String, JSONObject>> loadBehaviorProfiles() {

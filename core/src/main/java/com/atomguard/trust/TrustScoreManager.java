@@ -307,6 +307,9 @@ public class TrustScoreManager {
 
     public void save() {
         try {
+            if (!trustFile.getParentFile().exists()) {
+                trustFile.getParentFile().mkdirs();
+            }
             List<TrustProfile> list = new ArrayList<>(profiles.values());
             String json = gson.toJson(list);
             try (Writer writer = new OutputStreamWriter(new java.io.FileOutputStream(trustFile), StandardCharsets.UTF_8)) {

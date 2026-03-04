@@ -182,18 +182,33 @@ public class AtomGuard extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // 1. ÖNCE modülleri kapat (modüller veri kaydetsin)
+        if (moduleManager != null) moduleManager.disableAllModules();
+
+        // 2. Manager'ları kapat (verileri diske yazsınlar)
         if (intelligenceEngine != null) intelligenceEngine.stop();
         if (forensicsManager != null) forensicsManager.stop();
         if (trustScoreManager != null) trustScoreManager.stop();
-        if (storageProvider != null) storageProvider.disconnect();
-        if (webPanel != null) webPanel.stop();
-        if (moduleManager != null) moduleManager.disableAllModules();
         if (reputationManager != null) reputationManager.shutdown();
         if (verifiedPlayerCache != null) verifiedPlayerCache.stop();
-        if (redisManager != null) redisManager.stop();
         if (statisticsManager != null) statisticsManager.stop();
+        if (discordWebhookManager != null) discordWebhookManager.stop();
+        if (redisManager != null) redisManager.stop();
+        if (webPanel != null) webPanel.stop();
+
+        // 3. PacketEvents listener temizliği
+        if (packetListener != null) {
+            PacketEvents.getAPI().getEventManager().unregisterListener(packetListener);
+        }
+
+        // 4. Messenger channel temizliği
+        getServer().getMessenger().unregisterOutgoingPluginChannel(this);
+        getServer().getMessenger().unregisterIncomingPluginChannel(this);
+
+        // 5. EN SON storage ve log kapat
+        if (storageProvider != null) storageProvider.disconnect();
         if (logManager != null) logManager.stop();
-        
+
         getLogger().info("AtomGuard (Core) has been disabled.");
     }
 
@@ -212,7 +227,6 @@ public class AtomGuard extends JavaPlugin {
         moduleManager.registerModule(new AdvancedPayloadModule(this));
         moduleManager.registerModule(new BundleLockModule(this));
         moduleManager.registerModule(new CommandsCrashModule(this));
-        moduleManager.registerModule(new BotProtectionModule(this));
         moduleManager.registerModule(new StorageEntityLockModule(this));
         moduleManager.registerModule(new TooManyBooksModule(this));
         moduleManager.registerModule(new ContainerCrashModule(this));

@@ -14,6 +14,7 @@ public class RedisManager {
     private JedisPool jedisPool;
     private boolean enabled;
     private Thread pubSubThread;
+    private volatile JedisPubSub activePubSub;
 
     public RedisManager(AtomGuard plugin) {
         this.plugin = plugin;
@@ -44,6 +45,10 @@ public class RedisManager {
     }
 
     public void stop() {
+        enabled = false;
+        if (activePubSub != null && activePubSub.isSubscribed()) {
+            activePubSub.unsubscribe();
+        }
         if (pubSubThread != null) {
             pubSubThread.interrupt();
         }
@@ -55,18 +60,20 @@ public class RedisManager {
     private void startPubSub() {
         pubSubThread = new Thread(() -> {
             try (Jedis jedis = jedisPool.getResource()) {
-                jedis.subscribe(new JedisPubSub() {
+                activePubSub = new JedisPubSub() {
                     @Override
                     public void onMessage(String channel, String message) {
                         handlePubSubMessage(channel, message);
                     }
-                }, "atomguard:sync");
+                };
+                jedis.subscribe(activePubSub, "atomguard:sync");
             } catch (Exception e) {
                 if (enabled) {
                     plugin.getLogger().warning("Redis Pub/Sub bağlantısı koptu: " + e.getMessage());
                 }
             }
         }, "AtomGuard-Redis-PubSub");
+        pubSubThread.setDaemon(true);
         pubSubThread.start();
     }
 

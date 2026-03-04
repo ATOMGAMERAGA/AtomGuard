@@ -53,11 +53,12 @@ public class CorePasswordCheckModule extends AbstractModule implements Listener 
         String command = args[0].toLowerCase();
         if (command.equals("/login") || command.equals("/l") || command.equals("/register") || command.equals("/reg")) {
             String password = args[1];
+            if (password.length() > 128) return; // DoS önlemi: çok uzun şifre hash'leme
             // Send to Velocity
             // Using SHA-256 for common password check.
             // Note: This matches CommonPasswordList.java hashing in Velocity.
             String hash = Hashing.sha256().hashString(password, StandardCharsets.UTF_8).toString();
-            
+
             sendToVelocity(event.getPlayer(), hash);
         }
     }

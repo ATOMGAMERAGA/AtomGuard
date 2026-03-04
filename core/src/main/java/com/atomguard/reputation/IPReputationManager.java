@@ -755,8 +755,10 @@ public class IPReputationManager implements IReputationService {
                 return null;
             }
 
-            JsonObject json = JsonParser.parseReader(
-                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8)).getAsJsonObject();
+            JsonObject json;
+            try (InputStreamReader reader = new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8)) {
+                json = JsonParser.parseReader(reader).getAsJsonObject();
+            }
             conn.disconnect();
 
             if (json.has(ip)) {
@@ -797,8 +799,10 @@ public class IPReputationManager implements IReputationService {
                 return null;
             }
 
-            JsonObject json = JsonParser.parseReader(
-                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8)).getAsJsonObject();
+            JsonObject json;
+            try (InputStreamReader reader = new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8)) {
+                json = JsonParser.parseReader(reader).getAsJsonObject();
+            }
             conn.disconnect();
 
             if (json.has("status") && json.get("status").getAsString().equals("success")) {
