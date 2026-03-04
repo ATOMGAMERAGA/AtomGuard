@@ -72,4 +72,14 @@ public class WhitelistManager {
             }
         });
     }
+
+    public void saveSync() {
+        Set<UUID> copy = ConcurrentHashMap.newKeySet();
+        copy.addAll(whitelistedPlayers);
+        try (Writer writer = new OutputStreamWriter(new FileOutputStream(dataFile), StandardCharsets.UTF_8)) {
+            gson.toJson(copy, writer);
+        } catch (IOException e) {
+            module.getPlugin().getLogger().warning("Whitelist save error: " + e.getMessage());
+        }
+    }
 }

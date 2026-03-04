@@ -75,8 +75,8 @@ public class AntiBotModule extends AbstractModule implements Listener {
     public void onDisable() {
         super.onDisable();
         
-        if (blacklistManager != null) blacklistManager.saveAsync();
-        if (whitelistManager != null) whitelistManager.saveAsync();
+        if (blacklistManager != null) blacklistManager.saveSync();
+        if (whitelistManager != null) whitelistManager.saveSync();
         
         playerProfiles.clear();
         ipProfiles.clear();

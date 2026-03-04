@@ -61,6 +61,15 @@ public class BlacklistManager {
         });
     }
 
+    public void saveSync() {
+        Map<String, BlacklistEntry> copy = new ConcurrentHashMap<>(blacklistedIPs);
+        try (Writer writer = new OutputStreamWriter(new FileOutputStream(dataFile), StandardCharsets.UTF_8)) {
+            gson.toJson(copy, writer);
+        } catch (IOException e) {
+            module.getPlugin().getLogger().warning("Blacklist save error: " + e.getMessage());
+        }
+    }
+
     public static class BlacklistEntry {
         long timestamp;
         long durationMs;
