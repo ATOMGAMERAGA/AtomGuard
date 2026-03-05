@@ -76,8 +76,9 @@ public class HeuristicEngine {
                 profile.addSuspicion(5.0);
                 double newScore = profile.getSuspicionLevel();
                 
-                // Trigger Event
-                Bukkit.getPluginManager().callEvent(new com.atomguard.api.event.ThreatScoreChangedEvent(player, oldScore, newScore, "Rotation Spike"));
+                // Trigger Event (async-only event)
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () ->
+                    Bukkit.getPluginManager().callEvent(new com.atomguard.api.event.ThreatScoreChangedEvent(player, oldScore, newScore, "Rotation Spike")));
                 
                 plugin.getLogManager().debug("High rotation speed (Burst): " + speed + " (User: " + player.getName() + ")");
                 checkSuspicionLevel(player, profile);
@@ -127,8 +128,9 @@ public class HeuristicEngine {
                 profile.addSuspicion(15.0);
                 double newScore = profile.getSuspicionLevel();
                 
-                // Trigger Event
-                Bukkit.getPluginManager().callEvent(new com.atomguard.api.event.ThreatScoreChangedEvent(player, oldScore, newScore, "Low Click Variance"));
+                // Trigger Event (async-only event)
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () ->
+                    Bukkit.getPluginManager().callEvent(new com.atomguard.api.event.ThreatScoreChangedEvent(player, oldScore, newScore, "Low Click Variance")));
                 
                 plugin.getLogManager().debug("Low click variance: " + variance + " (User: " + player.getName() + ")");
                 checkSuspicionLevel(player, profile);

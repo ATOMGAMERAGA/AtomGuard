@@ -63,7 +63,7 @@ public class ThreatScoreCalculator {
             UUID eventUuid = profile.getUuid();
             int finalOldScore = oldScore;
             int finalNewScore = totalScore;
-            org.bukkit.Bukkit.getScheduler().runTask(module.getPlugin(), () -> {
+            org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(module.getPlugin(), () -> {
                 org.bukkit.entity.Player p = org.bukkit.Bukkit.getPlayer(eventUuid);
                 if (p != null) {
                     org.bukkit.Bukkit.getPluginManager().callEvent(

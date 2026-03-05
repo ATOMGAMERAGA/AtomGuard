@@ -3,6 +3,12 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [1.2.8] - 2026-03-05
+
+### 🐛 Hata Düzeltmeleri
+
+- **ThreatScoreChangedEvent async hatası düzeltildi**: `ThreatScoreCalculator`, `HeuristicEngine` (Rotation Spike ve Low Click Variance) içindeki `ThreatScoreChangedEvent` çağrıları main thread yerine `runTaskAsynchronously` ile çağrılacak şekilde düzeltildi (Paper 1.21.4 `IllegalStateException` hatası giderildi)
+
 ## [1.2.7] - 2026-03-04
 
 ### ✨ Yeni Özellikler
