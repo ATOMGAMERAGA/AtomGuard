@@ -101,15 +101,16 @@ public class FrameCrashModule extends AbstractModule implements Listener {
     
     private void handleEntityRemoval(Entity entity) {
         if (!isEnabled()) return;
-        
+
         EntityType type = entity.getType();
         if (type == EntityType.ITEM_FRAME || type == EntityType.GLOW_ITEM_FRAME) {
-            ChunkKey key = new ChunkKey(entity.getLocation().getChunk());
+            // Use location-based key to avoid getChunk() during chunk unload (IllegalStateException)
+            ChunkKey key = ChunkKey.fromLocation(entity.getLocation());
             if (frameCounts.containsKey(key)) {
                 frameCounts.get(key).decrementAndGet();
             }
         } else if (type == EntityType.ARMOR_STAND) {
-            ChunkKey key = new ChunkKey(entity.getLocation().getChunk());
+            ChunkKey key = ChunkKey.fromLocation(entity.getLocation());
             if (armorStandCounts.containsKey(key)) {
                 armorStandCounts.get(key).decrementAndGet();
             }
@@ -235,10 +236,22 @@ public class FrameCrashModule extends AbstractModule implements Listener {
         private final int hashCode;
 
         public ChunkKey(@NotNull Chunk chunk) {
-            this.worldName = chunk.getWorld().getName();
-            this.x = chunk.getX();
-            this.z = chunk.getZ();
+            this(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
+        }
+
+        public ChunkKey(@NotNull String worldName, int chunkX, int chunkZ) {
+            this.worldName = worldName;
+            this.x = chunkX;
+            this.z = chunkZ;
             this.hashCode = computeHashCode();
+        }
+
+        /**
+         * Build a ChunkKey from a Location without calling getChunk() (safe during chunk unload).
+         * Chunk coordinates are derived via bit-shift to avoid triggering a chunk load.
+         */
+        public static ChunkKey fromLocation(@NotNull org.bukkit.Location loc) {
+            return new ChunkKey(loc.getWorld().getName(), loc.getBlockX() >> 4, loc.getBlockZ() >> 4);
         }
 
         private int computeHashCode() {

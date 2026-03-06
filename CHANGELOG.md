@@ -3,6 +3,12 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [1.2.9] - 2026-03-06
+
+### 🐛 Hata Düzeltmeleri
+
+- **FrameCrashModule — EntityRemoveEvent chunk yükleme hatası düzeltildi**: `handleEntityRemoval()` içinde `entity.getLocation().getChunk()` çağrısı, chunk unload sırasında `IllegalStateException: Cannot update ticket level while unloading chunks` hatasına yol açıyordu. `getChunk()` yerine `Location` koordinatlarından bit-shift ile chunk koordinatı hesaplayan `ChunkKey.fromLocation()` metoduna geçildi.
+
 ## [1.2.8] - 2026-03-05
 
 ### 🐛 Hata Düzeltmeleri
