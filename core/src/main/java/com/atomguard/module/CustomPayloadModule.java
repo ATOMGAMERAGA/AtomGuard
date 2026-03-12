@@ -13,8 +13,13 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Özel Payload Modülü
+ * Özel Payload Modülü.
+ * CustomPayload paketlerini filtreler ve zararlı payload'ları engeller.
  *
+ * Config: {@code moduller.custom-payload}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
  * @deprecated Use {@link com.atomguard.module.AdvancedPayloadModule} instead.
  */
 @Deprecated

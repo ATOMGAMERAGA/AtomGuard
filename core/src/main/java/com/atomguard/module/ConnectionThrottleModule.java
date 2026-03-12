@@ -12,8 +12,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
- * IP bazli baglanti hiz sinirlandirici.
- * Sliding window ile IP basina dakikada max baglanti sayisini sinirlar.
+ * IP bazlı bağlantı hız sınırlandırıcı.
+ * Sliding window ile IP başına dakikada maksimum bağlantı sayısını sınırlar.
+ *
+ * Config: {@code moduller.baglanti-sinirlandirici}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
  */
 public class ConnectionThrottleModule extends AbstractModule implements Listener {
 

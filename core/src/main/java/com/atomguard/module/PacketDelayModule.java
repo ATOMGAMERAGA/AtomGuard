@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * - PlayerData kullanarak oyuncu bazlı tracking
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class PacketDelayModule extends AbstractModule {
 

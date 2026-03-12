@@ -14,6 +14,12 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Hesap kara listesi yönetimi — engellenen kullanıcı adları ve UUID'leri kalıcı olarak saklar.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class AccountBlacklist {
 
     private final AtomGuardVelocity plugin;

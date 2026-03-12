@@ -18,11 +18,28 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
- * Tüm modüllerin extend edeceği soyut modül sınıfı
- * Ortak modül fonksiyonlarını ve alanlarını sağlar
+ * Abstract base class for all AtomGuard exploit-fixer modules.
  *
- * @author AtomGuard Team
- * @version 1.0.0
+ * <p>Every module extends this class and provides a Turkish config key as its {@code name},
+ * which maps to the {@code moduller.<name>} section in {@code config.yml}. Helper methods
+ * ({@code getConfigBoolean}, {@code getConfigInt}, etc.) automatically prefix the config path
+ * with the module name.
+ *
+ * <p>Key behaviors provided by this base class:
+ * <ul>
+ *   <li><b>Automatic Bukkit event registration:</b> If the subclass implements {@link org.bukkit.event.Listener},
+ *       it is registered as a Bukkit listener in {@code onEnable()} — subclasses must NOT register themselves.</li>
+ *   <li><b>Packet handler tracking:</b> Subclasses should use the protected {@code registerReceiveHandler()}
+ *       and {@code registerSendHandler()} methods (not {@code plugin.getPacketListener().registerReceiveHandler()})
+ *       so that handlers are properly tracked and cleaned up on {@code onDisable()}.</li>
+ *   <li><b>Thread-safe state:</b> The {@code enabled} flag is {@code volatile}; the block counter
+ *       uses {@link java.util.concurrent.atomic.AtomicLong}.</li>
+ *   <li><b>Exploit blocking:</b> {@code blockExploit()} fires the {@link com.atomguard.api.event.ExploitBlockedEvent},
+ *       updates heuristics, trust scores, and forensics asynchronously.</li>
+ * </ul>
+ *
+ * @see com.atomguard.api.module.IModule
+ * @see com.atomguard.manager.ModuleManager
  */
 public abstract class AbstractModule implements IModule {
 
@@ -135,6 +152,11 @@ public abstract class AbstractModule implements IModule {
                 if (!ip.equals("0.0.0.0")) {
                     plugin.getForensicsManager().recordBlock(ip);
                 }
+            }
+
+            // CoreMetrics — modul engel kaydı
+            if (plugin.getCoreMetrics() != null) {
+                plugin.getCoreMetrics().recordModuleBlock(moduleName);
             }
         });
     }

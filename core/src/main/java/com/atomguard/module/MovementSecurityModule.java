@@ -16,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
  * Geçersiz koordinatları ve aşırı hızlı hareketleri denetler.
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class MovementSecurityModule extends AbstractModule implements Listener {
 

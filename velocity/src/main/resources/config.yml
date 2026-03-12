@@ -127,3 +127,13 @@ moduller:
     konsensus-esigi: 2
     guven-skoru-esigi: 60
     residential-bypass: true
+  hesap-guvenlik-duvari:
+    aktif: true
+
+# Harici Servis URL'leri (değiştirmeniz gerekmiyorsa varsayılanları kullanın)
+harici-servisler:
+  proxycheck-url: "https://proxycheck.io/v2/"
+  ip-api-url: "http://ip-api.com/json/"
+  abuseipdb-url: "https://api.abuseipdb.com/api/v2/check"
+  iphub-url: "https://v2.api.iphub.info/ip/"
+  ashcon-url: "https://api.ashcon.app/mojang/v2/user/"

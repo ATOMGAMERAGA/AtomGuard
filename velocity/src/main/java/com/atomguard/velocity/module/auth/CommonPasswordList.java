@@ -9,6 +9,12 @@ import java.security.MessageDigest;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Yaygın şifre listesi — bilinen zayıf şifrelerin hash'lerini saklayarak şifre kontrolü sağlar.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class CommonPasswordList {
 
     private final AtomGuardVelocity plugin;

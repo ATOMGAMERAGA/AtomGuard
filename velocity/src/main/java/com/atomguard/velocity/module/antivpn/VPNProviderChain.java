@@ -46,9 +46,16 @@ public class VPNProviderChain {
         String ipHubKey = plugin.getConfigManager().getString(
                 "vpn-proxy-engelleme.api.iphub.api-key", "");
 
-        this.proxyCheck = new ProxyCheckProvider(proxyCheckKey);
-        this.ipHub = new IPHubProvider(ipHubKey);
-        this.ipApi = new IPApiProvider();
+        String proxyCheckUrl = plugin.getConfigManager().getString(
+                "harici-servisler.proxycheck-url", "");
+        String ipHubUrl = plugin.getConfigManager().getString(
+                "harici-servisler.iphub-url", "");
+        String ipApiUrl = plugin.getConfigManager().getString(
+                "harici-servisler.ip-api-url", "");
+
+        this.proxyCheck = new ProxyCheckProvider(proxyCheckKey, proxyCheckUrl);
+        this.ipHub = new IPHubProvider(ipHubKey, ipHubUrl);
+        this.ipApi = new IPApiProvider(ipApiUrl);
         List<String> dnsblList = plugin.getConfigManager().getStringList(
                 "vpn-proxy-engelleme.dnsbl-listesi");
         this.dnsbl = new DNSBLChecker(dnsblList != null ? dnsblList : List.of());

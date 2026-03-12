@@ -5,11 +5,12 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -184,7 +185,9 @@ public class LogManager {
                 currentLogFile.createNewFile();
             }
 
-            logWriter = new BufferedWriter(new FileWriter(currentLogFile, true));
+            logWriter = Files.newBufferedWriter(currentLogFile.toPath(),
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Log dosyası oluşturulamadı!", e);

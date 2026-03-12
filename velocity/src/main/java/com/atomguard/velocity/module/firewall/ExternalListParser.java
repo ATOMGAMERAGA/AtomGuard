@@ -5,6 +5,12 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Harici liste ayrıştırıcı — düz metin formatındaki IP ve CIDR listelerini ayrıştırır.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class ExternalListParser {
 
     // Simple parser for plain text IPs or CIDRs

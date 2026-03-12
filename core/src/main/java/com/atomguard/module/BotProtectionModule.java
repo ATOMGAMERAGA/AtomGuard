@@ -31,7 +31,13 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * BotProtectionModule - Bot algılama ve koruma modülü
+ * Bot algılama ve koruma modülü.
+ * Basit bot tespit mekanizması sağlar, gelişmiş koruma için AntiBotModule kullanılmalıdır.
+ *
+ * Config: {@code moduller.bot-koruma}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
  * @deprecated Use {@link com.atomguard.module.antibot.AntiBotModule} for advanced protection.
  */
 @Deprecated

@@ -4,6 +4,14 @@ import com.atomguard.module.antibot.check.*;
 import com.atomguard.module.antibot.action.ActionType;
 import java.util.*;
 
+/**
+ * Tehdit skoru hesaplayıcı. Kayıtlı kontrolleri sırayla çalıştırarak oyuncunun bot olma ihtimalini puanlar.
+ *
+ * Config: {@code moduller.anti-bot}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class ThreatScoreCalculator {
     private final AntiBotModule module;
     private final List<AbstractCheck> checks = new ArrayList<>();

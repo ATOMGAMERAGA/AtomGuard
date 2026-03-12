@@ -2,6 +2,12 @@ package com.atomguard.velocity.module.fastchat;
 
 import java.util.regex.Pattern;
 
+/**
+ * Sohbet mesajı desen analizcisi — büyük harf spam, tekrarlanan karakter ve URL tespiti yapar.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class ChatPatternAnalyzer {
 
     private static final Pattern URL_PATTERN = Pattern.compile(

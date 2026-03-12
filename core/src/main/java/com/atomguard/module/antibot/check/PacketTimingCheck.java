@@ -3,6 +3,14 @@ package com.atomguard.module.antibot.check;
 import com.atomguard.module.antibot.AntiBotModule;
 import com.atomguard.module.antibot.PlayerProfile;
 
+/**
+ * Paket zamanlama kontrolü. Konum paketlerinin frekansını ve varyansını analiz ederek bot davranışı tespit eder.
+ *
+ * Config: {@code moduller.anti-bot.kontroller.paket-zamanlama}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class PacketTimingCheck extends AbstractCheck {
     
     public PacketTimingCheck(AntiBotModule module) {

@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 4. 2 tick sonra kilidi kaldır
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class BundleLockModule extends AbstractModule implements Listener {
 

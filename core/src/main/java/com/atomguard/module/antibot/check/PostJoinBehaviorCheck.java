@@ -3,6 +3,14 @@ package com.atomguard.module.antibot.check;
 import com.atomguard.module.antibot.AntiBotModule;
 import com.atomguard.module.antibot.PlayerProfile;
 
+/**
+ * Giriş sonrası davranış kontrolü. Oyuncunun sunucuya katıldıktan sonraki hareketlerini analiz ederek bot tespiti yapar.
+ *
+ * Config: {@code moduller.anti-bot.kontroller.giris-sonrasi-davranis}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class PostJoinBehaviorCheck extends AbstractCheck {
     
     public PostJoinBehaviorCheck(AntiBotModule module) {

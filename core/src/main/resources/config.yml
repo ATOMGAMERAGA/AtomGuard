@@ -5,7 +5,7 @@
 # ╚══════════════════════════════════════════════╝
 
 # Config Versiyonu (Değiştirmeyin)
-config-version: "1.2.0"
+config-version: "2.0.0"
 
 # Genel Ayarlar
 genel:
@@ -61,6 +61,27 @@ web-panel:
     sifre: "atomguard2024"
   # Web panelde gösterilecek maksimum olay sayısı
   max-olay-sayisi: 100
+  # CORS origin (boş = sadece loopback, "*" = tüm originler)
+  cors-origin: ""
+  # REST API ayarları
+  api:
+    aktif: true
+    rate-limit: 60
+  # Server-Sent Events (gerçek zamanlı bildirimler)
+  sse:
+    aktif: true
+    heartbeat-saniye: 30
+  # JWT Kimlik Doğrulama
+  jwt:
+    # JWT imza anahtarı (boş bırakılırsa otomatik oluşturulur)
+    secret: ""
+    # Token geçerlilik süresi (dakika)
+    token-suresi-dakika: 120
+  # Saldırı haritası
+  geo-harita:
+    aktif: true
+    max-olay: 500
+    guncelleme-saniye: 60
 
 # Discord Webhook Bildirimleri
 discord-webhook:
@@ -694,6 +715,14 @@ moduller:
       max-benzer-sayisi: 15
 
 # ═══════════════════════════════════════
+# Metrikler v2.0.0
+# TPS, bellek, modul engelleme istatistikleri
+# ═══════════════════════════════════════
+metrikler:
+  aktif: true
+  guncelleme-araligi-saniye: 1
+
+# ═══════════════════════════════════════
 # Tehdit İstihbarat Motoru v1.2.0
 # Adaptif EMA tabanlı trafik profili + Z-Score anomali tespiti
 # ═══════════════════════════════════════
@@ -714,6 +743,21 @@ tehdit-istihbarati:
   uyari-bekleme-saniye: 300
   # Gerçek zamanlı tampon boyutu (dakika cinsinden son N örnek)
   tampon-boyutu: 60
+  # Algılama motoru: "zscore", "ewma" veya "isolation-forest"
+  algilama-motoru: "ewma"
+  # Adaptif eşik sistemi
+  adaptif-esik:
+    aktif: true
+    min-ogrenme-haftasi: 2
+    gunduz-gece-ayri: true
+    hafta-ici-sonu-ayri: true
+  # Isolation Forest parametreleri
+  isolation-forest:
+    agac-sayisi: 100
+    ornek-boyutu: 256
+    anomali-esigi: 0.6
+    min-ornek: 50
+    yeniden-olusturma-araligi: 100
 
 # ═══════════════════════════════════════
 # Oyuncu Güven Skoru v1.2.0
@@ -754,3 +798,58 @@ adli-analiz:
   json-export: true
   # Periyodik metrik kayıt aralığı (saniye)
   metrik-kayit-aralik-saniye: 10
+
+# ═══════════════════════════════════════
+# Bildirim Sistemi v2.0.0
+# Discord, Telegram ve Slack entegrasyonu
+# ═══════════════════════════════════════
+bildirimler:
+  # Discord Webhook
+  discord:
+    aktif: false
+    webhook-url: ""
+    bildirim-turleri: [ATTACK_MODE, EXPLOIT_BLOCKED, PANIC_COMMAND, DDOS_DETECTED]
+    toplama-suresi: 30
+
+  # Telegram Bot
+  telegram:
+    aktif: false
+    bot-token: ""
+    chat-id: ""
+    bildirim-turleri: [ATTACK_MODE, DDOS_DETECTED, PANIC_COMMAND]
+
+  # Slack Webhook
+  slack:
+    aktif: false
+    webhook-url: ""
+    kanal: "#minecraft-security"
+    bildirim-turleri: [ATTACK_MODE, PERFORMANCE_ALERT]
+
+# ═══════════════════════════════════════
+# Paket Kaydı (Forensics v2.0.0)
+# Şüpheli oyuncuların paket trafiğini kaydeder
+# ═══════════════════════════════════════
+forensik:
+  paket-kaydi:
+    aktif: true
+    # Her oyuncu için circular buffer süresi (saniye)
+    tampon-suresi-saniye: 30
+    # Aynı anda kaç oyuncu kaydedilebilir
+    max-eszamanli-kayit: 10
+    # Heuristic skor bu eşiği aşınca otomatik kayıt başlat
+    otomatik-kayit-esik: 50
+    # Kayıt dosyası boyut limiti (MB)
+    max-dosya-boyutu-mb: 50
+    # Eski kayıtları silme süresi (gün)
+    saklama-gunu: 7
+
+# ═══════════════════════════════════════
+# Harici Servis URL'leri
+# Değiştirilmesi gerekmiyorsa varsayılan bırakın
+# ═══════════════════════════════════════
+harici-servisler:
+  ashcon-api: "https://api.ashcon.app/mojang/v2/user/"
+  proxycheck: "https://proxycheck.io/v2/"
+  ip-api: "http://ip-api.com/json/"
+  abuseipdb: "https://api.abuseipdb.com/api/v2/check"
+  iphub: "https://v2.api.iphub.info/ip/"

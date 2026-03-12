@@ -5,6 +5,14 @@ import com.atomguard.module.antibot.PlayerProfile;
 import java.util.*;
 import java.util.regex.Pattern;
 
+/**
+ * Kullanıcı adı desen kontrolü. Bot istemcilerinin tipik isim kalıplarını regex ile tespit eder.
+ *
+ * Config: {@code moduller.anti-bot.kontroller.kullanici-adi}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class UsernamePatternCheck extends AbstractCheck {
     
     private static final List<Pattern> BOT_PATTERNS = List.of(

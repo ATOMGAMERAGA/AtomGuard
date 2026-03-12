@@ -4,6 +4,14 @@ import com.atomguard.module.antibot.AntiBotModule;
 import com.atomguard.module.antibot.PlayerProfile;
 import java.util.Set;
 
+/**
+ * Protokol kontrolü. Client settings, client brand ve locale bilgilerini analiz ederek sahte istemcileri tespit eder.
+ *
+ * Config: {@code moduller.anti-bot.kontroller.protokol}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class ProtocolCheck extends AbstractCheck {
     
     private static final Set<String> LEGITIMATE_BRANDS = Set.of(

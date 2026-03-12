@@ -12,6 +12,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Beyaz liste yöneticisi. Doğrulanmış oyuncuları JSON dosyasında saklar ve bot kontrolünden muaf tutar.
+ *
+ * Config: {@code moduller.anti-bot.beyaz-liste}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class WhitelistManager {
     private final AntiBotModule module;
     private final Set<UUID> whitelistedPlayers = ConcurrentHashMap.newKeySet();

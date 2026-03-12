@@ -3,6 +3,45 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.0.0] - 2026-03-12
+
+### ✨ Yeni Özellikler
+
+- **Genişletilmiş Public API**: `AtomGuardAPI` artık `ITrustService`, `IForensicsService`, `IConnectionPipeline` arayüzlerini sunuyor; harici eklentiler güven skoru, adli kayıt ve bağlantı hattına erişebilir
+- **Forensics Sistemi**: `ForensicsManager` / `PacketRecorder` / `RecordingSession` — paket kayıt oturumları, saldırı anı anlık görüntüleri disk üzerine kaydediliyor
+- **Traffic Intelligence Engine**: `AdaptiveThresholdManager`, `EWMADetector`, `IsolationForestDetector` — adaptif eşik ve anomali tespiti
+- **Notification Manager**: `NotificationManager` — çok sağlayıcılı bildirim yönlendirme (Discord, konsol, custom)
+- **Trust Score Manager**: `TrustScoreManager` (`ITrustService`) — oyuncu başına güven puanı, tier sistemi, JSON kalıcılığı
+- **Executor Manager**: `ExecutorManager` — paylaşımlı thread pool yönetimi
+- **Web Panel Yenilendi**: JWT kimlik doğrulama (`JWTAuthProvider`, `SessionManager`), API handler'ları, middleware katmanı
+- **Config Migration (Core)**: `ConfigMigrationManager` — `1.x → 2.0.0` otomatik yapılandırma göçü
+- **Config Migration (Velocity)**: `VelocityConfigMigrationManager` — Velocity yapılandırma göçü
+- **Velocity Bedrock Desteği**: `BedrockSupportModule` — Bedrock oyuncu kimlik tespiti ve bot ayırt etme
+- **Yeni API Olayları**: `NotificationSentEvent`, `PostVerificationEvent`, `PreConnectionCheckEvent`, `TrustScoreChangeEvent`
+- **IForensicsService / ITrustService API arayüzleri** api modülüne eklendi
+- **IConnectionPipeline API arayüzü** api modülüne eklendi
+
+### 🔧 İyileştirmeler
+
+- **HttpClientUtil**: `HttpURLConnection` tabanlı yardımcı sınıf; `IPReputationManager`, `DiscordWebhookManager`, `ExternalListFetcher`, `GeoIPUpdater` tümü HttpClientUtil'e geçirildi
+- **Caffeine Önbelleği**: `CooldownManager`, `PacketListener` bypass cache, `IPReputationManager` API cache, `WebPanel` oran sınırlama — tüm el ile TTL yönetimi Caffeine ile değiştirildi
+- **Bypass Cache Basitleştirildi**: `Cache<UUID, Boolean>` Caffeine 10 dk TTL; Netty-safe, kilitsiz
+- **Javadoc**: `AtomGuard`, `AbstractModule`, `PacketListener`, `ModuleManager`, `TrustScoreManager`, `ForensicsManager`, `NotificationManager` — sınıf düzeyi İngilizce Javadoc eklendi
+- **Hardcoded URL'ler kaldırıldı**: Velocity VPN sağlayıcıları (`ProxyCheckProvider`, `IPApiProvider`, `AbuseIPDBProvider`, `IPHubProvider`) ve `AccountFirewallModule` Ashcon API URL'leri artık `harici-servisler` config bölümünden okunuyor
+- **Statik Analiz Araçları**: SpotBugs, PMD, Checkstyle, OWASP Dependency Check eklentileri parent POM'a eklendi (`pluginManagement`)
+- **Build Süreci**: GitHub Actions workflow güncellendi; Checkstyle doğrulaması CI'ya entegre edildi
+
+### 🧪 Testler
+
+- **92 core testi** (TrustScoreManagerTest 21, HeuristicEngineTest 10, ConfigMigrationManagerTest 11, SessionManagerTest 10, JWTAuthProviderTest 10, vb.)
+- **51 velocity testi** (BedrockSupportModuleTest 21, VPNResultCacheTest 12, ConnectionPipelineTest 12, vb.)
+- **Yeni testler (bu sürüm)**: `ThreatScoreCalculatorTest`, `PacketTimingCheckTest`, `PingHandshakeCheckTest`, `PostJoinBehaviorCheckTest`, `ProtocolCheckTest`, `UsernamePatternCheckTest`, `RateLimiterTest` (velocity), `WhitelistManagerTest` (velocity), `AttackLevelManagerTest` (velocity)
+- **Toplam: 266 test**, 0 hata
+
+### 🐛 Hata Düzeltmeleri
+
+- **@Override eksiklikleri giderildi**: Velocity `LatencyCheckModule`, `CountryFilterModule`, `ReconnectControlModule` — `onEnable()`/`onDisable()` üzerindeki `@Override` etiketleri zaten mevcuttu, doğrulandı
+
 ## [1.2.9] - 2026-03-06
 
 ### 🐛 Hata Düzeltmeleri

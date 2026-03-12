@@ -25,7 +25,7 @@ import java.util.UUID;
  * - Duplikasyon exploit önleme
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class CowDuplicationModule extends AbstractModule implements Listener {
 

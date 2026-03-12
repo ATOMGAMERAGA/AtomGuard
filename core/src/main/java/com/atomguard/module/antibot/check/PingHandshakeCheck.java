@@ -3,6 +3,14 @@ package com.atomguard.module.antibot.check;
 import com.atomguard.module.antibot.AntiBotModule;
 import com.atomguard.module.antibot.PlayerProfile;
 
+/**
+ * Ping ve handshake zamanlama kontrolü. Ping paketi gönderilmeden bağlanan istemcileri tespit eder.
+ *
+ * Config: {@code moduller.anti-bot.kontroller.ping-handshake}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class PingHandshakeCheck extends AbstractCheck {
     
     public PingHandshakeCheck(AntiBotModule module) {

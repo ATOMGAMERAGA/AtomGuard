@@ -1,8 +1,10 @@
 package com.atomguard.forensics;
 
 import com.atomguard.AtomGuard;
+import com.atomguard.api.forensics.IForensicsService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -14,13 +16,26 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
- * Saldırı adli analiz yöneticisi.
- * Saldırı sırasında metrikleri kaydeder, saldırı bittiğinde snapshot oluşturur.
+ * Forensic recording and analysis system for attack investigations.
  *
- * @author AtomGuard Team
- * @version 1.2.0
+ * <p>Implements {@link IForensicsService} (the public API interface). During an active
+ * attack or on-demand recording session, this manager captures periodic metrics — connection
+ * counts, per-module block counts, per-IP connection frequency, TPS readings, and timeline
+ * events — into an {@code AttackSnapshot}. When recording stops, the snapshot is serialized
+ * to JSON in the {@code forensics/} directory for post-incident analysis.
+ *
+ * <p><b>Lifecycle:</b> Call {@code startRecording()} to begin capturing metrics and
+ * {@code stopRecording()} to finalize and persist the snapshot. The manager also runs
+ * periodic cleanup to enforce configurable limits on in-memory and on-disk snapshot counts.
+ *
+ * <p><b>Thread safety:</b> Counters use {@link java.util.concurrent.atomic.AtomicInteger}
+ * and {@link java.util.concurrent.atomic.AtomicLong}; collections use
+ * {@link ConcurrentHashMap} and {@link CopyOnWriteArrayList}. The background scheduler
+ * runs on a dedicated daemon thread ({@code AtomGuard-Forensics}).
+ *
+ * @see com.atomguard.api.forensics.IForensicsService
  */
-public class ForensicsManager {
+public class ForensicsManager implements IForensicsService {
 
     private final AtomGuard plugin;
     private final Gson gson;
@@ -348,7 +363,22 @@ public class ForensicsManager {
     public List<AttackSnapshot> getRecentSnapshots() { return new ArrayList<>(recentSnapshots); }
     public String getForensicsDir() { return forensicsDir.getAbsolutePath(); }
     public boolean isEnabled() { return enabled; }
+
+    @Override
     public boolean isRecording() { return activeSnapshot != null; }
+
+    @Override
+    public void startRecording(@NotNull String reason) {
+        if (!enabled || activeSnapshot != null) return;
+        onAttackStart(0);
+        addTimelineEvent(new TimelineEvent(System.currentTimeMillis(), "MANUAL_START", reason));
+    }
+
+    @Override
+    public void stopRecording() {
+        if (!enabled || activeSnapshot == null) return;
+        onAttackEnd();
+    }
 
     private <T extends Number> Map<String, Integer> computeTop(Map<String, T> counts, int limit) {
         return counts.entrySet().stream()

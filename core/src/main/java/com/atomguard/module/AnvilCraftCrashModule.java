@@ -9,8 +9,13 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Anvil ve Crafting Crash Koruması
+ * Anvil ve Crafting Crash Koruması.
  * 1.21.x aşırı uzun isim ve geçersiz recipe exploitlerini önler.
+ *
+ * Config: {@code moduller.ors-craft-crash}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
  */
 public class AnvilCraftCrashModule extends AbstractModule implements Listener {
 

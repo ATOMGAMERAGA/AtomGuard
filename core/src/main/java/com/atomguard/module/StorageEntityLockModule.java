@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * - 30 saniye timeout → otomatik kilit kaldırma
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class StorageEntityLockModule extends AbstractModule implements Listener {
 

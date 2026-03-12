@@ -132,10 +132,14 @@ public class BukkitListener implements Listener {
             if (plugin.getVerifiedPlayerCache() != null) {
                 plugin.getVerifiedPlayerCache().addVerified(player.getName(), ip);
 
-                // Trigger API Event (async-only event — scheduler ile tetiklenmeli)
-                plugin.getServer().getScheduler().runTaskAsynchronously(plugin,
-                    () -> plugin.getServer().getPluginManager().callEvent(
-                        new com.atomguard.api.event.PlayerVerifiedEvent(player, ip)));
+                // Trigger API Events (async-only events — scheduler ile tetiklenmeli)
+                plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                    plugin.getServer().getPluginManager().callEvent(
+                        new com.atomguard.api.event.PlayerVerifiedEvent(player, ip));
+                    plugin.getServer().getPluginManager().callEvent(
+                        new com.atomguard.api.event.PostVerificationEvent(
+                            player.getUniqueId(), true, "trusted"));
+                });
             }
 
             // Başarılı giriş — önceki false-positive API cache kaydını temizle (FP-15)

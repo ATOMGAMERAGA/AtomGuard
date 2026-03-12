@@ -15,8 +15,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Entity Etkileşim Crash Koruması
+ * Entity Etkileşim Crash Koruması.
  * Geçersiz entity ID ve aşırı hızlı etkileşimleri önler.
+ *
+ * Config: {@code moduller.entity-etkilesim-crash}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
  */
 public class EntityInteractCrashModule extends AbstractModule {
 

@@ -19,9 +19,20 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class IPApiProvider {
 
+    private final String baseUrl;
     private final AtomicInteger failures = new AtomicInteger(0);
     private volatile long circuitOpenUntil = 0;
     private volatile long rateLimitResetMs = 0;
+
+    private static final String DEFAULT_BASE_URL = "http://ip-api.com/json/";
+
+    public IPApiProvider() {
+        this(DEFAULT_BASE_URL);
+    }
+
+    public IPApiProvider(String baseUrl) {
+        this.baseUrl = (baseUrl != null && !baseUrl.isBlank()) ? baseUrl : DEFAULT_BASE_URL;
+    }
 
     /**
      * Geriye dönük uyumluluk metodu.
@@ -45,7 +56,7 @@ public class IPApiProvider {
             return CompletableFuture.completedFuture(new DetailedResult(false, false, "", ""));
         }
 
-        String url = "http://ip-api.com/json/" + ip + "?fields=proxy,hosting,isp,org";
+        String url = baseUrl + ip + "?fields=proxy,hosting,isp,org";
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String response = NetworkUtils.httpGet(url, 5000);

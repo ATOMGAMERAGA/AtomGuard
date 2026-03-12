@@ -1,5 +1,11 @@
 package com.atomguard.velocity.module.firewall;
 
+/**
+ * Harici liste girdisi — kaynak, IP/CIDR değeri ve zaman damgası bilgilerini taşıyan değer nesnesi.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class ExternalListEntry {
     private final String source;
     private final String value; // IP or CIDR

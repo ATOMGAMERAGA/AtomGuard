@@ -1,5 +1,14 @@
 package com.atomguard.velocity;
 
+/**
+ * AtomGuard Velocity Ana Eklenti Sinifi
+ *
+ * Velocity proxy sunucusu icin AtomGuard guvenlik eklentisinin ana giris noktasi.
+ * Tum modullerin, yoneticilerin ve dinleyicilerin yasam dongusunu yonetir.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 import com.atomguard.api.AtomGuardAPI;
 import com.atomguard.velocity.adapter.VelocityModuleManagerAdapter;
 import com.atomguard.velocity.adapter.VelocityReputationAdapter;
@@ -8,6 +17,7 @@ import com.atomguard.velocity.command.AtomGuardVelocityCommand;
 import com.atomguard.velocity.communication.BackendCommunicator;
 import com.atomguard.velocity.config.VelocityConfigManager;
 import com.atomguard.velocity.config.VelocityMessageManager;
+import com.atomguard.velocity.migration.VelocityConfigMigrationManager;
 import com.atomguard.velocity.event.VelocityEventBus;
 import com.atomguard.velocity.listener.*;
 import com.atomguard.velocity.manager.*;
@@ -72,6 +82,7 @@ public class AtomGuardVelocity {
     private AttackModeManager attackModeManager;
     private BehaviorManager behaviorManager;
     private com.atomguard.velocity.data.ConnectionHistory connectionHistory;
+    private VelocityConfigMigrationManager configMigrationManager;
     private volatile boolean dataLoaded = false;
 
     // Modüller
@@ -181,6 +192,15 @@ public class AtomGuardVelocity {
         configManager = new VelocityConfigManager(dataDirectory, logger);
         configManager.load();
         configManager.validateAndMigrate();
+
+        configMigrationManager = new VelocityConfigMigrationManager(this);
+        var migrationResult = configMigrationManager.migrate("2.0.0");
+        if (!migrationResult.getFromVersion().equals(migrationResult.getToVersion())) {
+            configMigrationManager.logMigrationResult(migrationResult);
+            if (migrationResult.isSuccess()) {
+                configManager.reload();
+            }
+        }
 
         messageManager = new VelocityMessageManager(dataDirectory, logger);
         messageManager.load(configManager.getString("dil", "tr"));
@@ -376,6 +396,7 @@ public class AtomGuardVelocity {
     public Logger getSlf4jLogger() { return logger; }
     public Path getDataDirectory() { return dataDirectory; }
     public VelocityConfigManager getConfigManager() { return configManager; }
+    public VelocityConfigMigrationManager getConfigMigrationManager() { return configMigrationManager; }
     public VelocityMessageManager getMessageManager() { return messageManager; }
     public VelocityLogManager getLogManager() { return logManager; }
     public VelocityStatisticsManager getStatisticsManager() { return statisticsManager; }

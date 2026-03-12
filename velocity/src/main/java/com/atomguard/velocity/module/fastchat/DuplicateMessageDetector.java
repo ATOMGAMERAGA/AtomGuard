@@ -5,6 +5,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Tekrarlanan mesaj tespit sistemi — IP başına mesaj geçmişini tutarak aynı mesajların tekrar gönderilmesini engeller.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class DuplicateMessageDetector {
 
     private final Map<String, LinkedList<MessageRecord>> history = new ConcurrentHashMap<>();

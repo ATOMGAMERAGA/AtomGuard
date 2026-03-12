@@ -24,7 +24,7 @@ import org.jetbrains.annotations.NotNull;
  * - Exploit önleme
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class PortalBreakModule extends AbstractModule implements Listener {
 

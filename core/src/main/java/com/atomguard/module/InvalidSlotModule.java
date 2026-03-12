@@ -21,7 +21,7 @@ import org.jetbrains.annotations.NotNull;
  * - PacketUtils.isSlotValid() kullanımı
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class InvalidSlotModule extends AbstractModule {
 

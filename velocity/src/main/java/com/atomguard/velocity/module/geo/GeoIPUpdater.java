@@ -1,17 +1,18 @@
 package com.atomguard.velocity.module.geo;
 
 import com.atomguard.velocity.AtomGuardVelocity;
+import com.atomguard.velocity.util.HttpClientUtil;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.slf4j.Logger;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class GeoIPUpdater {
@@ -62,20 +63,10 @@ public class GeoIPUpdater {
             logger.info("Downloading GeoLite2-Country database...");
             try {
                 String urlString = String.format(updateUrlTemplate, licenseKey);
-                URL url = new URL(urlString);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setConnectTimeout(10000);
-                connection.setReadTimeout(30000);
-
-                if (connection.getResponseCode() != 200) {
-                    logger.error("Failed to download GeoIP database: HTTP " + connection.getResponseCode());
-                    return false;
-                }
 
                 Path tempTarGz = plugin.getDataDirectory().resolve("GeoLite2-Country.tar.gz");
-                try (InputStream in = connection.getInputStream()) {
-                    Files.copy(in, tempTarGz, StandardCopyOption.REPLACE_EXISTING);
-                }
+                HttpClientUtil.downloadToFile(urlString, tempTarGz,
+                        Map.of(), Duration.ofSeconds(30));
 
                 // Extract .mmdb from tar.gz
                 boolean found = false;

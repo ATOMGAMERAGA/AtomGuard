@@ -7,8 +7,13 @@ import com.github.retrooper.packetevents.protocol.nbt.NBTList;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Bundle ve Component Crash Koruması
+ * Bundle ve Component Crash Koruması.
  * 1.20.5+ iç içe geçmiş bundle ve aşırı component içeren itemları önler.
+ *
+ * Config: {@code moduller.component-crash}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
  */
 public class ComponentCrashModule extends AbstractModule {
 

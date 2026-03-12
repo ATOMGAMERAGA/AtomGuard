@@ -4,11 +4,9 @@ import com.atomguard.AtomGuard;
 import com.atomguard.forensics.AttackSnapshot;
 import com.atomguard.intelligence.IntelligenceAlert;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
+import com.atomguard.util.HttpClientUtil;
+
+import java.time.Duration;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -233,41 +231,23 @@ public class DiscordWebhookManager {
         if (sentTimestamps.size() >= MAX_PER_MINUTE) return;
         sentTimestamps.add(now);
 
-        executor.submit(() -> {
-            try {
-                // Escape JSON special chars
-                String safeTitle = escapeJson(title);
-                String safeDesc = escapeJson(description);
+        // Escape JSON special chars
+        String safeTitle = escapeJson(title);
+        String safeDesc = escapeJson(description);
 
-                String json = String.format(
-                    "{\"embeds\":[{\"title\":\"%s\",\"description\":\"%s\",\"color\":%d,\"footer\":{\"text\":\"AtomGuard\"}}]}",
-                    safeTitle, safeDesc, color
-                );
+        String json = String.format(
+            "{\"embeds\":[{\"title\":\"%s\",\"description\":\"%s\",\"color\":%d,\"footer\":{\"text\":\"AtomGuard\"}}]}",
+            safeTitle, safeDesc, color
+        );
 
-                URL url = URI.create(webhookUrl).toURL();
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setDoOutput(true);
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(5000);
-
-                try (OutputStream os = conn.getOutputStream()) {
-                    os.write(json.getBytes(StandardCharsets.UTF_8));
+        HttpClientUtil.postAsync(webhookUrl, json,
+                java.util.Map.of("Content-Type", "application/json"),
+                Duration.ofSeconds(5))
+            .whenComplete((response, ex) -> {
+                if (ex != null) {
+                    plugin.getLogManager().warning("Discord webhook gönderilemedi: " + ex.getMessage());
                 }
-
-                int responseCode = conn.getResponseCode();
-                if (responseCode == 429) {
-                    // Rate limited by Discord, skip
-                    plugin.getLogManager().debug("Discord rate limited.");
-                } else if (responseCode < 200 || responseCode >= 300) {
-                    plugin.getLogManager().warning("Discord webhook yanit kodu: " + responseCode);
-                }
-                conn.disconnect();
-            } catch (IOException e) {
-                plugin.getLogManager().warning("Discord webhook gonderilemedi: " + e.getMessage());
-            }
-        });
+            });
     }
 
     private String escapeJson(String text) {

@@ -1,9 +1,12 @@
 package com.atomguard.util;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Generic cooldown yönetim sistemi
@@ -13,10 +16,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CooldownManager {
 
     // UUID -> (Cooldown Tipi -> Son İşlem Zamanı (nanoseconds))
-    private final ConcurrentHashMap<UUID, ConcurrentHashMap<String, Long>> cooldowns;
+    private final Cache<UUID, ConcurrentHashMap<String, Long>> cooldowns;
 
     public CooldownManager() {
-        this.cooldowns = new ConcurrentHashMap<>();
+        this.cooldowns = Caffeine.newBuilder()
+                .expireAfterWrite(5, TimeUnit.MINUTES)
+                .build();
     }
 
     /**
@@ -28,7 +33,7 @@ public class CooldownManager {
      * @return Cooldown aktif mi?
      */
     public boolean isOnCooldown(@NotNull UUID uuid, @NotNull String type, long cooldownMs) {
-        ConcurrentHashMap<String, Long> playerCooldowns = cooldowns.get(uuid);
+        ConcurrentHashMap<String, Long> playerCooldowns = cooldowns.getIfPresent(uuid);
         if (playerCooldowns == null) {
             return false;
         }
@@ -51,7 +56,7 @@ public class CooldownManager {
      * @param type Cooldown tipi
      */
     public void setCooldown(@NotNull UUID uuid, @NotNull String type) {
-        cooldowns.computeIfAbsent(uuid, k -> new ConcurrentHashMap<>())
+        cooldowns.get(uuid, k -> new ConcurrentHashMap<>())
                  .put(type, System.nanoTime());
     }
 
@@ -64,7 +69,7 @@ public class CooldownManager {
      * @return Kalan süre (ms), cooldown yoksa 0
      */
     public long getRemainingTime(@NotNull UUID uuid, @NotNull String type, long cooldownMs) {
-        ConcurrentHashMap<String, Long> playerCooldowns = cooldowns.get(uuid);
+        ConcurrentHashMap<String, Long> playerCooldowns = cooldowns.getIfPresent(uuid);
         if (playerCooldowns == null) {
             return 0;
         }
@@ -91,7 +96,7 @@ public class CooldownManager {
      * @param uuid Oyuncu UUID
      */
     public void clearCooldowns(@NotNull UUID uuid) {
-        cooldowns.remove(uuid);
+        cooldowns.invalidate(uuid);
     }
 
     /**
@@ -101,7 +106,7 @@ public class CooldownManager {
      * @param type Cooldown tipi
      */
     public void clearCooldown(@NotNull UUID uuid, @NotNull String type) {
-        ConcurrentHashMap<String, Long> playerCooldowns = cooldowns.get(uuid);
+        ConcurrentHashMap<String, Long> playerCooldowns = cooldowns.getIfPresent(uuid);
         if (playerCooldowns != null) {
             playerCooldowns.remove(type);
         }
@@ -111,7 +116,7 @@ public class CooldownManager {
      * Tüm cooldown'ları temizler
      */
     public void clearAll() {
-        cooldowns.clear();
+        cooldowns.invalidateAll();
     }
 
     /**
@@ -119,21 +124,7 @@ public class CooldownManager {
      * Bu metot periyodik olarak çağrılmalıdır
      */
     public void cleanup() {
-        long currentTime = System.nanoTime();
-
-        cooldowns.entrySet().removeIf(entry -> {
-            ConcurrentHashMap<String, Long> playerCooldowns = entry.getValue();
-
-            // Oyuncunun tüm cooldown'larını kontrol et
-            playerCooldowns.entrySet().removeIf(cooldownEntry -> {
-                long lastTime = cooldownEntry.getValue();
-                // 5 dakikadan eski cooldown'ları temizle
-                return (currentTime - lastTime) > 300_000_000_000L; // 5 dakika (ns)
-            });
-
-            // Oyuncunun hiç cooldown'u kalmadıysa oyuncuyu da sil
-            return playerCooldowns.isEmpty();
-        });
+        cooldowns.cleanUp();
     }
 
     /**
@@ -142,7 +133,7 @@ public class CooldownManager {
      * @return Toplam cooldown sayısı
      */
     public int getActiveCooldownCount() {
-        return cooldowns.values().stream()
+        return cooldowns.asMap().values().stream()
                 .mapToInt(ConcurrentHashMap::size)
                 .sum();
     }

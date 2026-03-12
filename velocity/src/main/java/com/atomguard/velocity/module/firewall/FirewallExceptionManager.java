@@ -15,6 +15,12 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
+/**
+ * Güvenlik duvarı istisna yöneticisi — istisna kurallarını JSON dosyasında kalıcı olarak saklar ve yönetir.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class FirewallExceptionManager {
 
     private final AtomGuardVelocity plugin;

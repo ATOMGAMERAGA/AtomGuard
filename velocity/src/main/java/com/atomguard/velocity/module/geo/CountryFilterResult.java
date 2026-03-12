@@ -1,5 +1,12 @@
 package com.atomguard.velocity.module.geo;
 
+/**
+ * Ülke filtreleme kontrol sonucunu temsil eden değer nesnesi.
+ * İzin verilen veya reddedilen bağlantılar için sebep bilgisi içerir.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class CountryFilterResult {
     private final boolean allowed;
     private final String reason;

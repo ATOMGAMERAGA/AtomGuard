@@ -8,6 +8,15 @@ import org.slf4j.Logger;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Velocity Modul Temel Sinifi
+ *
+ * Tum Velocity modullerinin miras aldigi soyut temel sinif.
+ * Modul yasam dongusu, istatistik takibi ve yapilandirma erisimi saglar.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public abstract class VelocityModule implements IModule {
 
     protected final AtomGuardVelocity plugin;

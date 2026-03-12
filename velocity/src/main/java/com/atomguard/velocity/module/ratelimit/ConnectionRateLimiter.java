@@ -5,6 +5,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * IP başına bağlantı hız sınırlayıcı — belirli bir zaman penceresinde izin verilen bağlantı sayısını kontrol eder.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class ConnectionRateLimiter {
 
     private final Map<String, AtomicInteger> ipCounts = new ConcurrentHashMap<>();

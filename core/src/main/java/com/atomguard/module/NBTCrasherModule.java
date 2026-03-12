@@ -25,7 +25,7 @@ import org.jetbrains.annotations.NotNull;
  * - Creative ve normal inventory kontrolü
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class NBTCrasherModule extends AbstractModule {
 

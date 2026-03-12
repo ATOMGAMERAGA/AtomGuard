@@ -10,6 +10,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+/**
+ * Harici liste yöneticisi — uzak URL'lerden IP/CIDR kara listelerini periyodik olarak çeker ve yönetir.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class ExternalListManager {
 
     private final AtomGuardVelocity plugin;

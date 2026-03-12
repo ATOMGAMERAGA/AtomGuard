@@ -1,5 +1,6 @@
 package com.atomguard;
 
+import com.atomguard.api.AtomGuardAPI;
 import com.atomguard.command.AtomGuardCommand;
 import com.atomguard.command.AtomGuardTabCompleter;
 import com.atomguard.command.PanicCommand;
@@ -11,6 +12,12 @@ import com.atomguard.listener.*;
 import com.atomguard.manager.*;
 import com.atomguard.migration.ConfigMigrationManager;
 import com.atomguard.module.*;
+import com.atomguard.notification.NotificationManager;
+import com.atomguard.notification.NotificationType;
+import com.atomguard.notification.provider.DiscordProvider;
+import com.atomguard.notification.provider.TelegramProvider;
+import com.atomguard.notification.provider.SlackProvider;
+import com.atomguard.util.ExecutorManager;
 import com.atomguard.module.antibot.AntiBotModule;
 import com.atomguard.module.honeypot.HoneypotModule;
 import com.atomguard.reputation.IPReputationManager;
@@ -21,6 +28,23 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.logging.Level;
 
+/**
+ * Main plugin singleton and lifecycle orchestrator for AtomGuard.
+ *
+ * <p>This class serves as the central entry point for the Paper plugin. It manages
+ * the full lifecycle through {@code onLoad()} (PacketEvents API init), {@code onEnable()}
+ * (manager/listener/module bootstrap and public API initialization), and {@code onDisable()}
+ * (graceful teardown in reverse order). All managers, the module system, storage, and
+ * the public {@link com.atomguard.api.AtomGuardAPI} are wired and accessed through this class
+ * via {@code AtomGuard.getInstance()}.
+ *
+ * <p><b>Critical initialization order:</b> The {@link com.atomguard.listener.PacketListener}
+ * must be created before modules are registered, because modules call
+ * {@code registerReceiveHandler()} during their {@code onEnable()}.
+ *
+ * @see com.atomguard.api.AtomGuardAPI
+ * @see com.atomguard.manager.ModuleManager
+ */
 public class AtomGuard extends JavaPlugin {
 
     private static AtomGuard instance;
@@ -43,6 +67,9 @@ public class AtomGuard extends JavaPlugin {
     private ForensicsManager forensicsManager;
     private TrafficIntelligenceEngine intelligenceEngine;
     private ConfigMigrationManager migrationManager;
+    private NotificationManager notificationManager;
+    private ExecutorManager executorManager;
+    private com.atomguard.metrics.CoreMetrics coreMetrics;
 
     @Override
     public void onLoad() {
@@ -53,6 +80,7 @@ public class AtomGuard extends JavaPlugin {
     public void onEnable() {
         try {
             // Managers
+            this.executorManager = new ExecutorManager();
             this.configManager = new ConfigManager(this);
             configManager.load(); // Config diğer manager'lardan önce yüklenmeli
             this.messageManager = new MessageManager(this);
@@ -73,6 +101,7 @@ public class AtomGuard extends JavaPlugin {
             this.trustScoreManager = new TrustScoreManager(this);
             this.forensicsManager = new ForensicsManager(this);
             this.intelligenceEngine = new TrafficIntelligenceEngine(this);
+            this.coreMetrics = new com.atomguard.metrics.CoreMetrics(this);
 
             // Initialize Managers
             logManager.start();
@@ -82,6 +111,7 @@ public class AtomGuard extends JavaPlugin {
             trustScoreManager.start();
             forensicsManager.start();
             intelligenceEngine.start();
+            if (coreMetrics != null) coreMetrics.start();
 
             // ÖNCE PacketListener oluştur — modüller onEnable()'da registerReceiveHandler() çağırdığından
             this.packetListener = new PacketListener(this);
@@ -117,6 +147,11 @@ public class AtomGuard extends JavaPlugin {
             // Discord Webhook
             discordWebhookManager.start();
 
+            // Notification Manager
+            this.notificationManager = new NotificationManager(this);
+            initializeNotificationProviders();
+            notificationManager.start();
+
             // Periyodik görev: saldırı modunu otomatik kapat
             getServer().getScheduler().runTaskTimerAsynchronously(this,
                 () -> attackModeManager.update(), 20L, 20L); // her saniye kontrol
@@ -142,6 +177,9 @@ public class AtomGuard extends JavaPlugin {
             getCommand("atomguard").setExecutor(new AtomGuardCommand(this));
             getCommand("atomguard").setTabCompleter(new AtomGuardTabCompleter(this));
             getCommand("panic").setExecutor(new PanicCommand(this));
+
+            // API initialization
+            initializeAPI();
 
             getLogger().info("AtomGuard (Core) has been enabled!");
 
@@ -180,20 +218,40 @@ public class AtomGuard extends JavaPlugin {
         }
     }
 
+    private void initializeAPI() {
+        new AtomGuardAPI(
+            moduleManager,
+            storageProvider,
+            statisticsManager,
+            reputationManager,
+            trustScoreManager,
+            forensicsManager,
+            null, // connectionPipeline — not yet implemented in core
+            getDescription().getVersion()
+        );
+        getLogger().info("AtomGuard API v" + getDescription().getVersion() + " başlatıldı.");
+    }
+
     @Override
     public void onDisable() {
+        // 0. API shutdown
+        AtomGuardAPI.shutdown();
+
         // 1. ÖNCE modülleri kapat (modüller veri kaydetsin)
         if (moduleManager != null) moduleManager.disableAllModules();
 
         // 2. Manager'ları kapat (verileri diske yazsınlar)
         if (intelligenceEngine != null) intelligenceEngine.stop();
+        if (coreMetrics != null) coreMetrics.stop();
         if (forensicsManager != null) forensicsManager.stop();
         if (trustScoreManager != null) trustScoreManager.stop();
         if (reputationManager != null) reputationManager.shutdown();
         if (verifiedPlayerCache != null) verifiedPlayerCache.stop();
         if (statisticsManager != null) statisticsManager.stop();
+        if (notificationManager != null) notificationManager.stop();
         if (discordWebhookManager != null) discordWebhookManager.stop();
         if (redisManager != null) redisManager.stop();
+        if (executorManager != null) executorManager.shutdown();
         if (webPanel != null) webPanel.stop();
 
         // 3. PacketEvents listener temizliği
@@ -210,6 +268,42 @@ public class AtomGuard extends JavaPlugin {
         if (logManager != null) logManager.stop();
 
         getLogger().info("AtomGuard (Core) has been disabled.");
+    }
+
+    private void initializeNotificationProviders() {
+        // Discord
+        if (getConfig().getBoolean("bildirimler.discord.aktif", false)) {
+            DiscordProvider discord = new DiscordProvider(this);
+            java.util.Set<NotificationType> types = parseNotificationTypes(
+                    getConfig().getStringList("bildirimler.discord.bildirim-turleri"));
+            notificationManager.registerProvider(discord, types);
+        }
+        // Telegram
+        if (getConfig().getBoolean("bildirimler.telegram.aktif", false)) {
+            TelegramProvider telegram = new TelegramProvider(this);
+            java.util.Set<NotificationType> types = parseNotificationTypes(
+                    getConfig().getStringList("bildirimler.telegram.bildirim-turleri"));
+            notificationManager.registerProvider(telegram, types);
+        }
+        // Slack
+        if (getConfig().getBoolean("bildirimler.slack.aktif", false)) {
+            SlackProvider slack = new SlackProvider(this);
+            java.util.Set<NotificationType> types = parseNotificationTypes(
+                    getConfig().getStringList("bildirimler.slack.bildirim-turleri"));
+            notificationManager.registerProvider(slack, types);
+        }
+    }
+
+    private java.util.Set<NotificationType> parseNotificationTypes(java.util.List<String> typeNames) {
+        java.util.Set<NotificationType> types = java.util.EnumSet.noneOf(NotificationType.class);
+        for (String name : typeNames) {
+            try {
+                types.add(NotificationType.valueOf(name));
+            } catch (IllegalArgumentException ignored) {
+                getLogger().warning("Bilinmeyen bildirim türü: " + name);
+            }
+        }
+        return types;
     }
 
     private void registerModules() {
@@ -280,4 +374,7 @@ public class AtomGuard extends JavaPlugin {
     public ForensicsManager getForensicsManager() { return forensicsManager; }
     public TrafficIntelligenceEngine getIntelligenceEngine() { return intelligenceEngine; }
     public ConfigMigrationManager getMigrationManager() { return migrationManager; }
+    public NotificationManager getNotificationManager() { return notificationManager; }
+    public ExecutorManager getExecutorManager() { return executorManager; }
+    public com.atomguard.metrics.CoreMetrics getCoreMetrics() { return coreMetrics; }
 }

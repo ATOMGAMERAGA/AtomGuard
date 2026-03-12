@@ -11,17 +11,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class IPHubProvider {
 
     private final String apiKey;
+    private final String baseUrl;
     private final AtomicInteger failures = new AtomicInteger(0);
     private volatile long circuitOpenUntil = 0;
 
-    public IPHubProvider(String apiKey) {
+    private static final String DEFAULT_BASE_URL = "https://v2.api.iphub.info/ip/";
+
+    public IPHubProvider(String apiKey, String baseUrl) {
         this.apiKey = apiKey;
+        this.baseUrl = (baseUrl != null && !baseUrl.isBlank()) ? baseUrl : DEFAULT_BASE_URL;
     }
 
     public CompletableFuture<Boolean> isVPN(String ip) {
         if (!isAvailable()) return CompletableFuture.completedFuture(false);
 
-        String url = "https://v2.api.iphub.info/ip/" + ip;
+        String url = baseUrl + ip;
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String response = NetworkUtils.httpGet(url, 5000, "X-Key", apiKey);

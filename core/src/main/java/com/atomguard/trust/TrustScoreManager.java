@@ -1,10 +1,12 @@
 package com.atomguard.trust;
 
 import com.atomguard.AtomGuard;
+import com.atomguard.api.trust.ITrustService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -16,13 +18,24 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
- * Oyuncu güven puanı yöneticisi.
- * JSON kalıcılığı, periyodik hesaplama ve bypass kontrolü sağlar.
+ * Per-player trust scoring system that tracks reputation over time.
  *
- * @author AtomGuard Team
- * @version 1.2.0
+ * <p>Implements {@link ITrustService} (the public API interface). Each player has a
+ * {@code TrustProfile} containing unique login days, violation history, and a computed
+ * trust score. Scores determine trust tiers (new, regular, trusted, veteran) which
+ * influence how strictly exploit checks are applied — for example, veteran players may
+ * bypass bot detection or attack-mode restrictions.
+ *
+ * <p><b>Persistence:</b> Profiles are stored in {@code trust-scores.json} inside the plugin
+ * data folder and saved periodically by a daemon scheduled executor. Scores are recalculated
+ * on a configurable interval, and recent violations decay after a configurable reset period.
+ *
+ * <p><b>Thread safety:</b> All profile data is held in a {@link ConcurrentHashMap}. The
+ * background scheduler runs on a dedicated daemon thread ({@code AtomGuard-Trust}).
+ *
+ * @see com.atomguard.api.trust.ITrustService
  */
-public class TrustScoreManager {
+public class TrustScoreManager implements ITrustService {
 
     private final AtomGuard plugin;
     private final ScheduledExecutorService scheduler;
@@ -107,19 +120,62 @@ public class TrustScoreManager {
     }
 
     /**
-     * Oyuncu güven puanını al.
+     * Oyuncu güven puanını al (double).
      */
-    public double getScore(UUID uuid) {
+    public double getScoreDouble(UUID uuid) {
         TrustProfile profile = profiles.get(uuid);
         if (profile == null) return basePuan;
         return profile.getTrustScore();
     }
 
+    @Override
+    public int getScore(@NotNull UUID playerId) {
+        return (int) getScoreDouble(playerId);
+    }
+
     /**
-     * Oyuncu güven kademesini al.
+     * Oyuncu güven kademesini al (core TrustTier).
      */
-    public TrustTier getTier(UUID uuid) {
-        return TrustTier.fromScore(getScore(uuid));
+    public TrustTier getCoreTier(UUID uuid) {
+        return TrustTier.fromScore(getScoreDouble(uuid));
+    }
+
+    @Override
+    @NotNull
+    public com.atomguard.api.trust.TrustTier getTier(@NotNull UUID playerId) {
+        return com.atomguard.api.trust.TrustTier.fromScore(getScore(playerId));
+    }
+
+    @Override
+    public void addBonus(@NotNull UUID playerId, int amount, @NotNull String reason) {
+        TrustProfile profile = getOrCreate(playerId);
+        double newScore = Math.min(100, profile.getTrustScore() + amount);
+        profile.setTrustScore(newScore);
+        profile.setLastCalculation(System.currentTimeMillis());
+        if (plugin.getConfigManager().isDebugEnabled()) {
+            plugin.getLogManager().debug("[Trust] " + profile.getLastKnownName() + " bonus: +" + amount + " (" + reason + ") → " + String.format("%.1f", newScore));
+        }
+    }
+
+    @Override
+    public void addPenalty(@NotNull UUID playerId, int amount, @NotNull String reason) {
+        TrustProfile profile = getOrCreate(playerId);
+        double newScore = Math.max(0, profile.getTrustScore() - amount);
+        profile.setTrustScore(newScore);
+        profile.setLastCalculation(System.currentTimeMillis());
+        if (plugin.getConfigManager().isDebugEnabled()) {
+            plugin.getLogManager().debug("[Trust] " + profile.getLastKnownName() + " penalty: -" + amount + " (" + reason + ") → " + String.format("%.1f", newScore));
+        }
+    }
+
+    @Override
+    public boolean isTrusted(@NotNull UUID playerId) {
+        return getScoreDouble(playerId) >= trustedEsik;
+    }
+
+    @Override
+    public boolean isVeteran(@NotNull UUID playerId) {
+        return getScoreDouble(playerId) >= veteranEsik;
     }
 
     /**
@@ -271,6 +327,13 @@ public class TrustScoreManager {
         profile.setTrustScore(score);
         profile.setLastCalculation(System.currentTimeMillis());
         profile.setLastCalculatedScore(score);
+
+        // Fire PostVerificationEvent when trust reaches bypass threshold
+        if (score >= attackBypassEsik) {
+            org.bukkit.Bukkit.getPluginManager().callEvent(
+                new com.atomguard.api.event.PostVerificationEvent(
+                    profile.getUuid(), true, "behavior"));
+        }
     }
 
     private void updateScores() {

@@ -4,6 +4,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Sohbet mesajı hız sınırlayıcı — token bucket algoritması ile IP başına mesaj hızını kontrol eder.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class ChatRateLimiter {
     private final Map<String, TokenBucket> buckets = new ConcurrentHashMap<>();
     private final double refillRate; // tokens per second

@@ -13,17 +13,33 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketTypeCommon;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
- * Merkezi Paket Yönlendiricisi (PERF-01)
+ * Central PacketEvents listener that multiplexes packet events to registered module handlers.
  *
- * Tüm modüllerin paket dinleyicilerini tek bir noktada toplar.
- * Her paket için sadece bir kez PacketEvents event bus tetiklenir,
- * ardından ilgili modüllere dağıtılır.
+ * <p>Instead of each module registering its own {@link PacketListenerAbstract}, this single
+ * listener is registered with the PacketEvents event bus. Modules register per-packet-type
+ * handlers (or global handlers) via {@code registerReceiveHandler()} and {@code registerSendHandler()},
+ * and this class dispatches incoming/outgoing packets to the appropriate handlers.
+ *
+ * <p><b>Bypass cache (Netty-safe):</b> A Caffeine cache ({@code UUID -> Boolean}, 10-minute TTL)
+ * stores bypass-permission results. The cache is populated from the main thread on
+ * {@code PlayerJoinEvent} and evicted on {@code PlayerQuitEvent}. The {@code hasBypass(UUID)}
+ * method is safe to call from Netty threads because it only reads the cache and never calls
+ * {@code Player.hasPermission()}, which is not thread-safe.
+ *
+ * <p>Handler lists use {@link java.util.concurrent.CopyOnWriteArrayList} so iteration from
+ * Netty threads does not require synchronization.
+ *
+ * @see com.atomguard.module.AbstractModule#registerReceiveHandler
  */
 public class PacketListener extends PacketListenerAbstract {
 
@@ -35,13 +51,10 @@ public class PacketListener extends PacketListenerAbstract {
     private final List<Consumer<PacketReceiveEvent>> globalReceiveHandlers = new CopyOnWriteArrayList<>();
     private final List<Consumer<PacketSendEvent>> globalSendHandlers = new CopyOnWriteArrayList<>();
 
-    // PERF-02: Bypass permission cache
-    // null  → henüz kontrol edilmemiş
-    // -1L   → kontrol edildi, bypass yok
-    // >0    → bypass var, cachedUntil zaman damgası
-    private final Map<UUID, Long> bypassCache = new ConcurrentHashMap<>();
-    private static final long BYPASS_CACHE_DURATION = 30_000; // 30 saniye
-    private static final long NO_BYPASS_SENTINEL = -1L;
+    // PERF-02: Bypass permission cache (Caffeine, 10 min TTL)
+    private final Cache<UUID, Boolean> bypassCache = Caffeine.newBuilder()
+            .expireAfterWrite(10, TimeUnit.MINUTES)
+            .build();
 
     public PacketListener(@NotNull AtomGuard plugin) {
         super(PacketListenerPriority.NORMAL);
@@ -151,31 +164,22 @@ public class PacketListener extends PacketListenerAbstract {
      * Cache güncellemesi ana thread'deki checkAndCacheBypass() ile yapılır.
      */
     private boolean hasBypass(UUID uuid) {
-        Long cached = bypassCache.get(uuid);
-        if (cached == null) return false;              // Henüz kontrol edilmemiş
-        if (cached == NO_BYPASS_SENTINEL) return false; // Kontrol edildi, bypass yok
-        if (System.currentTimeMillis() < cached) return true; // Bypass var, süresi dolmamış
-        // Cache süresi dolmuş — temizle, bir sonraki join'de yeniden kontrol edilecek
-        bypassCache.remove(uuid);
-        return false;
+        Boolean cached = bypassCache.getIfPresent(uuid);
+        return cached != null && cached;
     }
 
     /**
      * PlayerJoinEvent'te ana thread'den çağır — hasPermission() burada güvenle kullanılabilir.
      */
     public void checkAndCacheBypass(@NotNull Player player) {
-        if (player.hasPermission("atomguard.bypass")) {
-            bypassCache.put(player.getUniqueId(), System.currentTimeMillis() + BYPASS_CACHE_DURATION);
-        } else {
-            bypassCache.put(player.getUniqueId(), NO_BYPASS_SENTINEL);
-        }
+        bypassCache.put(player.getUniqueId(), player.hasPermission("atomguard.bypass"));
     }
 
     /**
      * PlayerQuitEvent'te cache'den temizle
      */
     public void removeBypassCache(@NotNull UUID uuid) {
-        bypassCache.remove(uuid);
+        bypassCache.invalidate(uuid);
     }
 
     private void handleLegacyIncoming(PacketReceiveEvent event) {

@@ -18,11 +18,22 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Hesap güvenlik duvarı modülü — yeni/şüpheli hesapları ve kara listedeki kullanıcıları engeller.
+ *
+ * Config: {@code moduller.hesap-guvenlik-duvari}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class AccountFirewallModule extends VelocityModule {
+
+    private static final String DEFAULT_ASHCON_URL = "https://api.ashcon.app/mojang/v2/user/";
 
     private final AccountBlacklist blacklist;
     private final ConcurrentHashMap<String, Long> accountAgeCache = new ConcurrentHashMap<>();
     private final HttpClient httpClient;
+    private final String ashconBaseUrl;
 
     public AccountFirewallModule(AtomGuardVelocity plugin) {
         super(plugin, "hesap-guvenlik-duvari");
@@ -30,6 +41,8 @@ public class AccountFirewallModule extends VelocityModule {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
+        String configUrl = plugin.getConfigManager().getString("harici-servisler.ashcon-url", DEFAULT_ASHCON_URL);
+        this.ashconBaseUrl = (configUrl != null && !configUrl.isBlank()) ? configUrl : DEFAULT_ASHCON_URL;
     }
 
     @Override
@@ -114,7 +127,7 @@ public class AccountFirewallModule extends VelocityModule {
         }
 
         // Use Ashcon API for creation date
-        String url = "https://api.ashcon.app/mojang/v2/user/" + username;
+        String url = ashconBaseUrl + username;
         HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
 
         return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())

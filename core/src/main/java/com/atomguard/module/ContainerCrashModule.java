@@ -10,8 +10,13 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Container/Window Crash Koruması
+ * Container/Window Crash Koruması.
  * Geçersiz window ID ve slot ID exploitlerini önler.
+ *
+ * Config: {@code moduller.container-crash}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
  */
 public class ContainerCrashModule extends AbstractModule {
 

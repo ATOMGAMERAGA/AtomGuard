@@ -4,6 +4,7 @@ import com.atomguard.AtomGuard;
 import com.atomguard.migration.steps.Migration_1_0_0_to_1_1_0;
 import com.atomguard.migration.steps.Migration_1_1_0_to_1_1_1;
 import com.atomguard.migration.steps.Migration_1_1_1_to_1_2_0;
+import com.atomguard.migration.steps.Migration_1_2_0_to_2_0_0;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -35,6 +36,7 @@ public class ConfigMigrationManager {
         registeredSteps.add(new Migration_1_0_0_to_1_1_0());
         registeredSteps.add(new Migration_1_1_0_to_1_1_1());
         registeredSteps.add(new Migration_1_1_1_to_1_2_0());
+        registeredSteps.add(new Migration_1_2_0_to_2_0_0());
     }
 
     /**

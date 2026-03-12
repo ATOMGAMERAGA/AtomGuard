@@ -26,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
  * Optimizasyon: Math.sqrt KULLANILMAZ — squared distance karşılaştırması
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class ViewDistanceMaskModule extends AbstractModule {
 

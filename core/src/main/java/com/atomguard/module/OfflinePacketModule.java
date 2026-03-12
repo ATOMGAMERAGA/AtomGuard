@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * - IP ve Socket kanalı doğrulaması
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class OfflinePacketModule extends AbstractModule {
 

@@ -13,11 +13,25 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Modül kayıt ve yönetim sistemi
- * Tüm exploit düzeltme modüllerini yönetir
+ * Manages the lifecycle of all AtomGuard exploit-fixer modules.
  *
- * @author AtomGuard Team
- * @version 1.0.0
+ * <p>This class implements {@link IModuleManager} (the public API interface) and is responsible
+ * for registering, enabling, disabling, and looking up modules. Modules are stored in a
+ * thread-safe {@link ConcurrentHashMap} indexed by both their Turkish config-key name and
+ * their Java class.
+ *
+ * <p>Key responsibilities:
+ * <ul>
+ *   <li><b>Registration:</b> Modules are registered during {@link com.atomguard.AtomGuard#registerModules()}
+ *       and can be looked up by name or class.</li>
+ *   <li><b>Enable/Disable:</b> {@code enableAllModules()} reads each module's {@code aktif} config flag;
+ *       on failure, the module is rolled back via {@code onDisable()}. Individual modules can be
+ *       toggled at runtime.</li>
+ *   <li><b>Statistics:</b> Aggregates per-module block counts for the statistics and web panel systems.</li>
+ * </ul>
+ *
+ * @see com.atomguard.module.AbstractModule
+ * @see com.atomguard.api.module.IModuleManager
  */
 public class ModuleManager implements IModuleManager {
 
@@ -263,9 +277,9 @@ public class ModuleManager implements IModuleManager {
      */
     @NotNull
     public List<AbstractModule> getEnabledModules() {
-        return modules.values().stream()
+        return Collections.unmodifiableList(modules.values().stream()
             .filter(AbstractModule::isEnabled)
-            .collect(Collectors.toList());
+            .collect(Collectors.toList()));
     }
 
     /**
@@ -275,9 +289,9 @@ public class ModuleManager implements IModuleManager {
      */
     @NotNull
     public List<AbstractModule> getDisabledModules() {
-        return modules.values().stream()
+        return Collections.unmodifiableList(modules.values().stream()
             .filter(module -> !module.isEnabled())
-            .collect(Collectors.toList());
+            .collect(Collectors.toList()));
     }
 
     /**
@@ -372,7 +386,7 @@ public class ModuleManager implements IModuleManager {
         for (AbstractModule module : modules.values()) {
             stats.put(module.getName(), module.getBlockedCount());
         }
-        return stats;
+        return Collections.unmodifiableMap(stats);
     }
 
     /**

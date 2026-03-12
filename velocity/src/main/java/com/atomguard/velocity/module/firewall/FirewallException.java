@@ -1,5 +1,11 @@
 package com.atomguard.velocity.module.firewall;
 
+/**
+ * Güvenlik duvarı istisnası — belirli IP, CIDR, ülke, ASN veya kullanıcı için istisna kuralı tanımlar.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class FirewallException {
     private final ExceptionType type;
     private final String value;

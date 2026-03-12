@@ -12,6 +12,14 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Hızlı sohbet kontrol modülü — mesaj hız sınırlama, tekrar tespit ve desen analizi ile sohbet spam'ını engeller.
+ *
+ * Config: {@code moduller.hizli-sohbet-kontrol}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class FastChatModule extends VelocityModule {
 
     private ChatRateLimiter rateLimiter;

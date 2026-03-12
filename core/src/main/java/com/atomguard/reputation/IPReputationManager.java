@@ -11,11 +11,13 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import com.atomguard.util.HttpClientUtil;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.io.*;
-import java.net.HttpURLConnection;
 import java.net.InetAddress;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -63,7 +65,7 @@ public class IPReputationManager implements IReputationService {
     private final Gson gson;
 
     // ── API Önbellek ──
-    private Map<String, ReputationResult> apiCache;
+    private Cache<String, ReputationResult> apiCache;
 
     // ── IP Setleri ──
     private final Set<String> proxyIpSet = ConcurrentHashMap.newKeySet();
@@ -123,11 +125,14 @@ public class IPReputationManager implements IReputationService {
         this.proxyListFile = new File(plugin.getDataFolder(), "proxy_ips.txt");
         this.manualBlocklistFile = new File(plugin.getDataFolder(), "manual_blocklist.txt");
         this.statsFile = new File(plugin.getDataFolder(), "antivpn_stats.json");
-        this.apiCache = new ConcurrentHashMap<>();
 
         // ── Yapılandırma Yükle ──
         this.enabled = plugin.getConfig().getBoolean("anti-vpn.enabled", false);
         this.cacheTtl = TimeUnit.HOURS.toMillis(plugin.getConfig().getLong("anti-vpn.cache-hours", 24));
+        this.apiCache = Caffeine.newBuilder()
+                .maximumSize(10_000)
+                .expireAfterWrite(cacheTtl, TimeUnit.MILLISECONDS)
+                .build();
         this.primaryApiKey = plugin.getConfig().getString("anti-vpn.api-kontrol.api-key", "");
         this.riskThreshold = plugin.getConfig().getInt("anti-vpn.risk-threshold", 75); // 60'tan 75'e yükseltildi (FP-13)
         this.blockedCountries = plugin.getConfig().getStringList("anti-vpn.blocked-countries");
@@ -343,44 +348,29 @@ public class IPReputationManager implements IReputationService {
         return new DownloadResult(sourceName, Set.of(), false, "Max retries exceeded");
     }
 
-    private Set<String> downloadProxyList(@NotNull String listUrl) throws IOException {
+    private Set<String> downloadProxyList(@NotNull String listUrl) throws Exception {
         Set<String> ips = new HashSet<>();
 
-        URL url = new URL(listUrl);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestProperty("User-Agent", "AtomGuard-AntiVPN/2.4.0");
-        conn.setConnectTimeout(downloadTimeoutMs);
-        conn.setReadTimeout(downloadTimeoutMs);
-        conn.setInstanceFollowRedirects(true);
+        String body = HttpClientUtil.getSync(listUrl,
+                Map.of("User-Agent", "AtomGuard-AntiVPN/2.4.0"),
+                Duration.ofMillis(downloadTimeoutMs));
 
-        int responseCode = conn.getResponseCode();
-        if (responseCode != 200) {
-            conn.disconnect();
-            throw new IOException("HTTP " + responseCode);
-        }
+        for (String line : body.split("\n")) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("#")) continue;
 
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String trimmed = line.trim();
-                if (trimmed.isEmpty() || trimmed.startsWith("#")) continue;
-
-                // Format: IP:PORT — sadece IP kısmını al
-                String ip;
-                int colonIndex = trimmed.lastIndexOf(':');
-                if (colonIndex > 0) {
-                    ip = trimmed.substring(0, colonIndex).trim();
-                } else {
-                    ip = trimmed;
-                }
-
-                if (isValidIpv4(ip)) {
-                    ips.add(ip);
-                }
+            // Format: IP:PORT — sadece IP kısmını al
+            String ip;
+            int colonIndex = trimmed.lastIndexOf(':');
+            if (colonIndex > 0) {
+                ip = trimmed.substring(0, colonIndex).trim();
+            } else {
+                ip = trimmed;
             }
-        } finally {
-            conn.disconnect();
+
+            if (isValidIpv4(ip)) {
+                ips.add(ip);
+            }
         }
 
         return ips;
@@ -552,7 +542,7 @@ public class IPReputationManager implements IReputationService {
      * Başarılı giriş sonrası API önbelleğindeki yanlış engellemeleri temizler.
      */
     public void clearCacheForIp(@NotNull String ip) {
-        apiCache.remove(ip);
+        apiCache.invalidate(ip);
     }
 
     @Override
@@ -639,9 +629,9 @@ public class IPReputationManager implements IReputationService {
                     ReputationResult.blocked(100, "Datacenter/Hosting CIDR", "Bilinmiyor", "Bilinmiyor"));
         }
 
-        // Katman 5: API önbellek
-        ReputationResult cached = apiCache.get(ip);
-        if (cached != null && (System.currentTimeMillis() - cached.timestamp < cacheTtl)) {
+        // Katman 5: API önbellek (Caffeine TTL handles expiry)
+        ReputationResult cached = apiCache.getIfPresent(ip);
+        if (cached != null) {
             if (cached.isBlocked) totalBlocks.incrementAndGet();
             return CompletableFuture.completedFuture(cached);
         }
@@ -672,8 +662,8 @@ public class IPReputationManager implements IReputationService {
         detail.proxyListed = proxyListEnabled && proxyIpSet.contains(ip);
         detail.cidrBlocked = isInBlockedCidr(ip);
 
-        ReputationResult cached = apiCache.get(ip);
-        if (cached != null && (System.currentTimeMillis() - cached.timestamp < cacheTtl)) {
+        ReputationResult cached = apiCache.getIfPresent(ip);
+        if (cached != null) {
             detail.apiResult = cached;
         }
 
@@ -744,22 +734,11 @@ public class IPReputationManager implements IReputationService {
         try {
             String apiUrl = "https://proxycheck.io/v2/" + ip + "?key=" + primaryApiKey + "&vpn=1&asn=1&risk=1";
 
-            URL url = new URL(apiUrl);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestProperty("User-Agent", "AtomGuard-AntiVPN/2.4.0");
-            conn.setConnectTimeout(3000);
-            conn.setReadTimeout(3000);
+            String body = HttpClientUtil.getSync(apiUrl,
+                    Map.of("User-Agent", "AtomGuard-AntiVPN/2.4.0"),
+                    Duration.ofSeconds(3));
 
-            if (conn.getResponseCode() != 200) {
-                conn.disconnect();
-                return null;
-            }
-
-            JsonObject json;
-            try (InputStreamReader reader = new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8)) {
-                json = JsonParser.parseReader(reader).getAsJsonObject();
-            }
-            conn.disconnect();
+            JsonObject json = JsonParser.parseString(body).getAsJsonObject();
 
             if (json.has(ip)) {
                 JsonObject ipData = json.getAsJsonObject(ip);
@@ -788,22 +767,11 @@ public class IPReputationManager implements IReputationService {
         try {
             String apiUrl = "http://ip-api.com/json/" + ip + "?fields=status,proxy,hosting,isp,org,as,countryCode";
 
-            URL url = new URL(apiUrl);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestProperty("User-Agent", "AtomGuard-AntiVPN/2.4.0");
-            conn.setConnectTimeout(3000);
-            conn.setReadTimeout(3000);
+            String body = HttpClientUtil.getSync(apiUrl,
+                    Map.of("User-Agent", "AtomGuard-AntiVPN/2.4.0"),
+                    Duration.ofSeconds(3));
 
-            if (conn.getResponseCode() != 200) {
-                conn.disconnect();
-                return null;
-            }
-
-            JsonObject json;
-            try (InputStreamReader reader = new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8)) {
-                json = JsonParser.parseReader(reader).getAsJsonObject();
-            }
-            conn.disconnect();
+            JsonObject json = JsonParser.parseString(body).getAsJsonObject();
 
             if (json.has("status") && json.get("status").getAsString().equals("success")) {
                 boolean isProxy = json.has("proxy") && json.get("proxy").getAsBoolean();
@@ -914,7 +882,7 @@ public class IPReputationManager implements IReputationService {
             if (loaded != null) {
                 long now = System.currentTimeMillis();
                 loaded.entrySet().removeIf(entry -> (now - entry.getValue().timestamp) > cacheTtl);
-                this.apiCache = new ConcurrentHashMap<>(loaded);
+                apiCache.putAll(loaded);
             }
         } catch (Exception e) {
             plugin.getLogger().warning("[Anti-VPN] API önbelleği yüklenemedi: " + e.getMessage());
@@ -940,7 +908,7 @@ public class IPReputationManager implements IReputationService {
     public void saveCache() {
         // API önbellek
         try (Writer writer = new FileWriter(apiCacheFile)) {
-            gson.toJson(apiCache, writer);
+            gson.toJson(apiCache.asMap(), writer);
         } catch (IOException e) {
             plugin.getLogger().warning("[Anti-VPN] API önbelleği kaydedilemedi: " + e.getMessage());
         }
@@ -983,7 +951,7 @@ public class IPReputationManager implements IReputationService {
     public boolean isEnabled()                { return enabled; }
     public int getProxyListSize()             { return proxyIpSet.size(); }
     public int getManualBlocklistSize()       { return manualBlocklist.size(); }
-    public int getApiCacheSize()              { return apiCache.size(); }
+    public int getApiCacheSize()              { return (int) apiCache.estimatedSize(); }
     public int getProxyListBlockCount()       { return proxyListBlocks.get(); }
     public int getApiBlockCount()             { return apiBlocks.get(); }
     public int getManualBlockCount()          { return manualBlocks.get(); }

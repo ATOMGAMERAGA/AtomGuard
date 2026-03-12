@@ -3,104 +3,90 @@ package com.atomguard.web;
 import com.atomguard.AtomGuard;
 import com.atomguard.manager.StatisticsManager;
 import com.atomguard.module.AbstractModule;
+import com.atomguard.web.auth.JWTAuthProvider;
+import com.atomguard.web.auth.SessionManager;
+import com.atomguard.web.handler.*;
+import com.atomguard.web.middleware.CORSMiddleware;
+import com.atomguard.web.middleware.CSRFMiddleware;
+import com.atomguard.web.middleware.RateLimitMiddleware;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import org.bukkit.Bukkit;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Lightweight embedded web panel for AtomGuard.
- * v2.3: HTTP Basic Auth, module management, event buffer, attack history.
+ * v2.0: JWT auth, middleware extraction, module management, event buffer, attack history.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
  */
 public class WebPanel {
 
     private final AtomGuard plugin;
     private HttpServer server;
-    private final int port;
-    private final boolean enabled;
 
-    // Auth config
-    private final boolean authEnabled;
-    private final String authUser;
-    private final String authPass;
+    // Config & Auth
+    private final WebPanelConfig config;
+    private final JWTAuthProvider jwtProvider;
+    private final SessionManager sessionManager;
+
+    // Middleware
+    private final RateLimitMiddleware rateLimitMiddleware;
+    private final CORSMiddleware corsMiddleware;
+    private final CSRFMiddleware csrfMiddleware;
 
     // Event buffer
     private final ConcurrentLinkedDeque<EventRecord> recentEvents = new ConcurrentLinkedDeque<>();
-    private final int maxEvents;
 
-    // Rate Limiting (Bounded LRU)
-    private final java.util.Map<String, RateLimitTracker> rateLimits = Collections.synchronizedMap(new LinkedHashMap<>(128, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, RateLimitTracker> eldest) {
-            return size() > 2000;
-        }
-    });
-    // loginAttempts: IP → [count, firstAttemptTimestamp]. 30 dakika sonra sıfırlanır.
-    private final java.util.Map<String, long[]> loginAttempts = Collections.synchronizedMap(new LinkedHashMap<>(128, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, long[]> eldest) {
-            return size() > 1000;
-        }
-    });
-    private static final long LOGIN_LOCKOUT_MS = 30 * 60 * 1000L; // 30 dakika lockout
-    private final java.util.Map<String, Long> validTokens = new java.util.concurrent.ConcurrentHashMap<>();
-    private java.util.concurrent.ScheduledExecutorService tokenCleanupExecutor;
+    // Login attempt tracking
+    private final Cache<String, long[]> loginAttempts = Caffeine.newBuilder()
+            .maximumSize(1000)
+            .expireAfterWrite(30, TimeUnit.MINUTES)
+            .build();
+
+    private java.util.concurrent.ScheduledExecutorService cleanupExecutor;
+    private SSEHandler sseHandler;
 
     public WebPanel(AtomGuard plugin) {
         this.plugin = plugin;
-        this.port = plugin.getConfig().getInt("web-panel.port", 8080);
-        this.enabled = plugin.getConfig().getBoolean("web-panel.enabled", false);
-        this.authEnabled = plugin.getConfig().getBoolean("web-panel.kimlik-dogrulama.aktif", true);
-        this.authUser = plugin.getConfig().getString("web-panel.kimlik-dogrulama.kullanici-adi", "admin");
-        
-        String pass = plugin.getConfig().getString("web-panel.kimlik-dogrulama.sifre", "atomguard2024");
-        if ("atomguard2024".equals(pass) && enabled) {
-            pass = generateRandomPassword();
-            plugin.getConfig().set("web-panel.kimlik-dogrulama.sifre", pass);
-            plugin.saveConfig();
-            plugin.getLogger().warning("Web Panel varsayilan sifresi degistirildi. Yeni sifre config.yml dosyasinda saklanmaktadir.");
-            plugin.getLogger().warning("Web Panel sifresi: " + pass.substring(0, 3) + "***" + " (config.yml: web-panel.kimlik-dogrulama.sifre)");
-        }
-        this.authPass = pass;
-        
-        this.maxEvents = plugin.getConfig().getInt("web-panel.max-olay-sayisi", 100);
-        
-        // Cleanup task for expired tokens — executor kaydediliyor (stop()'ta kapatılacak)
-        tokenCleanupExecutor = Executors.newSingleThreadScheduledExecutor();
-        tokenCleanupExecutor.scheduleAtFixedRate(() -> {
-            long now = System.currentTimeMillis();
-            validTokens.entrySet().removeIf(entry -> entry.getValue() < now);
-        }, 1, 1, java.util.concurrent.TimeUnit.HOURS);
-    }
+        this.config = new WebPanelConfig(plugin);
 
-    private String generateRandomPassword() {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        StringBuilder sb = new StringBuilder();
-        SecureRandom rnd = new SecureRandom();
-        for (int i = 0; i < 12; i++) {
-            sb.append(chars.charAt(rnd.nextInt(chars.length())));
-        }
-        return sb.toString();
+        // JWT & Session
+        this.jwtProvider = new JWTAuthProvider(config.getJwtSecret(), config.getTokenExpiryMinutes());
+        this.sessionManager = new SessionManager(jwtProvider);
+
+        // Middleware
+        this.rateLimitMiddleware = new RateLimitMiddleware(20);
+        this.corsMiddleware = new CORSMiddleware(config.getCorsOrigin());
+        this.csrfMiddleware = new CSRFMiddleware();
+
+        // Periodic cleanup
+        cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
+        cleanupExecutor.scheduleAtFixedRate(
+            () -> sessionManager.cleanupBlacklist(), 1, 1, java.util.concurrent.TimeUnit.HOURS);
     }
 
     public void start() {
-        if (!enabled) return;
+        if (!config.isEnabled()) return;
 
         try {
-            server = HttpServer.create(new InetSocketAddress(port), 0);
+            server = HttpServer.create(new InetSocketAddress(config.getPort()), 0);
             server.createContext("/", new ProtectedHandler(new DashboardHandler()));
             server.createContext("/login", new LoginHandler());
             server.createContext("/modules", new ProtectedHandler(new ModulesPageHandler()));
@@ -109,10 +95,27 @@ public class WebPanel {
             server.createContext("/api/modules/toggle", new ProtectedHandler(new ModuleToggleHandler()));
             server.createContext("/api/events", new ProtectedHandler(new EventsApiHandler()));
             server.createContext("/api/attacks", new ProtectedHandler(new AttacksApiHandler()));
+            server.createContext("/api/auth/refresh", new ProtectedHandler(new RefreshHandler()));
+
+            // v2.0 API endpoints
+            server.createContext("/api/health", new ProtectedHandler(new ApiHandler(plugin, this)));
+            server.createContext("/api/dashboard", new ProtectedHandler(new ApiHandler(plugin, this)));
+            server.createContext("/api/metrics", new ProtectedHandler(new ApiHandler(plugin, this)));
+            server.createContext("/api/geomap", new ProtectedHandler(new GeoMapHandler(plugin, this)));
+            server.createContext("/api/players", new ProtectedHandler(new PlayerHandler(plugin)));
+            server.createContext("/api/logs", new ProtectedHandler(new LogHandler(plugin)));
+
+            // SSE endpoint
+            if (plugin.getConfig().getBoolean("web-panel.sse.aktif", true)) {
+                this.sseHandler = new SSEHandler(plugin);
+                server.createContext("/api/events/stream", new ProtectedHandler(sseHandler));
+                sseHandler.start();
+            }
+
             server.setExecutor(Executors.newFixedThreadPool(4));
             server.start();
-            plugin.getLogger().info("Web Panel started on port " + port);
-            plugin.getLogger().warning("UYARI: Web Panel HTTP üzerinden çalışıyor. Güvenlik için bir reverse proxy (Nginx, Caddy vb.) ile HTTPS kullanılması önerilir.");
+            plugin.getLogger().info("Web Panel started on port " + config.getPort());
+            plugin.getLogger().warning("UYARI: Web Panel HTTP uzerinden calisiyor. Guvenlik icin bir reverse proxy (Nginx, Caddy vb.) ile HTTPS kullanilmasi onerilir.");
         } catch (IOException e) {
             plugin.getLogger().severe("Failed to start Web Panel: " + e.getMessage());
         }
@@ -131,42 +134,27 @@ public class WebPanel {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            // CORS Headers — wildcard yerine config'den izin verilen origin
-            String allowedOrigin = plugin.getConfig().getString("web-panel.cors-origin", "");
-            String corsOrigin = (allowedOrigin == null || allowedOrigin.isBlank()) ? "null" : allowedOrigin;
-            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", corsOrigin);
-            exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-            exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            // 1. CORS
+            corsMiddleware.applyCorsHeaders(exchange);
+            if (corsMiddleware.isPreflightRequest(exchange)) {
                 exchange.sendResponseHeaders(204, -1);
                 return;
             }
 
-            // 1. Rate Limiting
-            if (!checkRateLimit(exchange)) {
+            // 2. Rate Limiting
+            if (!rateLimitMiddleware.checkRateLimit(exchange)) {
                 exchange.sendResponseHeaders(429, -1);
                 exchange.close();
                 return;
             }
 
-            // 2. CSRF Protection for POST requests
-            if ("POST".equalsIgnoreCase(exchange.getRequestMethod())) {
-                String origin = exchange.getRequestHeaders().getFirst("Origin");
-                String referer = exchange.getRequestHeaders().getFirst("Referer");
-                String host = exchange.getRequestHeaders().getFirst("Host");
-
-                // Güvenli kontrol: contains() yerine tam eşleşme — "evil-localhost.com" bypass'ını önler
-                boolean originOk = origin != null && isOriginAllowed(origin, host);
-                boolean refererOk = referer != null && isRefererAllowed(referer, host);
-
-                if (!originOk && !refererOk) {
-                    sendResponse(exchange, 403, "application/json", "{\"error\":\"CSRF detected\"}");
-                    return;
-                }
+            // 3. CSRF Protection
+            if (!csrfMiddleware.checkCSRF(exchange)) {
+                sendResponse(exchange, 403, "application/json", "{\"error\":\"CSRF detected\"}");
+                return;
             }
 
-            // 3. Authentication (Token or Basic)
+            // 4. Authentication (JWT or Basic)
             if (!checkAuth(exchange)) {
                 return;
             }
@@ -184,17 +172,8 @@ public class WebPanel {
             }
 
             String ip = exchange.getRemoteAddress().getAddress().getHostAddress();
-            long now = System.currentTimeMillis();
-            int attempts;
-            synchronized (loginAttempts) {
-                long[] entry = loginAttempts.get(ip);
-                if (entry != null && (now - entry[1]) > LOGIN_LOCKOUT_MS) {
-                    // Lockout süresi doldu — sıfırla
-                    loginAttempts.remove(ip);
-                    entry = null;
-                }
-                attempts = (entry == null) ? 0 : (int) entry[0];
-            }
+            long[] entry = loginAttempts.getIfPresent(ip);
+            int attempts = (entry == null) ? 0 : (int) entry[0];
 
             if (attempts >= 5) {
                 sendResponse(exchange, 429, "application/json", "{\"error\":\"Too many login attempts. Try again later.\"}");
@@ -211,87 +190,54 @@ public class WebPanel {
                 }
             }
 
-            if (authUser.equals(user) && constantTimeEquals(authPass, pass)) {
-                String token = UUID.randomUUID().toString();
-                validTokens.put(token, System.currentTimeMillis() + (2 * 3600 * 1000L)); // 2 hour expiry
-                synchronized (loginAttempts) {
-                    loginAttempts.remove(ip);
-                }
+            if (constantTimeEquals(config.getAuthUser(), user) && constantTimeEquals(config.getAuthPass(), pass)) {
+                String token = sessionManager.createSession(user);
+                loginAttempts.invalidate(ip);
                 sendResponse(exchange, 200, "application/json", "{\"token\":\"" + token + "\"}");
             } else {
-                synchronized (loginAttempts) {
-                    long[] entry = loginAttempts.get(ip);
-                    if (entry == null) {
-                        loginAttempts.put(ip, new long[]{1, now});
-                    } else {
-                        entry[0]++;
-                    }
+                long[] existingEntry = loginAttempts.getIfPresent(ip);
+                if (existingEntry == null) {
+                    loginAttempts.put(ip, new long[]{1, System.currentTimeMillis()});
+                } else {
+                    existingEntry[0]++;
                 }
                 sendResponse(exchange, 401, "application/json", "{\"error\":\"Invalid credentials\"}");
             }
         }
     }
 
+    private class RefreshHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendResponse(exchange, 405, "application/json", "{\"error\":\"Method not allowed\"}");
+                return;
+            }
+
+            String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                sendResponse(exchange, 401, "application/json", "{\"error\":\"No token provided\"}");
+                return;
+            }
+
+            String currentToken = authHeader.substring(7);
+            String newToken = sessionManager.refreshToken(currentToken);
+            if (newToken != null) {
+                sendResponse(exchange, 200, "application/json", "{\"token\":\"" + newToken + "\"}");
+            } else {
+                sendResponse(exchange, 401, "application/json", "{\"error\":\"Invalid or expired token\"}");
+            }
+        }
+    }
+
     /**
-     * Origin header'ın izin verilen kaynaklardan gelip gelmediğini kontrol eder.
-     * "evil-localhost.com" gibi domain'lerin bypass yapmasını engeller.
-     */
-    /**
-     * Timing attack'a karşı dayanıklı sabit-zamanlı string karşılaştırması.
+     * Timing attack'a karsi dayanikli sabit-zamanli string karsilastirmasi.
      */
     private boolean constantTimeEquals(String a, String b) {
         if (a == null || b == null) return false;
         byte[] aBytes = a.getBytes(StandardCharsets.UTF_8);
         byte[] bBytes = b.getBytes(StandardCharsets.UTF_8);
         return java.security.MessageDigest.isEqual(aBytes, bBytes);
-    }
-
-    private boolean isOriginAllowed(String origin, String host) {
-        if (origin == null) return false;
-        // Tam eşleşme: http://host veya https://host
-        if (host != null && (origin.equals("http://" + host) || origin.equals("https://" + host))) return true;
-        // Loopback — sadece tam "localhost" veya "127.0.0.1" kabul et
-        return origin.equals("http://localhost") || origin.equals("https://localhost")
-            || origin.equals("http://127.0.0.1") || origin.equals("https://127.0.0.1")
-            || origin.startsWith("http://localhost:") || origin.startsWith("https://localhost:")
-            || origin.startsWith("http://127.0.0.1:") || origin.startsWith("https://127.0.0.1:");
-    }
-
-    /**
-     * Referer header'ının izin verilen host ile eşleşip eşleşmediğini kontrol eder.
-     */
-    private boolean isRefererAllowed(String referer, String host) {
-        if (referer == null) return false;
-        if (host != null && (referer.startsWith("http://" + host + "/") || referer.startsWith("https://" + host + "/"))) return true;
-        return referer.startsWith("http://localhost") || referer.startsWith("https://localhost")
-            || referer.startsWith("http://127.0.0.1") || referer.startsWith("https://127.0.0.1");
-    }
-
-    private boolean checkRateLimit(HttpExchange exchange) {
-        String ip = exchange.getRemoteAddress().getAddress().getHostAddress();
-        RateLimitTracker tracker;
-        synchronized (rateLimits) {
-            tracker = rateLimits.get(ip);
-            if (tracker == null) {
-                tracker = new RateLimitTracker();
-                rateLimits.put(ip, tracker);
-            }
-        }
-        return tracker.tryAcquire();
-    }
-
-    private static class RateLimitTracker {
-        private final java.util.concurrent.atomic.AtomicInteger requests = new java.util.concurrent.atomic.AtomicInteger(0);
-        private volatile long lastReset = System.currentTimeMillis();
-
-        public boolean tryAcquire() {
-            long now = System.currentTimeMillis();
-            if (now - lastReset > 1000) { // 1 second window
-                lastReset = now;
-                requests.set(0);
-            }
-            return requests.incrementAndGet() <= 20; // 20 req/sec limit
-        }
     }
 
     private String readBodyWithLimit(HttpExchange exchange, int limit) throws IOException {
@@ -305,11 +251,14 @@ public class WebPanel {
     }
 
     public void stop() {
+        if (sseHandler != null) {
+            sseHandler.stop();
+        }
         if (server != null) {
             server.stop(0);
         }
-        if (tokenCleanupExecutor != null && !tokenCleanupExecutor.isShutdown()) {
-            tokenCleanupExecutor.shutdown();
+        if (cleanupExecutor != null && !cleanupExecutor.isShutdown()) {
+            cleanupExecutor.shutdown();
         }
     }
 
@@ -328,7 +277,7 @@ public class WebPanel {
         record.timestamp = System.currentTimeMillis();
         recentEvents.addFirst(record);
 
-        while (recentEvents.size() > maxEvents) {
+        while (recentEvents.size() > config.getMaxEvents()) {
             recentEvents.pollLast(); // removeLast() yerine pollLast() — boş deque'de NPE güvenli
         }
     }
@@ -342,7 +291,7 @@ public class WebPanel {
     // ═══════════════════════════════════════
 
     private boolean checkAuth(HttpExchange exchange) throws IOException {
-        if (!authEnabled) return true;
+        if (!config.isAuthEnabled()) return true;
 
         String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
         if (authHeader == null) {
@@ -351,17 +300,21 @@ public class WebPanel {
             return false;
         }
 
+        // JWT Bearer token
         if (authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            if (isTokenValid(token)) return true;
+            if (sessionManager.isValidSession(token)) return true;
             exchange.sendResponseHeaders(401, -1);
             return false;
         }
 
+        // HTTP Basic Auth
         if (authHeader.startsWith("Basic ")) {
             String decoded = new String(Base64.getDecoder().decode(authHeader.substring(6)), StandardCharsets.UTF_8);
             String[] parts = decoded.split(":", 2);
-            if (parts.length == 2 && constantTimeEquals(parts[0], authUser) && constantTimeEquals(parts[1], authPass)) {
+            if (parts.length == 2
+                    && constantTimeEquals(parts[0], config.getAuthUser())
+                    && constantTimeEquals(parts[1], config.getAuthPass())) {
                 return true;
             }
         }
@@ -369,16 +322,6 @@ public class WebPanel {
         exchange.getResponseHeaders().set("WWW-Authenticate", "Basic realm=\"AtomGuard\"");
         exchange.sendResponseHeaders(401, -1);
         return false;
-    }
-
-    private boolean isTokenValid(String token) {
-        Long expiry = validTokens.get(token);
-        if (expiry == null) return false;
-        if (expiry < System.currentTimeMillis()) {
-            validTokens.remove(token);
-            return false;
-        }
-        return true;
     }
 
     private void sendResponse(HttpExchange exchange, int code, String contentType, String body) throws IOException {
@@ -687,7 +630,20 @@ public class WebPanel {
     }
 
     public boolean isEnabled() {
-        return enabled;
+        return config.isEnabled();
+    }
+
+    public SSEHandler getSSEHandler() {
+        return sseHandler;
+    }
+
+    /**
+     * Pushes an event to SSE clients if SSE is active.
+     */
+    public void pushSSEEvent(String eventType, String data) {
+        if (sseHandler != null) {
+            sseHandler.pushEvent(eventType, data);
+        }
     }
 
     // ═══════════════════════════════════════

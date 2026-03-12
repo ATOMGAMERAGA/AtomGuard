@@ -30,7 +30,7 @@ public class ConfigManagerTest {
 
     @BeforeEach
     void setUp() {
-        when(plugin.getLogger()).thenReturn(Logger.getLogger("AtomGuard"));
+        lenient().when(plugin.getLogger()).thenReturn(Logger.getLogger("AtomGuard"));
         configManager = new ConfigManager(plugin);
     }
 

@@ -1,8 +1,11 @@
 package com.atomguard.api;
 
+import com.atomguard.api.forensics.IForensicsService;
 import com.atomguard.api.module.IModuleManager;
+import com.atomguard.api.pipeline.IConnectionPipeline;
 import com.atomguard.api.stats.IStatisticsProvider;
 import com.atomguard.api.storage.IStorageProvider;
+import com.atomguard.api.trust.ITrustService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,11 +24,17 @@ public final class AtomGuardAPI {
     private final IStorageProvider storageProvider;
     private final IStatisticsProvider statisticsProvider;
     private final IReputationService reputationService;
+    private final ITrustService trustService;
+    private final IForensicsService forensicsService;
+    private final IConnectionPipeline connectionPipeline;
     private final String version;
 
     /**
      * API instance oluşturur. Sadece core plugin tarafından çağrılmalıdır.
+     *
+     * @deprecated Eski 5-parametre constructor. Yeni 7-parametre versiyonunu kullanın.
      */
+    @Deprecated
     public AtomGuardAPI(
             @NotNull IModuleManager moduleManager,
             @Nullable IStorageProvider storageProvider,
@@ -33,10 +42,31 @@ public final class AtomGuardAPI {
             @Nullable IReputationService reputationService,
             @NotNull String version
     ) {
+        this(moduleManager, storageProvider, statisticsProvider, reputationService, null, null, null, version);
+    }
+
+    /**
+     * API instance oluşturur. Sadece core plugin tarafından çağrılmalıdır.
+     *
+     * @since 2.0.0
+     */
+    public AtomGuardAPI(
+            @NotNull IModuleManager moduleManager,
+            @Nullable IStorageProvider storageProvider,
+            @NotNull IStatisticsProvider statisticsProvider,
+            @Nullable IReputationService reputationService,
+            @Nullable ITrustService trustService,
+            @Nullable IForensicsService forensicsService,
+            @Nullable IConnectionPipeline connectionPipeline,
+            @NotNull String version
+    ) {
         this.moduleManager = moduleManager;
         this.storageProvider = storageProvider;
         this.statisticsProvider = statisticsProvider;
         this.reputationService = reputationService;
+        this.trustService = trustService;
+        this.forensicsService = forensicsService;
+        this.connectionPipeline = connectionPipeline;
         this.version = version;
         instance = this;
     }
@@ -104,6 +134,39 @@ public final class AtomGuardAPI {
     @Nullable
     public IReputationService getReputationService() {
         return reputationService;
+    }
+
+    /**
+     * Güven puanı servisi.
+     *
+     * @return ITrustService instance veya null
+     * @since 2.0.0
+     */
+    @Nullable
+    public ITrustService getTrustService() {
+        return trustService;
+    }
+
+    /**
+     * Forensics kayıt servisi.
+     *
+     * @return IForensicsService instance veya null
+     * @since 2.0.0
+     */
+    @Nullable
+    public IForensicsService getForensicsService() {
+        return forensicsService;
+    }
+
+    /**
+     * Bağlantı pipeline servisi.
+     *
+     * @return IConnectionPipeline instance veya null
+     * @since 2.0.0
+     */
+    @Nullable
+    public IConnectionPipeline getConnectionPipeline() {
+        return connectionPipeline;
     }
 
     /**

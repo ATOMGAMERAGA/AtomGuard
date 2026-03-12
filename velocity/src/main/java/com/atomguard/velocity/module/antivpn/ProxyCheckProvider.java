@@ -11,11 +11,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ProxyCheckProvider {
 
     private final String apiKey;
+    private final String baseUrl;
     private final AtomicInteger failures = new AtomicInteger(0);
     private volatile long circuitOpenUntil = 0;
 
-    public ProxyCheckProvider(String apiKey) {
+    private static final String DEFAULT_BASE_URL = "https://proxycheck.io/v2/";
+
+    public ProxyCheckProvider(String apiKey, String baseUrl) {
         this.apiKey = apiKey;
+        this.baseUrl = (baseUrl != null && !baseUrl.isBlank()) ? baseUrl : DEFAULT_BASE_URL;
     }
 
     public CompletableFuture<Boolean> isVPN(String ip) {
@@ -23,7 +27,7 @@ public class ProxyCheckProvider {
             return CompletableFuture.completedFuture(false);
         }
 
-        String url = "https://proxycheck.io/v2/" + ip + "?key=" + apiKey + "&vpn=1&asn=1";
+        String url = baseUrl + ip + "?key=" + apiKey + "&vpn=1&asn=1";
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String response = NetworkUtils.httpGet(url, 5000);

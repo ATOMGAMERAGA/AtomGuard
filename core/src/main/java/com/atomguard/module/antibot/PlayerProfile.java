@@ -14,6 +14,14 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Oyuncu profili veri sınıfı. Bot tespiti için oyuncunun bağlantı, zamanlama ve davranış bilgilerini tutar.
+ *
+ * Config: {@code moduller.anti-bot}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class PlayerProfile {
     private UUID uuid;
     private String username;

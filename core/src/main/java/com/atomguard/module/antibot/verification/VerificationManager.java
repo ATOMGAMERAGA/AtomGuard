@@ -11,6 +11,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Doğrulama yöneticisi. Şüpheli oyuncular için tehdit skoru hesaplaması başlatır ve sonuca göre aksiyon alır.
+ *
+ * Config: {@code moduller.anti-bot}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class VerificationManager {
     private final AntiBotModule module;
     private final Map<UUID, BukkitTask> verificationTasks = new ConcurrentHashMap<>();

@@ -23,6 +23,22 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -DskipTests
 
+      - name: Run Tests
+        run: mvn test -B
+        continue-on-error: true
+
+      - name: Generate Coverage Report
+        run: mvn jacoco:report -B
+        continue-on-error: true
+
+      - name: Run SpotBugs
+        run: mvn spotbugs:check -B
+        continue-on-error: true
+
+      - name: Run Checkstyle
+        run: mvn checkstyle:check -B
+        continue-on-error: true
+
       - name: Verify build output
         run: |
           CORE_JAR=$(find core/target -name "AtomGuard-core-*.jar" -not -name "*-sources*" | head -1)

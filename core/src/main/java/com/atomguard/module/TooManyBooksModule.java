@@ -26,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
  * - Zararlı kitap içeriklerinin engellenmesi
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class TooManyBooksModule extends AbstractModule implements Listener {
 

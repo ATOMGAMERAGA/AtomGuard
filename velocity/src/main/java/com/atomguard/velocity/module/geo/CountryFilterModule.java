@@ -16,6 +16,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Ülke filtreleme modülü — GeoIP veritabanı kullanarak belirli ülkelerden gelen bağlantıları engeller.
+ *
+ * Config: {@code moduller.ulke-filtreleme}
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class CountryFilterModule extends VelocityModule {
 
     private final Path databaseFile;

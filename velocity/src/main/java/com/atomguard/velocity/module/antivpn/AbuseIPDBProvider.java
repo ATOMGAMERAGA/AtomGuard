@@ -9,11 +9,20 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * AbuseIPDB API sağlayıcısı — IP adreslerinin kötüye kullanım skorunu sorgular.
+ *
+ * @author AtomGuard Team
+ * @version 2.0.0
+ */
 public class AbuseIPDBProvider {
+
+    private static final String DEFAULT_BASE_URL = "https://api.abuseipdb.com/api/v2/check";
 
     private final AtomGuardVelocity plugin;
     private final HttpClient httpClient;
     private final String apiKey;
+    private final String baseUrl;
 
     public AbuseIPDBProvider(AtomGuardVelocity plugin) {
         this.plugin = plugin;
@@ -21,12 +30,14 @@ public class AbuseIPDBProvider {
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
         this.apiKey = plugin.getConfigManager().getString("vpn-proxy-engelleme.abuseipdb.api-anahtari", "");
+        String configUrl = plugin.getConfigManager().getString("harici-servisler.abuseipdb-url", DEFAULT_BASE_URL);
+        this.baseUrl = (configUrl != null && !configUrl.isBlank()) ? configUrl : DEFAULT_BASE_URL;
     }
 
     public CompletableFuture<Integer> check(String ip) {
         if (apiKey.isEmpty()) return CompletableFuture.completedFuture(0);
 
-        String url = "https://api.abuseipdb.com/api/v2/check?ipAddress=" + ip + "&maxAgeInDays=30";
+        String url = baseUrl + "?ipAddress=" + ip + "&maxAgeInDays=30";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Key", apiKey)

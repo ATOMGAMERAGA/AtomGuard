@@ -23,7 +23,7 @@ import org.jetbrains.annotations.NotNull;
  * - Duplikasyon exploit önleme
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class MuleDuplicationModule extends AbstractModule implements Listener {
 

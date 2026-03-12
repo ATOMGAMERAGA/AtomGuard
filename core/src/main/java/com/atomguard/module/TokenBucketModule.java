@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Token < kickThreshold → oyuncuyu kick et (sürekli flood)
  *
  * @author AtomGuard Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class TokenBucketModule extends AbstractModule {
 
