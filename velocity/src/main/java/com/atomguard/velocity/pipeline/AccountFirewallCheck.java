@@ -5,6 +5,7 @@ import com.atomguard.velocity.module.firewall.AccountFirewallModule;
 import com.atomguard.velocity.module.firewall.AccountFirewallResult;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 public class AccountFirewallCheck implements ConnectionCheck {
@@ -27,22 +28,24 @@ public class AccountFirewallCheck implements ConnectionCheck {
 
     @Override
     public @NotNull CheckResult check(@NotNull ConnectionContext ctx) {
+        return checkAsync(ctx).join();
+    }
+
+    @Override
+    public @NotNull CompletableFuture<CheckResult> checkAsync(@NotNull ConnectionContext ctx) {
         AccountFirewallModule module = plugin.getAccountFirewallModule();
-        try {
-            // Async kontrolü 2 saniye timeout ile bekle (Pipeline sync çalıştığı için)
-            AccountFirewallResult result = module.checkAsync(ctx.username(), ctx.uuid(), true)
-                    .get(2, TimeUnit.SECONDS);
-            
-            if (!result.isAllowed()) {
-                return CheckResult.deny(
-                    plugin.getMessageManager().parse(result.getReason()),
-                    name(),
-                    "account-blocked"
-                );
-            }
-        } catch (Exception ignored) {
-            // Hata veya timeout durumunda fail-open
-        }
-        return CheckResult.allowed();
+        return module.checkAsync(ctx.username(), ctx.uuid(), true)
+                .orTimeout(2, TimeUnit.SECONDS)
+                .exceptionally(e -> AccountFirewallResult.allow())
+                .thenApply(result -> {
+                    if (!result.isAllowed()) {
+                        return CheckResult.deny(
+                            plugin.getMessageManager().parse(result.getReason()),
+                            name(),
+                            "account-blocked"
+                        );
+                    }
+                    return CheckResult.allowed();
+                });
     }
 }

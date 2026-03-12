@@ -3,6 +3,19 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.0.1] - 2026-03-12
+
+### 🐛 Hata Düzeltmeleri
+
+- **Velocity — Oyuncu "Timed Out" sorunu düzeltildi**: `ConnectionListener.onPreLogin()` artık `EventTask.resumeWhenComplete()` döndürüyor; önceki senkron `process()` çağrısı Velocity event executor thread'ini 5 saneye kadar blokluyordu (VPNCheck `.get(3s)` + AccountFirewallCheck `.get(2s)`). Bu blokaj Minecraft istemcisinin bağlantı zaman aşımına çarpmasına neden oluyordu
+- **VPNCheck — blokaj kaldırıldı**: `checkAsync()` override edildi; `.get(3, TimeUnit.SECONDS)` yerine `.orTimeout(3, TimeUnit.SECONDS).exceptionally(...).thenApply(...)` zinciri kullanılıyor
+- **AccountFirewallCheck — blokaj kaldırıldı**: `checkAsync()` override edildi; `.get(2, TimeUnit.SECONDS)` yerine `.orTimeout(2, TimeUnit.SECONDS).exceptionally(...).thenApply(...)` zinciri kullanılıyor
+
+### 🔧 İyileştirmeler
+
+- **ConnectionCheck arayüzü**: `checkAsync(ctx)` default metodu eklendi — tüm mevcut check'ler uyumluluk bozmadan `CompletableFuture` desteği kazandı
+- **ConnectionPipeline**: `processAsync(ctx)` metodu eklendi — check'leri sıralı `CompletableFuture` zinciri olarak çalıştırır, ilk reddedilen sonuçta kısa devre yapar
+
 ## [2.0.0] - 2026-03-12
 
 ### ✨ Yeni Özellikler

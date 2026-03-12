@@ -4,7 +4,9 @@ import com.atomguard.velocity.AtomGuardVelocity;
 import com.atomguard.velocity.module.antivpn.VPNDetectionModule;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 public class VPNCheck implements ConnectionCheck {
@@ -27,35 +29,36 @@ public class VPNCheck implements ConnectionCheck {
 
     @Override
     public @NotNull CheckResult check(@NotNull ConnectionContext ctx) {
+        return checkAsync(ctx).join();
+    }
+
+    @Override
+    public @NotNull CompletableFuture<CheckResult> checkAsync(@NotNull ConnectionContext ctx) {
         VPNDetectionModule vpn = plugin.getVpnModule();
-        
-        // Verified clean bypass
+
         if (vpn.isVerifiedClean(ctx.ip())) {
-            return CheckResult.allowed();
+            return CompletableFuture.completedFuture(CheckResult.allowed());
         }
 
-        try {
-            // Wait for consensus result with timeout
-            VPNDetectionModule.DetectionResult vpnResult = vpn.check(ctx.ip(), false)
-                    .get(3, TimeUnit.SECONDS);
-            
-            if (vpnResult.isVPN()) {
-                if (plugin.getAuditLogger() != null) {
-                    plugin.getAuditLogger().log(
-                        com.atomguard.velocity.audit.AuditLogger.EventType.VPN_DETECTED,
-                        ctx.ip(), ctx.username(), name(), "Provider: " + vpnResult.getDetectedBy(),
-                        com.atomguard.velocity.audit.AuditLogger.Severity.INFO
-                    );
-                }
-                return CheckResult.deny(
-                    plugin.getMessageManager().buildKickMessage("kick.vpn", Map.of()),
-                    name(),
-                    "vpn-detected"
-                );
-            }
-        } catch (Exception ignored) {
-            // Fail-open on timeout
-        }
-        return CheckResult.allowed();
+        return vpn.check(ctx.ip(), false)
+                .orTimeout(3, TimeUnit.SECONDS)
+                .exceptionally(e -> new VPNDetectionModule.DetectionResult(false, 0, "timeout", List.of(), "timeout"))
+                .thenApply(vpnResult -> {
+                    if (vpnResult.isVPN()) {
+                        if (plugin.getAuditLogger() != null) {
+                            plugin.getAuditLogger().log(
+                                com.atomguard.velocity.audit.AuditLogger.EventType.VPN_DETECTED,
+                                ctx.ip(), ctx.username(), name(), "Provider: " + vpnResult.getDetectedBy(),
+                                com.atomguard.velocity.audit.AuditLogger.Severity.INFO
+                            );
+                        }
+                        return CheckResult.deny(
+                            plugin.getMessageManager().buildKickMessage("kick.vpn", Map.of()),
+                            name(),
+                            "vpn-detected"
+                        );
+                    }
+                    return CheckResult.allowed();
+                });
     }
 }

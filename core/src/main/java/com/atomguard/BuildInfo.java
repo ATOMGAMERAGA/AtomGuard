@@ -9,9 +9,9 @@ public final class BuildInfo {
     public static final String API_VERSION = "1.21";
     public static final String JAVA_VERSION = "21";
 
-    public static final int VERSION_MAJOR = 1;
-    public static final int VERSION_MINOR = 2;
-    public static final int VERSION_PATCH = 9;
+    public static final int VERSION_MAJOR = 2;
+    public static final int VERSION_MINOR = 0;
+    public static final int VERSION_PATCH = 1;
     public static final String VERSION_TAG = "";
 
     public static String getFullVersion() {

@@ -6,6 +6,7 @@ import com.atomguard.velocity.module.antivpn.VPNDetectionModule;
 import com.atomguard.velocity.module.firewall.FirewallModule;
 import com.atomguard.velocity.pipeline.CheckResult;
 import com.atomguard.velocity.pipeline.ConnectionContext;
+import com.velocitypowered.api.event.EventTask;
 import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
@@ -15,6 +16,7 @@ import com.velocitypowered.api.event.player.PlayerClientBrandEvent;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Bağlantı olayları dinleyicisi — pre-login, login, disconnect.
@@ -30,7 +32,7 @@ public class ConnectionListener {
     }
 
     @Subscribe(order = PostOrder.EARLY)
-    public void onPreLogin(PreLoginEvent event) {
+    public EventTask onPreLogin(PreLoginEvent event) {
         String ip = event.getConnection().getRemoteAddress().getAddress().getHostAddress();
         String username = event.getUsername();
         UUID uuid = event.getUniqueId();
@@ -44,28 +46,29 @@ public class ConnectionListener {
         int protocol = event.getConnection().getProtocolVersion().getProtocol();
 
         ConnectionContext ctx = new ConnectionContext(ip, username, uuid, hostname, port, protocol);
-        
-        CheckResult result = plugin.getConnectionPipeline().process(ctx);
-        
-        if (result.denied()) {
-            event.setResult(PreLoginEvent.PreLoginComponentResult.denied(result.kickMessage()));
-            
-            // 1. Audit Log
-            if (plugin.getAuditLogger() != null) {
-                plugin.getAuditLogger().connectionBlocked(ip, result.module(), result.reason());
-            }
-            
-            // 2. Behavior Violation (Trust Score'u düşürür)
-            if (plugin.getBehaviorManager() != null) {
-                plugin.getBehaviorManager().recordViolation(ip);
-            }
-            
-            // 3. Stats
-            plugin.getStatisticsManager().increment("pre_login_blocked");
-            return;
-        }
 
-        plugin.getStatisticsManager().increment("pre_login_checks");
+        CompletableFuture<Void> future = plugin.getConnectionPipeline().processAsync(ctx)
+                .thenAccept(result -> {
+                    if (result.denied()) {
+                        event.setResult(PreLoginEvent.PreLoginComponentResult.denied(result.kickMessage()));
+
+                        if (plugin.getAuditLogger() != null) {
+                            plugin.getAuditLogger().connectionBlocked(ip, result.module(), result.reason());
+                        }
+                        if (plugin.getBehaviorManager() != null) {
+                            plugin.getBehaviorManager().recordViolation(ip);
+                        }
+                        plugin.getStatisticsManager().increment("pre_login_blocked");
+                        return;
+                    }
+                    plugin.getStatisticsManager().increment("pre_login_checks");
+                })
+                .exceptionally(e -> {
+                    plugin.getLogManager().log("PreLogin pipeline hatası (" + ip + "): " + e.getMessage());
+                    return null;
+                });
+
+        return EventTask.resumeWhenComplete(future);
     }
 
     @Subscribe

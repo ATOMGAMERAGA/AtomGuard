@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ConnectionPipeline {
@@ -29,5 +30,18 @@ public class ConnectionPipeline {
             }
         }
         return CheckResult.allowed();
+    }
+
+    @NotNull
+    public CompletableFuture<CheckResult> processAsync(@NotNull ConnectionContext ctx) {
+        CompletableFuture<CheckResult> chain = CompletableFuture.completedFuture(CheckResult.allowed());
+        for (ConnectionCheck check : checks) {
+            if (!check.isEnabled()) continue;
+            chain = chain.thenCompose(prev -> {
+                if (prev.denied()) return CompletableFuture.completedFuture(prev);
+                return check.checkAsync(ctx);
+            });
+        }
+        return chain;
     }
 }
