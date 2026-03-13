@@ -3,6 +3,20 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.0.2] - 2026-03-13
+
+### 🌐 Full English Translation
+
+- **Config keys renamed (Turkish → English)** across all 40+ modules and all manager classes
+- **Top-level sections renamed**: `moduller` → `modules`, `genel` → `general`, `istatistik` → `statistics`, `dogrulanmis-onbellek` → `verified-cache`, `metrikler` → `metrics`, `tehdit-istihbarati` → `threat-intelligence`, `guven-skoru` → `trust-score`, `adli-analiz` → `forensics`, `bildirimler` → `notifications`, `forensik` → `packet-forensics`, `harici-servisler` → `external-services`
+- **Module names translated**: e.g. `cok-fazla-kitap` → `too-many-books`, `paket-exploit` → `packet-exploit`, `bot-koruma` → `anti-bot`, `bal-kupu` → `honeypot`, `jeton-kovasi` → `token-bucket`, and 40+ more
+- **Common sub-keys translated**: `aktif` → `enabled`, `eylem` → `action`, `max-paket-boyutu` → `max-packet-size`, and 100+ more
+- **Velocity config translated**: `depolama` → `storage`, `bot-koruma` → `bot-protection`, `moduller` → `modules`, all DDoS/VPN/firewall sub-keys
+- **Default language changed**: `dil: "tr"` → `language: "en"` (both core and velocity configs)
+- **Hardcoded Turkish strings** in Java source translated to English (AtomGuard.java, ForensicsManager, NettyCrashHandler, BukkitListener, ModuleManager, and others)
+- **Migration step added** (`Migration_2_0_1_to_2_0_2`) — automatically renames all Turkish config keys to English for existing installations
+- **Config version bumped** to `2.0.2`
+
 ## [2.0.1] - 2026-03-12
 
 ### 🐛 Hata Düzeltmeleri

@@ -39,7 +39,7 @@ public class BundleDuplicationModule extends AbstractModule {
      * @param plugin Ana plugin instance
      */
     public BundleDuplicationModule(@NotNull AtomGuard plugin) {
-        super(plugin, "bundle-duplikasyon", "Bundle duplikasyonu önleme");
+        super(plugin, "bundle-duplication", "Bundle duplikasyonu önleme");
     }
 
     @Override
@@ -76,8 +76,8 @@ public class BundleDuplicationModule extends AbstractModule {
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.clickCooldownMs = getConfigLong("tiklama-cooldown-ms", 50L);
-        this.dropCooldownMs = getConfigLong("birakma-cooldown-ms", 50L);
+        this.clickCooldownMs = getConfigLong("click-cooldown-ms", 50L);
+        this.dropCooldownMs = getConfigLong("drop-cooldown-ms", 50L);
 
         debug("Config yüklendi: clickCooldown=" + clickCooldownMs +
               "ms, dropCooldown=" + dropCooldownMs + "ms");

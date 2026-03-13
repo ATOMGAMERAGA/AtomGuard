@@ -55,14 +55,14 @@ public class DiscordWebhookManager {
     }
 
     public void reload() {
-        this.enabled = plugin.getConfig().getBoolean("discord-webhook.aktif", false);
+        this.enabled = plugin.getConfig().getBoolean("discord-webhook.enabled", false);
         this.webhookUrl = plugin.getConfig().getString("discord-webhook.webhook-url", "");
-        this.batchIntervalSeconds = plugin.getConfig().getInt("discord-webhook.toplama-suresi", 30);
-        this.notifySaldiriModu = plugin.getConfig().getBoolean("discord-webhook.bildirimler.saldiri-modu", true);
-        this.notifyExploitEngelleme = plugin.getConfig().getBoolean("discord-webhook.bildirimler.exploit-engelleme", true);
-        this.notifyBotKick = plugin.getConfig().getBoolean("discord-webhook.bildirimler.bot-kick", true);
-        this.notifyPanikKomutu = plugin.getConfig().getBoolean("discord-webhook.bildirimler.panik-komutu", true);
-        this.notifyPerformans = plugin.getConfig().getBoolean("discord-webhook.bildirimler.performans", true);
+        this.batchIntervalSeconds = plugin.getConfig().getInt("discord-webhook.batch-seconds", 30);
+        this.notifySaldiriModu = plugin.getConfig().getBoolean("discord-webhook.notifications.attack-mode", true);
+        this.notifyExploitEngelleme = plugin.getConfig().getBoolean("discord-webhook.notifications.exploit-block", true);
+        this.notifyBotKick = plugin.getConfig().getBoolean("discord-webhook.notifications.bot-kick", true);
+        this.notifyPanikKomutu = plugin.getConfig().getBoolean("discord-webhook.notifications.panic-command", true);
+        this.notifyPerformans = plugin.getConfig().getBoolean("discord-webhook.notifications.performance", true);
     }
 
     /**

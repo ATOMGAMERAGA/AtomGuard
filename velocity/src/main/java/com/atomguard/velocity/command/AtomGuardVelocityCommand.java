@@ -80,7 +80,7 @@ public class AtomGuardVelocityCommand implements SimpleCommand {
 
     private void handleReload(CommandSource source) {
         plugin.getConfigManager().reload();
-        plugin.getMessageManager().load(plugin.getConfigManager().getString("dil", "tr"));
+        plugin.getMessageManager().load(plugin.getConfigManager().getString("language", "en"));
         
         // 1. Backend İletişimi (Redis) Yenile
         if (plugin.getBackendCommunicator() != null) {

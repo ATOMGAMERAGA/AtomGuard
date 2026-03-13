@@ -51,7 +51,7 @@ public class AdvancedPayloadModule extends AbstractModule {
      * @param plugin Ana plugin instance
      */
     public AdvancedPayloadModule(@NotNull AtomGuard plugin) {
-        super(plugin, "gelismis-payload", "Gelişmiş CustomPayload filtresi");
+        super(plugin, "advanced-payload", "Gelişmiş CustomPayload filtresi");
     }
 
     @Override
@@ -84,7 +84,7 @@ public class AdvancedPayloadModule extends AbstractModule {
 
         // İzinli kanalları yükle
         List<String> configChannels = plugin.getConfigManager()
-                .getStringList("moduller." + getName() + ".izinli-kanallar");
+                .getStringList("modules." + getName() + ".allowed-channels");
         if (configChannels != null && !configChannels.isEmpty()) {
             this.allowedChannels = new HashSet<>(configChannels);
         } else {

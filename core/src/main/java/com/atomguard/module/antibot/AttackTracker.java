@@ -29,7 +29,7 @@ public class AttackTracker {
 
     public void evaluateAttackStatus() {
         int connections = recentConnectionCount.getAndSet(0);
-        int threshold = module.getConfigInt("saldiri-modu.tetikleme-esigi", 15);
+        int threshold = module.getConfigInt("attack-mode.trigger-threshold", 15);
 
         if (connections >= threshold) {
             if (!underAttack) {
@@ -41,7 +41,7 @@ public class AttackTracker {
 
         if (underAttack) {
             long elapsed = System.currentTimeMillis() - lastBotDetection.get();
-            long cooldown = module.getConfigInt("saldiri-modu.kapanma-suresi-sn", 60) * 1000L;
+            long cooldown = module.getConfigInt("attack-mode.shutdown-seconds", 60) * 1000L;
             if (elapsed > cooldown) {
                 underAttack = false;
                 notifyAdmins("<green>✅ Bot saldırısı sona erdi. Normal moda dönüldü.");
@@ -50,7 +50,7 @@ public class AttackTracker {
     }
 
     private void notifyAdmins(String message) {
-        String permission = module.getConfigString("bildirimler.admin-izin", "atomguard.antibot.notify");
+        String permission = module.getConfigString("notify.admin-permission", "atomguard.antibot.notify");
         Bukkit.getOnlinePlayers().stream()
                 .filter(p -> p.hasPermission(permission))
                 .forEach(p -> p.sendMessage(module.getPlugin().getMessageManager().parse(message)));
@@ -66,6 +66,6 @@ public class AttackTracker {
     }
     
     public long getAttackCooldownMs() {
-        return module.getConfigInt("saldiri-modu.kapanma-suresi-sn", 60) * 1000L;
+        return module.getConfigInt("attack-mode.shutdown-seconds", 60) * 1000L;
     }
 }

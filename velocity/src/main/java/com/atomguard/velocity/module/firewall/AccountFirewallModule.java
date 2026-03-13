@@ -36,12 +36,12 @@ public class AccountFirewallModule extends VelocityModule {
     private final String ashconBaseUrl;
 
     public AccountFirewallModule(AtomGuardVelocity plugin) {
-        super(plugin, "hesap-guvenlik-duvari");
+        super(plugin, "account-firewall");
         this.blacklist = new AccountBlacklist(plugin);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
-        String configUrl = plugin.getConfigManager().getString("harici-servisler.ashcon-url", DEFAULT_ASHCON_URL);
+        String configUrl = plugin.getConfigManager().getString("external-services.ashcon-url", DEFAULT_ASHCON_URL);
         this.ashconBaseUrl = (configUrl != null && !configUrl.isBlank()) ? configUrl : DEFAULT_ASHCON_URL;
     }
 
@@ -50,7 +50,7 @@ public class AccountFirewallModule extends VelocityModule {
 
     @Override
     public java.util.List<String> getDependencies() {
-        return java.util.List.of("guvenlik-duvari");
+        return java.util.List.of("firewall");
     }
 
     @Override
@@ -101,7 +101,7 @@ public class AccountFirewallModule extends VelocityModule {
         }
 
         // 3. Account Age Check (Async)
-        if (isPremium && getConfigBoolean("hesap-yas-kontrolu.aktif", false)) {
+        if (isPremium && getConfigBoolean("account-age-check.enabled", false)) {
             return fetchAccountCreationDate(username).thenApply(createdAt -> {
                 if (createdAt == -1) return AccountFirewallResult.allow(); // Unknown age, allow
                 

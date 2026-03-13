@@ -51,8 +51,8 @@ public class CoreMetrics {
 
     public CoreMetrics(AtomGuard plugin) {
         this.plugin = plugin;
-        this.enabled = plugin.getConfig().getBoolean("metrikler.aktif", true);
-        this.updateIntervalSeconds = Math.max(1, plugin.getConfig().getInt("metrikler.guncelleme-araligi-saniye", 1));
+        this.enabled = plugin.getConfig().getBoolean("metrics.enabled", true);
+        this.updateIntervalSeconds = Math.max(1, plugin.getConfig().getInt("metrics.update-interval-seconds", 1));
         this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "AtomGuard-Metrics");
             t.setDaemon(true);

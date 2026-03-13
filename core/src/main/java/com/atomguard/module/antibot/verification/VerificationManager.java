@@ -52,7 +52,7 @@ public class VerificationManager {
                 module.getActionExecutor().executePeriodic(player, profile, result);
                 
                 // Whitelist evaluation
-                if (module.getConfigBoolean("beyaz-liste.otomatik-dogrulama", true)) {
+                if (module.getConfigBoolean("whitelist.auto-verify", true)) {
                     module.getWhitelistManager().evaluateForWhitelist(profile);
                 }
             }

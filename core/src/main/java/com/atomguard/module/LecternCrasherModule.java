@@ -39,7 +39,7 @@ public class LecternCrasherModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public LecternCrasherModule(@NotNull AtomGuard plugin) {
-        super(plugin, "kursu-crash", "Kürsü crash exploit kontrolü");
+        super(plugin, "lectern-crash", "Kürsü crash exploit kontrolü");
     }
 
     @Override

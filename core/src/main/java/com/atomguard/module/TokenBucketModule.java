@@ -79,7 +79,7 @@ public class TokenBucketModule extends AbstractModule {
      * @param plugin Ana plugin instance
      */
     public TokenBucketModule(@NotNull AtomGuard plugin) {
-        super(plugin, "jeton-kovasi", "Token bucket rate limiter");
+        super(plugin, "token-bucket", "Token bucket rate limiter");
     }
 
     @Override
@@ -104,15 +104,15 @@ public class TokenBucketModule extends AbstractModule {
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.hareketKapasite = getConfigLong("kovalar.hareket.kapasite", 200L);
-        this.hareketDolum = getConfigLong("kovalar.hareket.dolum-saniye", 80L);
-        this.sohbetKapasite = getConfigLong("kovalar.sohbet.kapasite", 20L);
-        this.sohbetDolum = getConfigLong("kovalar.sohbet.dolum-saniye", 5L);
-        this.envanterKapasite = getConfigLong("kovalar.envanter.kapasite", 100L);
-        this.envanterDolum = getConfigLong("kovalar.envanter.dolum-saniye", 50L);
-        this.digerKapasite = getConfigLong("kovalar.diger.kapasite", 150L);
-        this.digerDolum = getConfigLong("kovalar.diger.dolum-saniye", 60L);
-        this.floodKickThreshold = getConfigLong("flood-kick-esigi", -200L);
+        this.hareketKapasite = getConfigLong("buckets.movement.kapasite", 200L);
+        this.hareketDolum = getConfigLong("buckets.movement.dolum-saniye", 80L);
+        this.sohbetKapasite = getConfigLong("buckets.chat.kapasite", 20L);
+        this.sohbetDolum = getConfigLong("buckets.chat.dolum-saniye", 5L);
+        this.envanterKapasite = getConfigLong("buckets.inventory.kapasite", 100L);
+        this.envanterDolum = getConfigLong("buckets.inventory.dolum-saniye", 50L);
+        this.digerKapasite = getConfigLong("buckets.other.kapasite", 150L);
+        this.digerDolum = getConfigLong("buckets.other.dolum-saniye", 60L);
+        this.floodKickThreshold = getConfigLong("flood-kick-threshold", -200L);
     }
 
     /**

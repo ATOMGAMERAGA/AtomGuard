@@ -50,7 +50,7 @@ public class ItemSanitizerModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public ItemSanitizerModule(@NotNull AtomGuard plugin) {
-        super(plugin, "item-temizleyici", "Item güvenlik temizleyicisi");
+        super(plugin, "item-sanitizer", "Item güvenlik temizleyicisi");
     }
 
     @Override

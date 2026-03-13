@@ -24,15 +24,15 @@ public class MovementSecurityModule extends AbstractModule implements Listener {
     private boolean blockInvalidCoords;
 
     public MovementSecurityModule(@NotNull AtomGuard plugin) {
-        super(plugin, "hareket-guvenligi", "Koordinat ve hız denetimi");
+        super(plugin, "movement-security", "Koordinat ve hız denetimi");
     }
 
     @Override
 
     public void onEnable() {
         super.onEnable();
-        this.maxDistance = getConfigDouble("max-mesafe", 30000000.0);
-        this.blockInvalidCoords = getConfigBoolean("gecersiz-koordinat-engelle", true);
+        this.maxDistance = getConfigDouble("max-distance", 30000000.0);
+        this.blockInvalidCoords = getConfigBoolean("block-invalid-coords", true);
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)

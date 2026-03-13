@@ -45,7 +45,7 @@ public class NotificationManager {
             t.setDaemon(true);
             return t;
         });
-        this.batchIntervalSeconds = plugin.getConfig().getInt("bildirimler.toplama-suresi", 30);
+        this.batchIntervalSeconds = plugin.getConfig().getInt("notifications.batch-seconds", 30);
     }
 
     /**
@@ -204,6 +204,6 @@ public class NotificationManager {
      * Yapistirmayi (config) yeniden yukler.
      */
     public void reload() {
-        this.batchIntervalSeconds = plugin.getConfig().getInt("bildirimler.toplama-suresi", 30);
+        this.batchIntervalSeconds = plugin.getConfig().getInt("notifications.batch-seconds", 30);
     }
 }

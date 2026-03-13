@@ -52,7 +52,7 @@ public class CreativeItemsModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public CreativeItemsModule(@NotNull AtomGuard plugin) {
-        super(plugin, "creative-item", "Creative mode item kontrolü");
+        super(plugin, "creative-items", "Creative mode item kontrolü");
         this.blacklistedItems = new HashSet<>();
     }
 
@@ -91,7 +91,7 @@ public class CreativeItemsModule extends AbstractModule implements Listener {
         // Blacklist'i yükle
         List<String> itemList = plugin.getConfigManager()
             .getConfig()
-            .getStringList("moduller." + name + ".item-kara-liste");
+            .getStringList("modules." + name + ".item-blacklist");
 
         if (itemList == null || itemList.isEmpty()) {
             itemList = getDefaultBlacklistedItems();
@@ -107,9 +107,9 @@ public class CreativeItemsModule extends AbstractModule implements Listener {
             }
         }
 
-        this.maxNBTSize = getConfigInt("max-nbt-boyutu-creative", 10000);
-        this.stripCustomData = getConfigBoolean("ozel-veriyi-soy", true);
-        this.maxEnchantmentLevel = getConfigInt("max-buyu-seviyesi", 10);
+        this.maxNBTSize = getConfigInt("max-nbt-size-creative", 10000);
+        this.stripCustomData = getConfigBoolean("strip-custom-data", true);
+        this.maxEnchantmentLevel = getConfigInt("max-enchant-level", 10);
 
         debug("Config yüklendi: maxNBT=" + maxNBTSize +
               ", stripData=" + stripCustomData +

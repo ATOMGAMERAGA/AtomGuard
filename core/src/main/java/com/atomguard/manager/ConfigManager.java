@@ -62,11 +62,11 @@ public class ConfigManager {
     }
 
     private void checkConfigVersion() {
-        String currentVersion = "2.0.1";
+        String currentVersion = "2.0.2";
         String configVersion = config.getString("config-version", "1.0.0");
 
         if (!configVersion.equals(currentVersion)) {
-            plugin.getLogger().info("Config versiyonu eski (" + configVersion + " → " + currentVersion + "), güncelleniyor...");
+            plugin.getLogger().info("Config version outdated (" + configVersion + " → " + currentVersion + "), updating...");
 
             if (plugin.getMigrationManager() != null) {
                 plugin.getMigrationManager().migrate(config, configVersion, currentVersion);
@@ -107,7 +107,7 @@ public class ConfigManager {
      * messages.yml dosyasını yükler veya oluşturur
      */
     private void loadMessages() {
-        String lang = config.getString("genel.dil", "tr").toLowerCase();
+        String lang = config.getString("general.language", "en").toLowerCase();
         String fileName = "messages_" + lang + ".yml";
         File messagesFile = new File(plugin.getDataFolder(), fileName);
 
@@ -328,7 +328,7 @@ public class ConfigManager {
      * @return Debug aktif ise true
      */
     public boolean isDebugEnabled() {
-        return getBoolean("genel.debug", false);
+        return getBoolean("general.debug", false);
     }
 
     /**
@@ -337,7 +337,7 @@ public class ConfigManager {
      * @return Log aktif ise true
      */
     public boolean isLogEnabled() {
-        return getBoolean("genel.log.aktif", true);
+        return getBoolean("general.log.enabled", true);
     }
 
     /**
@@ -347,7 +347,7 @@ public class ConfigManager {
      */
     @NotNull
     public String getLogFolder() {
-        return getString("genel.log.klasor", "logs/atomguard");
+        return getString("general.log.folder", "logs/atomguard");
     }
 
     /**
@@ -356,7 +356,7 @@ public class ConfigManager {
      * @return Günlük dosya aktif ise true
      */
     public boolean isDailyLogEnabled() {
-        return getBoolean("genel.log.gunluk-dosya", true);
+        return getBoolean("general.log.daily-file", true);
     }
 
     /**
@@ -365,7 +365,7 @@ public class ConfigManager {
      * @return Saklama süresi (gün)
      */
     public int getLogRetentionDays() {
-        return getInt("genel.log.log-saklama-gunu", 7);
+        return getInt("general.log.retention-days", 7);
     }
 
     /**
@@ -375,7 +375,7 @@ public class ConfigManager {
      * @return Modül aktif ise true
      */
     public boolean isModuleEnabled(@NotNull String moduleName) {
-        return getBoolean("moduller." + moduleName + ".aktif", false);
+        return getBoolean("modules." + moduleName + ".enabled", false);
     }
 
     /**

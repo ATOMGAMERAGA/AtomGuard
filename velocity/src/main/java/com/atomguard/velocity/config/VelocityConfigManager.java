@@ -58,22 +58,22 @@ public class VelocityConfigManager {
     public void validateAndMigrate() {
         lock.writeLock().lock();
         try {
-            String version = getString("config-versiyon", "1.0.0");
+            String version = getString("config-version", "1.0.0");
             boolean changed = false;
 
             // Versiyon 1.0.0 -> 1.1.0 Migration
             if ("1.0.0".equals(version)) {
-                setDefault("vpn-proxy-engelleme.konsensus-esigi", 2);
-                setDefault("vpn-proxy-engelleme.guven-skoru-esigi", 60);
-                setDefault("vpn-proxy-engelleme.residential-bypass", true);
-                setDefault("guvenlik-duvari.decay-dakika", 5);
-                set("config-versiyon", "1.1.0");
+                setDefault("vpn-proxy-block.consensus-threshold", 2);
+                setDefault("vpn-proxy-block.trust-score-threshold", 60);
+                setDefault("vpn-proxy-block.residential-bypass", true);
+                setDefault("firewall.decay-minutes", 5);
+                set("config-version", "1.1.0");
                 changed = true;
                 logger.info("Yapılandırma v1.0.0 sürümünden v1.1.0 sürümüne yükseltildi.");
             }
 
             // Temel doğrulama uyarıları
-            int consThreshold = getInt("vpn-proxy-engelleme.konsensus-esigi", 2);
+            int consThreshold = getInt("vpn-proxy-block.consensus-threshold", 2);
             if (consThreshold < 1 || consThreshold > 6) {
                 logger.warn("Yapılandırma Uyarısı: vpn-proxy-engelleme.konsensus-esigi 1-6 arasında olmalıdır.");
             }

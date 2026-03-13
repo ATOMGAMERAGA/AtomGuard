@@ -23,8 +23,8 @@ public class PacketTimingCheck extends AbstractCheck {
 
         // 1. Position packet frequency
         double avgInterval = profile.getAveragePositionPacketInterval();
-        int minInterval = module.getConfigInt("kontroller.paket-zamanlama.min-interval-ms", 30);
-        int maxInterval = module.getConfigInt("kontroller.paket-zamanlama.max-interval-ms", 150);
+        int minInterval = module.getConfigInt("checks.packet-timing.min-interval-ms", 30);
+        int maxInterval = module.getConfigInt("checks.packet-timing.max-interval-ms", 150);
         
         if (avgInterval > 0) {
             if (avgInterval < minInterval) score += 15;
@@ -39,7 +39,7 @@ public class PacketTimingCheck extends AbstractCheck {
 
         // 3. Keep-alive response
         long keepAliveMs = profile.getAverageKeepAliveResponseMs();
-        int minKeepAlive = module.getConfigInt("kontroller.paket-zamanlama.min-keepalive-ms", 2); // 5'ten 2'ye düşürüldü
+        int minKeepAlive = module.getConfigInt("checks.packet-timing.min-keepalive-ms", 2); // 5'ten 2'ye düşürüldü
         if (keepAliveMs > 0 && keepAliveMs < minKeepAlive) {
             score += 20;
         }

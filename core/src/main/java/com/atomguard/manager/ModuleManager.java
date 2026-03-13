@@ -220,7 +220,7 @@ public class ModuleManager implements IModuleManager {
         boolean newState = module.toggle();
 
         // Config'i güncelle
-        plugin.getConfigManager().set("moduller." + moduleName + ".aktif", newState);
+        plugin.getConfigManager().set("modules." + moduleName + ".enabled", newState);
         plugin.getConfigManager().saveConfig();
 
         return newState;

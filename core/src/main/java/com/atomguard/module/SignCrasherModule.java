@@ -43,7 +43,7 @@ public class SignCrasherModule extends AbstractModule {
      * @param plugin Ana plugin instance
      */
     public SignCrasherModule(@NotNull AtomGuard plugin) {
-        super(plugin, "tabela-crash", "Tabela crash exploit kontrolü");
+        super(plugin, "sign-crash", "Tabela crash exploit kontrolü");
     }
 
     @Override
@@ -69,9 +69,9 @@ public class SignCrasherModule extends AbstractModule {
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.maxLineLength = getConfigInt("max-satir-uzunlugu", 100); // CR-04: Varsayılan 384 -> 100
-        this.cleanColorCodes = getConfigBoolean("renk-kodlarini-temizle", false);
-        this.blockSpecialChars = getConfigBoolean("ozel-karakterleri-engelle", true);
+        this.maxLineLength = getConfigInt("max-line-length", 100); // CR-04: Varsayılan 384 -> 100
+        this.cleanColorCodes = getConfigBoolean("clean-color-codes", false);
+        this.blockSpecialChars = getConfigBoolean("block-special-chars", true);
 
         debug("Config yüklendi: maxLength=" + maxLineLength +
               ", cleanColors=" + cleanColorCodes +

@@ -32,14 +32,14 @@ public class VelocityStorageProvider implements IStorageProvider {
     public void connect() throws Exception {
         HikariConfig config = new HikariConfig();
 
-        String type = plugin.getConfigManager().getString("depolama.tip", "sqlite");
+        String type = plugin.getConfigManager().getString("storage.type", "sqlite");
         if ("mysql".equalsIgnoreCase(type)) {
             config.setJdbcUrl(String.format("jdbc:mysql://%s:%d/%s",
-                plugin.getConfigManager().getString("depolama.mysql.host", "localhost"),
-                plugin.getConfigManager().getInt("depolama.mysql.port", 3306),
-                plugin.getConfigManager().getString("depolama.mysql.veritabani", "atomguard")));
-            config.setUsername(plugin.getConfigManager().getString("depolama.mysql.kullanici", "root"));
-            config.setPassword(plugin.getConfigManager().getString("depolama.mysql.sifre", ""));
+                plugin.getConfigManager().getString("storage.mysql.host", "localhost"),
+                plugin.getConfigManager().getInt("storage.mysql.port", 3306),
+                plugin.getConfigManager().getString("storage.mysql.database", "atomguard")));
+            config.setUsername(plugin.getConfigManager().getString("storage.mysql.username", "root"));
+            config.setPassword(plugin.getConfigManager().getString("storage.mysql.password", ""));
             config.setDriverClassName("com.mysql.cj.jdbc.Driver");
             config.setMaximumPoolSize(5);
         } else {

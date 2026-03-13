@@ -34,8 +34,8 @@ public class DiscordProvider implements NotificationProvider {
     }
 
     private void reload() {
-        this.webhookUrl = plugin.getConfig().getString("bildirimler.discord.webhook-url", "");
-        this.enabled.set(plugin.getConfig().getBoolean("bildirimler.discord.aktif", false)
+        this.webhookUrl = plugin.getConfig().getString("notifications.discord.webhook-url", "");
+        this.enabled.set(plugin.getConfig().getBoolean("notifications.discord.enabled", false)
                 && webhookUrl != null && !webhookUrl.isEmpty());
     }
 

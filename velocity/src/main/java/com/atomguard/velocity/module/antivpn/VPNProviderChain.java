@@ -42,22 +42,22 @@ public class VPNProviderChain {
         this.ip2Proxy = new Ip2ProxyProvider(plugin);
 
         String proxyCheckKey = plugin.getConfigManager().getString(
-                "vpn-proxy-engelleme.api.proxycheck.api-key", "");
+                "vpn-proxy-block.api.proxycheck.api-key", "");
         String ipHubKey = plugin.getConfigManager().getString(
-                "vpn-proxy-engelleme.api.iphub.api-key", "");
+                "vpn-proxy-block.api.iphub.api-key", "");
 
         String proxyCheckUrl = plugin.getConfigManager().getString(
-                "harici-servisler.proxycheck-url", "");
+                "external-services.proxycheck-url", "");
         String ipHubUrl = plugin.getConfigManager().getString(
-                "harici-servisler.iphub-url", "");
+                "external-services.iphub-url", "");
         String ipApiUrl = plugin.getConfigManager().getString(
-                "harici-servisler.ip-api-url", "");
+                "external-services.ip-api-url", "");
 
         this.proxyCheck = new ProxyCheckProvider(proxyCheckKey, proxyCheckUrl);
         this.ipHub = new IPHubProvider(ipHubKey, ipHubUrl);
         this.ipApi = new IPApiProvider(ipApiUrl);
         List<String> dnsblList = plugin.getConfigManager().getStringList(
-                "vpn-proxy-engelleme.dnsbl-listesi");
+                "vpn-proxy-block.dnsbl-list");
         this.dnsbl = new DNSBLChecker(dnsblList != null ? dnsblList : List.of());
         this.localList = new LocalProxyListChecker(plugin.getDataDirectory(), plugin.getSlf4jLogger());
         this.cidrBlocker = new CIDRBlocker();
@@ -65,7 +65,7 @@ public class VPNProviderChain {
         localList.load();
 
         List<String> cidrRanges = plugin.getConfigManager().getStringList(
-                "vpn-proxy-engelleme.engelli-cidr");
+                "vpn-proxy-block.blocked-cidr");
         if (cidrRanges != null) cidrBlocker.addRanges(cidrRanges);
     }
 
@@ -116,24 +116,24 @@ public class VPNProviderChain {
 
     private CompletableFuture<VPNCheckResult> runParallelChecks(String ip) {
         int consensusThreshold = plugin.getConfigManager().getInt(
-                "vpn-proxy-engelleme.konsensus-esigi", 2);
+                "vpn-proxy-block.consensus-threshold", 2);
         int confidenceThreshold = plugin.getConfigManager().getInt(
-                "vpn-proxy-engelleme.guven-skoru-esigi", 60);
+                "vpn-proxy-block.trust-score-threshold", 60);
         boolean residentialBypass = plugin.getConfigManager().getBoolean(
-                "vpn-proxy-engelleme.residential-bypass", true);
+                "vpn-proxy-block.residential-bypass", true);
 
         List<CompletableFuture<ProviderVote>> futures = new ArrayList<>();
 
         // ip2proxy (ağırlık: 0.95)
-        if (plugin.getConfigManager().getBoolean("vpn-proxy-engelleme.ip2proxy.aktif", false)) {
+        if (plugin.getConfigManager().getBoolean("vpn-proxy-block.ip2proxy.enabled", false)) {
             futures.add(CompletableFuture.supplyAsync(() ->
                     new ProviderVote("ip2proxy", ip2Proxy.isProxy(ip), 0.95, false)));
         }
 
         // abuseipdb (ağırlık: 0.80)
-        if (plugin.getConfigManager().getBoolean("vpn-proxy-engelleme.abuseipdb.aktif", false)) {
+        if (plugin.getConfigManager().getBoolean("vpn-proxy-block.abuseipdb.enabled", false)) {
             int threshold = plugin.getConfigManager().getInt(
-                    "vpn-proxy-engelleme.abuseipdb.guven-esigi", 50);
+                    "vpn-proxy-block.abuseipdb.trust-threshold", 50);
             futures.add(abuseIPDB.check(ip)
                     .thenApply(score -> new ProviderVote("abuseipdb", score >= threshold, 0.80, false)));
         }

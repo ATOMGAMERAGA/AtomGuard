@@ -25,7 +25,7 @@ public class ConnectionThrottleModule extends AbstractModule implements Listener
     private final ConcurrentHashMap<String, ConcurrentLinkedDeque<Long>> connectionTimes = new ConcurrentHashMap<>();
 
     public ConnectionThrottleModule(@NotNull AtomGuard plugin) {
-        super(plugin, "baglanti-sinirlandirici", "IP bazli baglanti hiz sinirlandirici");
+        super(plugin, "connection-throttle", "IP bazli baglanti hiz sinirlandirici");
     }
 
     @Override
@@ -48,12 +48,12 @@ public class ConnectionThrottleModule extends AbstractModule implements Listener
         String ip = event.getAddress().getHostAddress();
 
         // Check exempt IPs
-        List<String> exemptIps = plugin.getConfig().getStringList("moduller.baglanti-sinirlandirici.muaf-ipler");
+        List<String> exemptIps = plugin.getConfig().getStringList("modules.connection-throttle.exempt-ips");
         if (exemptIps != null && exemptIps.contains(ip)) return;
 
         // Determine limit based on attack mode
-        int normalLimit = getConfigInt("dakikada-max-baglanti", 3);
-        int attackLimit = getConfigInt("saldiri-dakikada-max", 1);
+        int normalLimit = getConfigInt("max-connections-per-minute", 3);
+        int attackLimit = getConfigInt("attack-max-per-minute", 1);
         boolean inAttack = plugin.getAttackModeManager().isAttackMode();
         int limit = inAttack ? attackLimit : normalLimit;
 

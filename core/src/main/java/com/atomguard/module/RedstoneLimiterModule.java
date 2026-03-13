@@ -48,7 +48,7 @@ public class RedstoneLimiterModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public RedstoneLimiterModule(@NotNull AtomGuard plugin) {
-        super(plugin, "redstone-sinirlandirici", "Redstone güncelleme sınırlandırıcı");
+        super(plugin, "redstone-limiter", "Redstone güncelleme sınırlandırıcı");
     }
 
     @Override

@@ -33,7 +33,7 @@ public class MuleDuplicationModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public MuleDuplicationModule(@NotNull AtomGuard plugin) {
-        super(plugin, "katir-duplikasyon", "Katır duplikasyonu önleme");
+        super(plugin, "mule-duplication", "Katır duplikasyonu önleme");
     }
 
     @Override

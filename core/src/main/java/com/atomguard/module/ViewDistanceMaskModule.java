@@ -36,7 +36,7 @@ public class ViewDistanceMaskModule extends AbstractModule {
      * @param plugin Ana plugin instance
      */
     public ViewDistanceMaskModule(@NotNull AtomGuard plugin) {
-        super(plugin, "gorunum-mesafesi-maskeleme", "View distance paket maskeleme (Anti-NoCom)");
+        super(plugin, "view-distance-mask", "View distance paket maskeleme (Anti-NoCom)");
     }
 
     @Override

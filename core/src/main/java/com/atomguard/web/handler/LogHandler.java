@@ -44,7 +44,7 @@ public class LogHandler implements HttpHandler {
         }
 
         // Find today's log file
-        String logFolderPath = plugin.getConfig().getString("genel.log.klasor", "logs/atomguard");
+        String logFolderPath = plugin.getConfig().getString("general.log.folder", "logs/atomguard");
         File logFolder = new File(plugin.getDataFolder().getParentFile().getParentFile(), logFolderPath);
         String today = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         File logFile = new File(logFolder, "atomguard-" + today + ".log");

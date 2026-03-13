@@ -35,7 +35,7 @@ public class InvalidSlotModule extends AbstractModule {
      * @param plugin Ana plugin instance
      */
     public InvalidSlotModule(@NotNull AtomGuard plugin) {
-        super(plugin, "gecersiz-slot", "Geçersiz slot numarası kontrolü");
+        super(plugin, "invalid-slot", "Geçersiz slot numarası kontrolü");
     }
 
     @Override

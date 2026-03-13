@@ -29,14 +29,14 @@ public class AdaptiveThresholdManager {
 
     public AdaptiveThresholdManager(AtomGuard plugin) {
         this.separateDayNight = plugin.getConfig()
-                .getBoolean("tehdit-istihbarati.adaptif-esik.gunduz-gece-ayri", true);
+                .getBoolean("threat-intelligence.adaptive-threshold.day-night-separation", true);
         this.separateWeekdayWeekend = plugin.getConfig()
-                .getBoolean("tehdit-istihbarati.adaptif-esik.hafta-ici-sonu-ayri", true);
+                .getBoolean("threat-intelligence.adaptive-threshold.weekday-weekend-separation", true);
         this.minLearningWeeks = Math.max(1, plugin.getConfig()
-                .getInt("tehdit-istihbarati.adaptif-esik.min-ogrenme-haftasi", 2));
+                .getInt("threat-intelligence.adaptive-threshold.min-learning-weeks", 2));
 
         double alpha = plugin.getConfig()
-                .getDouble("tehdit-istihbarati.ema-alpha", 0.1);
+                .getDouble("threat-intelligence.ema-alpha", 0.1);
 
         for (int i = 0; i < HOUR_SLOTS; i++) {
             hourlyDetectors[i] = new EWMADetector(alpha, 2.5, 10);

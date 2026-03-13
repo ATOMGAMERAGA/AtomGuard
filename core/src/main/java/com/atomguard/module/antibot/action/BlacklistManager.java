@@ -18,7 +18,7 @@ public class BlacklistManager {
 
     public BlacklistManager(AntiBotModule module) {
         this.module = module;
-        this.dataFile = new File(module.getPlugin().getDataFolder(), module.getConfigString("kara-liste.dosya", "blacklist.json"));
+        this.dataFile = new File(module.getPlugin().getDataFolder(), module.getConfigString("blacklist.file", "blacklist.json"));
         load();
     }
 

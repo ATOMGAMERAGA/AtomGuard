@@ -41,7 +41,7 @@ public class ShulkerByteModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public ShulkerByteModule(@NotNull AtomGuard plugin) {
-        super(plugin, "shulker-bayt", "Shulker kutusu byte boyutu kontrolü");
+        super(plugin, "shulker-byte", "Shulker kutusu byte boyutu kontrolü");
     }
 
     @Override

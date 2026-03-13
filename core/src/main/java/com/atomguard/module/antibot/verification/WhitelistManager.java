@@ -28,15 +28,15 @@ public class WhitelistManager {
 
     public WhitelistManager(AntiBotModule module) {
         this.module = module;
-        this.dataFile = new File(module.getPlugin().getDataFolder(), module.getConfigString("beyaz-liste.dosya", "whitelist.json"));
+        this.dataFile = new File(module.getPlugin().getDataFolder(), module.getConfigString("whitelist.file", "whitelist.json"));
         load();
     }
 
     public void evaluateForWhitelist(PlayerProfile profile) {
         if (profile.getUuid() == null || whitelistedPlayers.contains(profile.getUuid())) return;
 
-        int verificationTick = module.getConfigInt("beyaz-liste.dogrulama-suresi-tick", 600);
-        int maxScore = module.getConfigInt("beyaz-liste.dogrulama-max-skor", 15);
+        int verificationTick = module.getConfigInt("whitelist.verify-timeout-ticks", 600);
+        int maxScore = module.getConfigInt("whitelist.max-verify-score", 15);
 
         if (profile.getTicksSinceJoin() >= verificationTick
             && profile.getMaxThreatScore() < maxScore

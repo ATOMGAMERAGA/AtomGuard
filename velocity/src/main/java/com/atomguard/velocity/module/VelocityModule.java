@@ -84,30 +84,30 @@ public abstract class VelocityModule implements IModule {
     protected boolean isAttackMode() { return plugin.isAttackMode(); }
 
     protected boolean isConfigActive() {
-        return plugin.getConfigManager().getBoolean("moduller." + name + ".aktif", true);
+        return plugin.getConfigManager().getBoolean("modules." + name + ".enabled", true);
     }
 
     protected boolean getConfigBoolean(String key, boolean def) {
-        return plugin.getConfigManager().getBoolean("moduller." + name + "." + key, def);
+        return plugin.getConfigManager().getBoolean("modules." + name + "." + key, def);
     }
 
     protected int getConfigInt(String key, int def) {
-        return plugin.getConfigManager().getInt("moduller." + name + "." + key, def);
+        return plugin.getConfigManager().getInt("modules." + name + "." + key, def);
     }
 
     protected long getConfigLong(String key, long def) {
-        return plugin.getConfigManager().getLong("moduller." + name + "." + key, def);
+        return plugin.getConfigManager().getLong("modules." + name + "." + key, def);
     }
 
     protected double getConfigDouble(String key, double def) {
-        return plugin.getConfigManager().getDouble("moduller." + name + "." + key, def);
+        return plugin.getConfigManager().getDouble("modules." + name + "." + key, def);
     }
 
     protected String getConfigString(String key, String def) {
-        return plugin.getConfigManager().getString("moduller." + name + "." + key, def);
+        return plugin.getConfigManager().getString("modules." + name + "." + key, def);
     }
 
     protected List<String> getConfigStringList(String key) {
-        return plugin.getConfigManager().getStringList("moduller." + name + "." + key);
+        return plugin.getConfigManager().getStringList("modules." + name + "." + key);
     }
 }

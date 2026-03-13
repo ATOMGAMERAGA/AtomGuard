@@ -44,7 +44,7 @@ public class TooManyBooksModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public TooManyBooksModule(@NotNull AtomGuard plugin) {
-        super(plugin, "cok-fazla-kitap", "Chunk başına kitap sayısını kontrol eder");
+        super(plugin, "too-many-books", "Chunk başına kitap sayısını kontrol eder");
     }
 
     @Override
@@ -82,10 +82,10 @@ public class TooManyBooksModule extends AbstractModule implements Listener {
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.maxBooksPerChunk = getConfigInt("chunk-basina-max-kitap", 100);
-        this.maxPageLength = getConfigInt("max-sayfa-uzunlugu", 256);
+        this.maxBooksPerChunk = getConfigInt("max-books-per-chunk", 100);
+        this.maxPageLength = getConfigInt("max-page-length", 256);
         this.maxTotalSize = getConfigInt("max-toplam-boyut", 102400); // 100KB
-        this.action = getConfigString("eylem", "cancel");
+        this.action = getConfigString("action", "cancel");
 
         debug("Config yüklendi: maxBooks=" + maxBooksPerChunk +
               ", maxPageLength=" + maxPageLength +

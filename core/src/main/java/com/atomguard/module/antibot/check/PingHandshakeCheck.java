@@ -26,8 +26,8 @@ public class PingHandshakeCheck extends AbstractCheck {
             // FP-03: Ping yokluğunu tek başına şüpheli sayma — sadece diğer checklerle birlikte ağırlık kazansın.
             // Normal modda varsayılan 0, saldırı modunda varsayılan 5.
             return module.getAttackTracker().isUnderAttack() ? 
-                    module.getConfigInt("kontroller.ping-handshake.ping-yok-skor-saldiri", 5) : 
-                    module.getConfigInt("kontroller.ping-handshake.ping-yok-skor-normal", 0);
+                    module.getConfigInt("checks.ping-handshake.no-ping-score-attack", 5) : 
+                    module.getConfigInt("checks.ping-handshake.no-ping-score-normal", 0);
         }
 
         long timeSincePing = now - profile.getHandshakeTime();

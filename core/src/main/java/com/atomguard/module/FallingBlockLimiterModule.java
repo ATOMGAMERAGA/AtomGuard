@@ -28,14 +28,14 @@ public class FallingBlockLimiterModule extends AbstractModule implements Listene
     private int maxPerChunk;
 
     public FallingBlockLimiterModule(@NotNull AtomGuard plugin) {
-        super(plugin, "kum-cakil-sinirlandirici", "Düşen blok sınırlayıcı");
+        super(plugin, "falling-block-limiter", "Düşen blok sınırlayıcı");
     }
 
     @Override
 
     public void onEnable() {
         super.onEnable();
-        this.maxPerChunk = getConfigInt("max-dusen-blok-chunk", 64);
+        this.maxPerChunk = getConfigInt("max-falling-blocks-per-chunk", 64);
 
         // Periyodik temizlik
         plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, chunkCounts::clear, 200L, 200L);

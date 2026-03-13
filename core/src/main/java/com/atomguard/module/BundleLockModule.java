@@ -50,7 +50,7 @@ public class BundleLockModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public BundleLockModule(@NotNull AtomGuard plugin) {
-        super(plugin, "bundle-kilit", "Bundle slot kilitleme koruması");
+        super(plugin, "bundle-lock", "Bundle slot kilitleme koruması");
     }
 
     @Override

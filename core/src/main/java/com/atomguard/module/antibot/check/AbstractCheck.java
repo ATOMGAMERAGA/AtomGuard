@@ -15,11 +15,11 @@ public abstract class AbstractCheck {
     public abstract int calculateThreatScore(PlayerProfile profile);
 
     public boolean isEnabled() {
-        return module.getConfigBoolean("kontroller." + name + ".aktif", true);
+        return module.getConfigBoolean("checks." + name + ".enabled", true);
     }
 
     public double getAttackModeMultiplier() {
-        return module.getConfigDouble("kontroller." + name + ".saldiri-carpani", 1.0);
+        return module.getConfigDouble("checks." + name + ".attack-multiplier", 1.0);
     }
 
     public String getName() {

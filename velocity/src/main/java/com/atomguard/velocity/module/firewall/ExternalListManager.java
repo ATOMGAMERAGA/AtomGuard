@@ -30,7 +30,7 @@ public class ExternalListManager {
     }
 
     public void start() {
-        if (!plugin.getConfigManager().getBoolean("harici-listeler.aktif", false)) return;
+        if (!plugin.getConfigManager().getBoolean("external-lists.enabled", false)) return;
         
         List<Map<String, Object>> configLists = plugin.getConfigManager().getMapList("harici-listeler.listeler");
         if (configLists == null) return;

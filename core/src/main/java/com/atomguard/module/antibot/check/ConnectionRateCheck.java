@@ -20,7 +20,7 @@ public class ConnectionRateCheck extends AbstractCheck {
         int score = 0;
         String ip = profile.getIpAddress();
         long now = System.currentTimeMillis();
-        long windowMs = module.getConfigInt("kontroller.baglanti-hizi.pencere-suresi-ms", 10000);
+        long windowMs = module.getConfigInt("checks.connection-rate.window-ms", 10000);
 
         // Bağlantı timestamp'ini sadece pre-login aşamasında (henüz join olmamış) ekle.
         // Periodic (in-game) değerlendirmede tekrar ekleme — false positive önleme.
@@ -37,8 +37,8 @@ public class ConnectionRateCheck extends AbstractCheck {
         cleanOldEntries(ipDeque, now, windowMs);
         int ipRate = ipDeque.size();
 
-        int globalThreshold = module.getConfigInt("kontroller.baglanti-hizi.global-esik", 20);
-        int ipThreshold = module.getConfigInt("kontroller.baglanti-hizi.ip-basina-esik", 3);
+        int globalThreshold = module.getConfigInt("checks.connection-rate.global-threshold", 20);
+        int ipThreshold = module.getConfigInt("checks.connection-rate.per-ip-threshold", 3);
 
         if (globalRate > globalThreshold) {
             score += Math.min((globalRate - globalThreshold), 10);

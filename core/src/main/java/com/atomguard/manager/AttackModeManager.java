@@ -48,13 +48,13 @@ public class AttackModeManager {
     }
 
     private void loadActionConfig() {
-        this.actionBlockUnverified = plugin.getConfig().getBoolean("attack-mode.aksiyonlar.dogrulanmamis-ip-engelle", true);
-        this.actionTightLimits = plugin.getConfig().getBoolean("attack-mode.aksiyonlar.siki-limitler", true);
-        this.tightLimitMultiplier = plugin.getConfig().getDouble("attack-mode.aksiyonlar.siki-limit-carpani", 0.5);
-        this.actionAutoEnableModules = plugin.getConfig().getBoolean("attack-mode.aksiyonlar.otomatik-modul-etkinlestir", true);
-        this.autoModules = plugin.getConfig().getStringList("attack-mode.aksiyonlar.otomatik-moduller");
-        this.actionWhitelistOnly = plugin.getConfig().getBoolean("attack-mode.aksiyonlar.sadece-beyaz-liste", false);
-        this.actionDiscordNotify = plugin.getConfig().getBoolean("attack-mode.aksiyonlar.discord-bildirim", true);
+        this.actionBlockUnverified = plugin.getConfig().getBoolean("attack-mode.actions.block-unverified-ips", true);
+        this.actionTightLimits = plugin.getConfig().getBoolean("attack-mode.actions.strict-limits", true);
+        this.tightLimitMultiplier = plugin.getConfig().getDouble("attack-mode.actions.strict-limit-factor", 0.5);
+        this.actionAutoEnableModules = plugin.getConfig().getBoolean("attack-mode.actions.auto-enable-modules", true);
+        this.autoModules = plugin.getConfig().getStringList("attack-mode.actions.auto-modules");
+        this.actionWhitelistOnly = plugin.getConfig().getBoolean("attack-mode.actions.whitelist-only", false);
+        this.actionDiscordNotify = plugin.getConfig().getBoolean("attack-mode.actions.discord-notify", true);
     }
 
     /**

@@ -86,12 +86,12 @@ public class ThreatScoreCalculator {
         
         // FP-08: Doğrulanmış oyuncular için saldırı modu çarpanını uygulama (multiplier = 1.0)
         double multiplier = (module.getAttackTracker().isUnderAttack() && !isVerified) ? 
-                module.getConfigDouble("saldiri-modu.esik-carpani", 0.85) : 1.0; // 0.7'den 0.85'e çıkarıldı
+                module.getConfigDouble("attack-mode.threshold-multiplier", 0.85) : 1.0; // 0.7'den 0.85'e çıkarıldı
 
-        int allowThreshold = (int) (module.getConfigInt("skor-esikleri.izin-ver", 30) * multiplier);
-        int delayThreshold = (int) (module.getConfigInt("skor-esikleri.geciktir", 60) * multiplier);
+        int allowThreshold = (int) (module.getConfigInt("score-thresholds.allow", 30) * multiplier);
+        int delayThreshold = (int) (module.getConfigInt("score-thresholds.delay", 60) * multiplier);
         // FP-07: Minimum 75 — saldırı modu çarpanı kick eşiğini çok düşüremesin
-        int kickThreshold = Math.max(75, (int) (module.getConfigInt("skor-esikleri.at", 80) * multiplier));
+        int kickThreshold = Math.max(75, (int) (module.getConfigInt("score-thresholds.kick", 80) * multiplier));
 
         if (totalScore < allowThreshold) {
             action = ActionType.ALLOW;

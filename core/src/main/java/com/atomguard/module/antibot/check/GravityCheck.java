@@ -21,13 +21,13 @@ public class GravityCheck extends AbstractCheck {
         if (tps < 15.0) return 0; // Çok yoğun lag varsa devre dışı bırak
 
         List<Double> yPositions = profile.getRecentYPositions();
-        int minData = module.getConfigInt("kontroller.yercekimi.min-veri-sayisi", 8); // 5'ten 8'e çıkarıldı
+        int minData = module.getConfigInt("checks.gravity.min-data-count", 8); // 5'ten 8'e çıkarıldı
         
         if (yPositions.size() < minData) return 0;
 
         int violations = 0;
         int totalChecks = 0;
-        double tolerance = module.getConfigDouble("kontroller.yercekimi.tolerans", 0.08); // 0.03'ten 0.08'e çıkarıldı
+        double tolerance = module.getConfigDouble("checks.gravity.tolerance", 0.08); // 0.03'ten 0.08'e çıkarıldı
 
         // FP-06/07: Düşük TPS durumunda toleransı artır — eşik 19'a yükseltildi, çarpan 3x'e çıkarıldı
         if (tps < 19.0) {

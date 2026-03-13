@@ -203,7 +203,7 @@ public class AtomGuardVelocity {
         }
 
         messageManager = new VelocityMessageManager(dataDirectory, logger);
-        messageManager.load(configManager.getString("dil", "tr"));
+        messageManager.load(configManager.getString("language", "en"));
 
         logManager = new VelocityLogManager(dataDirectory, logger);
         logManager.initialize();
@@ -213,7 +213,7 @@ public class AtomGuardVelocity {
 
         alertManager = new VelocityAlertManager(server, logger);
         String webhookUrl = configManager.getString("discord-webhook.webhook-url", "");
-        boolean discordEnabled = configManager.getBoolean("discord-webhook.aktif", false);
+        boolean discordEnabled = configManager.getBoolean("discord-webhook.enabled", false);
         alertManager.configure(webhookUrl, discordEnabled);
 
         storageProvider = new VelocityStorageProvider(this);
@@ -232,10 +232,10 @@ public class AtomGuardVelocity {
         behaviorManager = new BehaviorManager(this);
         connectionHistory = new com.atomguard.velocity.data.ConnectionHistory();
 
-        if (configManager.getBoolean("metrikler.prometheus.aktif", false)) {
+        if (configManager.getBoolean("metrics.prometheus.enabled", false)) {
             prometheusExporter = new com.atomguard.velocity.metrics.PrometheusExporter(this);
             try {
-                prometheusExporter.start(configManager.getInt("metrikler.prometheus.port", 9225));
+                prometheusExporter.start(configManager.getInt("metrics.prometheus.port", 9225));
             } catch (Exception e) {
                 logger.error("Prometheus metrik sunucusu başlatılamadı: {}", e.getMessage());
             }

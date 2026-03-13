@@ -29,7 +29,7 @@ import org.jetbrains.annotations.NotNull;
 public class DuplicationFixModule extends AbstractModule implements Listener {
 
     public DuplicationFixModule(@NotNull AtomGuard plugin) {
-        super(plugin, "gelismis-duplikasyon", "Portal ve Shulker dupe koruması");
+        super(plugin, "advanced-duplication", "Portal ve Shulker dupe koruması");
     }
 
     @Override

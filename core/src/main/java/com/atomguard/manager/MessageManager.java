@@ -202,7 +202,7 @@ public class MessageManager {
      * @param path Messages.yml'deki mesaj yolu
      */
     public void sendPrefixedMessage(@NotNull Player player, @NotNull String path) {
-        Component prefix = getMessage("genel.onek");
+        Component prefix = getMessage("general.prefix");
         Component message = getMessage(path);
         player.sendMessage(prefix.append(Component.space()).append(message));
     }
@@ -215,7 +215,7 @@ public class MessageManager {
      * @param placeholders Placeholder map'i
      */
     public void sendPrefixedMessage(@NotNull Player player, @NotNull String path, @NotNull Map<String, String> placeholders) {
-        Component prefix = getMessage("genel.onek");
+        Component prefix = getMessage("general.prefix");
         Component message = getMessage(path, placeholders);
         player.sendMessage(prefix.append(Component.space()).append(message));
     }
@@ -227,7 +227,7 @@ public class MessageManager {
      * @param path Messages.yml'deki mesaj yolu
      */
     public void sendPrefixedMessage(@NotNull CommandSender sender, @NotNull String path) {
-        Component prefix = getMessage("genel.onek");
+        Component prefix = getMessage("general.prefix");
         Component message = getMessage(path);
         sender.sendMessage(prefix.append(Component.space()).append(message));
     }
@@ -240,7 +240,7 @@ public class MessageManager {
      * @param placeholders Placeholder map'i
      */
     public void sendPrefixedMessage(@NotNull CommandSender sender, @NotNull String path, @NotNull Map<String, String> placeholders) {
-        Component prefix = getMessage("genel.onek");
+        Component prefix = getMessage("general.prefix");
         Component message = getMessage(path, placeholders);
         sender.sendMessage(prefix.append(Component.space()).append(message));
     }

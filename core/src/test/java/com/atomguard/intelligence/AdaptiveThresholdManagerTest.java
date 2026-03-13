@@ -22,10 +22,10 @@ class AdaptiveThresholdManagerTest {
     @BeforeEach
     void setUp() {
         when(plugin.getConfig()).thenReturn(config);
-        when(config.getBoolean("tehdit-istihbarati.adaptif-esik.gunduz-gece-ayri", true)).thenReturn(true);
-        when(config.getBoolean("tehdit-istihbarati.adaptif-esik.hafta-ici-sonu-ayri", true)).thenReturn(true);
-        when(config.getInt("tehdit-istihbarati.adaptif-esik.min-ogrenme-haftasi", 2)).thenReturn(2);
-        when(config.getDouble("tehdit-istihbarati.ema-alpha", 0.1)).thenReturn(0.1);
+        when(config.getBoolean("threat-intelligence.adaptive-threshold.day-night-separation", true)).thenReturn(true);
+        when(config.getBoolean("threat-intelligence.adaptive-threshold.weekday-weekend-separation", true)).thenReturn(true);
+        when(config.getInt("threat-intelligence.adaptive-threshold.min-learning-weeks", 2)).thenReturn(2);
+        when(config.getDouble("threat-intelligence.ema-alpha", 0.1)).thenReturn(0.1);
 
         manager = new AdaptiveThresholdManager(plugin);
     }

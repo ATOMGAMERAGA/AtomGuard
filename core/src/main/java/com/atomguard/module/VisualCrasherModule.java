@@ -36,14 +36,14 @@ public class VisualCrasherModule extends AbstractModule implements Listener {
     private final Map<UUID, AtomicInteger> particleCounts = new ConcurrentHashMap<>();
 
     public VisualCrasherModule(@NotNull AtomGuard plugin) {
-        super(plugin, "gorsel-crasher", "Havai fişek ve partikül koruması");
+        super(plugin, "visual-crasher", "Havai fişek ve partikül koruması");
     }
 
     @Override
     public void onEnable() {
         super.onEnable();
-        this.maxFireworkEffects = getConfigInt("max-havai-fiseke-efekt", 15);
-        this.maxParticlePackets = getConfigInt("max-partikul-paketi-saniye", 100);
+        this.maxFireworkEffects = getConfigInt("max-firework-effects", 15);
+        this.maxParticlePackets = getConfigInt("max-particle-packets-per-second", 100);
 
         // PacketEvents listener for particles - Merkezi Listener üzerinden
         registerSendHandler(PacketType.Play.Server.PARTICLE, this::handleParticlePacket);

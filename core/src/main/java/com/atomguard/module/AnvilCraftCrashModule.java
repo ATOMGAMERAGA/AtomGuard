@@ -22,14 +22,14 @@ public class AnvilCraftCrashModule extends AbstractModule implements Listener {
     private int maxRenameLength;
 
     public AnvilCraftCrashModule(@NotNull AtomGuard plugin) {
-        super(plugin, "ors-craft-crash", "Anvil ve Crafting koruması");
+        super(plugin, "anvil-craft-crash", "Anvil ve Crafting koruması");
     }
 
     @Override
 
     public void onEnable() {
         super.onEnable();
-        this.maxRenameLength = getConfigInt("anvil-max-isim-uzunlugu", 50);
+        this.maxRenameLength = getConfigInt("max-anvil-name-length", 50);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

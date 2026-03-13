@@ -41,7 +41,7 @@ public class InventoryDuplicationModule extends AbstractModule implements Listen
      * @param plugin Ana plugin instance
      */
     public InventoryDuplicationModule(@NotNull AtomGuard plugin) {
-        super(plugin, "envanter-duplikasyon", "Envanter duplikasyonu onleme");
+        super(plugin, "inventory-duplication", "Envanter duplikasyonu onleme");
         this.openInventories = new ConcurrentHashMap<>();
     }
 

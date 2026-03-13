@@ -40,7 +40,7 @@ public class BookCrasherModule extends AbstractModule {
      * @param plugin Ana plugin instance
      */
     public BookCrasherModule(@NotNull AtomGuard plugin) {
-        super(plugin, "kitap-crash", "Kitap crash exploit kontrolü");
+        super(plugin, "book-crash", "Kitap crash exploit kontrolü");
     }
 
     @Override
@@ -70,10 +70,10 @@ public class BookCrasherModule extends AbstractModule {
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.maxTitleLength = getConfigInt("max-baslik-uzunlugu", 32);
-        this.maxPageCount = getConfigInt("max-sayfa-sayisi", 100);
-        this.maxPageSize = getConfigInt("max-sayfa-boyutu", 256);
-        this.maxTotalBookSize = getConfigInt("max-toplam-kitap-boyutu", 102400); // 100KB
+        this.maxTitleLength = getConfigInt("max-title-length", 32);
+        this.maxPageCount = getConfigInt("max-page-count", 100);
+        this.maxPageSize = getConfigInt("max-page-size", 256);
+        this.maxTotalBookSize = getConfigInt("max-total-book-size", 102400); // 100KB
 
         debug("Config yüklendi: maxTitle=" + maxTitleLength +
               ", maxPages=" + maxPageCount +

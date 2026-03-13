@@ -143,11 +143,11 @@ class BedrockSupportModuleTest {
         @BeforeEach
         void setUp() {
             // Config stubs for module constructor and enable
-            lenient().when(configManager.getBoolean(eq("moduller.bedrock-destek.aktif"), anyBoolean())).thenReturn(true);
-            lenient().when(configManager.getString(eq("moduller.bedrock-destek.bedrock-prefix"), anyString())).thenReturn(".");
-            lenient().when(configManager.getInt(eq("moduller.bedrock-destek.xbox-live-bonus"), anyInt())).thenReturn(10);
-            lenient().when(configManager.getDouble(eq("moduller.bedrock-destek.bedrock-rate-limit-carpani"), anyDouble())).thenReturn(1.5);
-            lenient().when(configManager.getBoolean(eq("moduller.bedrock-destek.floodgate-entegrasyon"), anyBoolean())).thenReturn(false);
+            lenient().when(configManager.getBoolean(eq("modules.bedrock-destek.enabled"), anyBoolean())).thenReturn(true);
+            lenient().when(configManager.getString(eq("modules.bedrock-destek.bedrock-prefix"), anyString())).thenReturn(".");
+            lenient().when(configManager.getInt(eq("modules.bedrock-destek.xbox-live-bonus"), anyInt())).thenReturn(10);
+            lenient().when(configManager.getDouble(eq("modules.bedrock-destek.bedrock-rate-limit-carpani"), anyDouble())).thenReturn(1.5);
+            lenient().when(configManager.getBoolean(eq("modules.bedrock-destek.floodgate-entegrasyon"), anyBoolean())).thenReturn(false);
 
             module = new BedrockSupportModule(plugin);
         }

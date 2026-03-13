@@ -32,7 +32,7 @@ public class BackendCommunicator {
     }
 
     private void setupRedis() {
-        redisEnabled = plugin.getConfigManager().getBoolean("redis.aktif", false);
+        redisEnabled = plugin.getConfigManager().getBoolean("redis.enabled", false);
         if (redisEnabled) {
             String host = plugin.getConfigManager().getString("redis.host", "localhost");
             int port = plugin.getConfigManager().getInt("redis.port", 6379);
@@ -101,7 +101,7 @@ public class BackendCommunicator {
                 }
                 case "CONFIG_RELOAD" -> {
                     plugin.getConfigManager().reload();
-                    plugin.getMessageManager().load(plugin.getConfigManager().getString("dil", "tr"));
+                    plugin.getMessageManager().load(plugin.getConfigManager().getString("language", "en"));
                     plugin.getLogManager().log("Uzaktan yapılandırma yenilendi.");
                 }
                 default -> logger.debug("Bilinmeyen Redis mesaj türü: {}", msg.getType());

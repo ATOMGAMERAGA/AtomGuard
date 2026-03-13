@@ -69,23 +69,23 @@ public class TrafficIntelligenceEngine {
         this.plugin = plugin;
 
         this.enabled = plugin.getConfigManager().getConfig()
-                .getBoolean("tehdit-istihbarati.aktif", true);
+                .getBoolean("threat-intelligence.enabled", true);
         this.learningMode = plugin.getConfigManager().getConfig()
-                .getBoolean("tehdit-istihbarati.ogrenme-modu", false);
+                .getBoolean("threat-intelligence.learning-mode", false);
         this.learningPeriodHours = Math.max(1, plugin.getConfigManager().getConfig()
-                .getInt("tehdit-istihbarati.ogrenme-suresi-saat", 48));
+                .getInt("threat-intelligence.learning-hours", 48));
         this.minSamplesForBaseline = Math.max(3, plugin.getConfigManager().getConfig()
-                .getInt("tehdit-istihbarati.min-ornek-sayisi", 10));
+                .getInt("threat-intelligence.min-samples", 10));
         this.emaAlpha = clamp(plugin.getConfigManager().getConfig()
-                .getDouble("tehdit-istihbarati.ema-alpha", 0.1), 0.001, 1.0);
+                .getDouble("threat-intelligence.ema-alpha", 0.1), 0.001, 1.0);
         this.sensitivityMultiplier = clamp(plugin.getConfigManager().getConfig()
-                .getDouble("tehdit-istihbarati.hassasiyet-carpani", 1.0), 0.1, 5.0);
+                .getDouble("threat-intelligence.sensitivity", 1.0), 0.1, 5.0);
         long cooldownSec = plugin.getConfigManager().getConfig()
-                .getLong("tehdit-istihbarati.uyari-bekleme-saniye", 300);
+                .getLong("threat-intelligence.alert-cooldown-seconds", 300);
         this.alertCooldownMs = cooldownSec * 1000L;
 
         int bufferSize = Math.max(10, plugin.getConfigManager().getConfig()
-                .getInt("tehdit-istihbarati.tampon-boyutu", 60));
+                .getInt("threat-intelligence.buffer-size", 60));
 
         this.connectionsBuffer  = new TimeSeriesBuffer(bufferSize);
         this.uniqueIpsBuffer    = new TimeSeriesBuffer(bufferSize);

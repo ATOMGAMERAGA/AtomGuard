@@ -38,7 +38,7 @@ public class CustomPayloadModule extends AbstractModule {
      * @param plugin Ana plugin instance
      */
     public CustomPayloadModule(@NotNull AtomGuard plugin) {
-        super(plugin, "ozel-payload", "Custom payload paket kontrolü");
+        super(plugin, "custom-payload", "Custom payload paket kontrolü");
         this.allowedChannels = new HashSet<>();
     }
 
@@ -74,7 +74,7 @@ public class CustomPayloadModule extends AbstractModule {
         // İzinli kanalları yükle
         List<String> channelList = plugin.getConfigManager()
             .getConfig()
-            .getStringList("moduller." + name + ".izinli-kanallar");
+            .getStringList("modules." + name + ".allowed-channels");
 
         if (channelList == null || channelList.isEmpty()) {
             // Varsayılan izinli kanallar
@@ -82,8 +82,8 @@ public class CustomPayloadModule extends AbstractModule {
         }
 
         this.allowedChannels = new HashSet<>(channelList);
-        this.maxPayloadSize = getConfigInt("max-payload-boyutu", 32767); // 32KB
-        this.blockUnknownChannels = getConfigBoolean("bilinmeyen-kanallari-engelle", true);
+        this.maxPayloadSize = getConfigInt("max-payload-size", 32767); // 32KB
+        this.blockUnknownChannels = getConfigBoolean("block-unknown-channels", true);
 
         debug("Config yüklendi: maxSize=" + maxPayloadSize +
               ", blockUnknown=" + blockUnknownChannels +

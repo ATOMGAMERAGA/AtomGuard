@@ -40,7 +40,7 @@ public class CowDuplicationModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public CowDuplicationModule(@NotNull AtomGuard plugin) {
-        super(plugin, "inek-duplikasyon", "Mooshroom kırkma duplikasyonu önleme");
+        super(plugin, "cow-duplication", "Mooshroom kırkma duplikasyonu önleme");
     }
 
     @Override
@@ -77,7 +77,7 @@ public class CowDuplicationModule extends AbstractModule implements Listener {
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.shearCooldownMs = getConfigLong("kirkma-cooldown-ms", 500L);
+        this.shearCooldownMs = getConfigLong("shearing-cooldown-ms", 500L);
 
         debug("Config yüklendi: cooldown=" + shearCooldownMs + "ms");
     }

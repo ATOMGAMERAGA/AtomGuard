@@ -126,13 +126,13 @@ public class AtomGuard extends JavaPlugin {
 
             if (getServer().getPluginManager().getPlugin("AuthMe") != null) {
                 getServer().getPluginManager().registerEvents(new AuthListener(this), this);
-                getLogger().info("AuthMe entegrasyonu aktif.");
+                getLogger().info("AuthMe integration active.");
             } else {
-                getLogger().info("AuthMe bulunamadı, auth entegrasyonu devre dışı.");
+                getLogger().info("AuthMe not found, auth integration disabled.");
             }
 
             // Messaging
-            if (getConfig().getBoolean("mesajlasma.aktif", true)) {
+            if (getConfig().getBoolean("messaging.enabled", true)) {
                 getServer().getMessenger().registerOutgoingPluginChannel(this, "atomguard:main");
                 getServer().getMessenger().registerIncomingPluginChannel(this, "atomguard:main", new CoreMessagingListener(this));
                 getServer().getMessenger().registerOutgoingPluginChannel(this, "atomguard:auth");
@@ -141,7 +141,7 @@ public class AtomGuard extends JavaPlugin {
             // PlaceholderAPI
             if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
                 new com.atomguard.util.AtomGuardPlaceholderExpansion(this).register();
-                getLogger().info("PlaceholderAPI entegrasyonu aktif.");
+                getLogger().info("PlaceholderAPI integration active.");
             }
 
             // Discord Webhook
@@ -160,14 +160,14 @@ public class AtomGuard extends JavaPlugin {
             getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
                 moduleManager.getAllModules().forEach(m -> {
                     try { m.cleanup(); } catch (Exception e) {
-                        getLogger().warning("Cleanup hatası (" + m.getName() + "): " + e.getMessage());
+                        getLogger().warning("Cleanup error (" + m.getName() + "): " + e.getMessage());
                     }
                 });
                 if (heuristicEngine != null) heuristicEngine.cleanupOfflinePlayers();
             }, 6000L, 6000L); // 5 dakikada bir
 
             // Web Panel
-            if (getConfig().getBoolean("web-panel.aktif", false)) {
+            if (getConfig().getBoolean("web-panel.enabled", false)) {
                 this.webPanel = new com.atomguard.web.WebPanel(this);
                 webPanel.start();
                 getLogger().info("Web Panel başlatıldı: port " + getConfig().getInt("web-panel.port", 8080));
@@ -184,7 +184,7 @@ public class AtomGuard extends JavaPlugin {
             getLogger().info("AtomGuard (Core) has been enabled!");
 
         } catch (Exception e) {
-            getLogger().log(java.util.logging.Level.SEVERE, "AtomGuard başlatılamadı", e);
+            getLogger().log(java.util.logging.Level.SEVERE, "AtomGuard failed to start", e);
             getServer().getPluginManager().disablePlugin(this);
         }
     }
@@ -214,7 +214,7 @@ public class AtomGuard extends JavaPlugin {
 
         if (storageProvider != null) {
             storageProvider.connect();
-            getLogger().info("Depolama sağlayıcısı başlatıldı: " + storageProvider.getTypeName());
+            getLogger().info("Storage provider initialized: " + storageProvider.getTypeName());
         }
     }
 
@@ -229,7 +229,7 @@ public class AtomGuard extends JavaPlugin {
             null, // connectionPipeline — not yet implemented in core
             getDescription().getVersion()
         );
-        getLogger().info("AtomGuard API v" + getDescription().getVersion() + " başlatıldı.");
+        getLogger().info("AtomGuard API v" + getDescription().getVersion() + " initialized.");
     }
 
     @Override
@@ -272,24 +272,24 @@ public class AtomGuard extends JavaPlugin {
 
     private void initializeNotificationProviders() {
         // Discord
-        if (getConfig().getBoolean("bildirimler.discord.aktif", false)) {
+        if (getConfig().getBoolean("notifications.discord.enabled", false)) {
             DiscordProvider discord = new DiscordProvider(this);
             java.util.Set<NotificationType> types = parseNotificationTypes(
-                    getConfig().getStringList("bildirimler.discord.bildirim-turleri"));
+                    getConfig().getStringList("notifications.discord.types"));
             notificationManager.registerProvider(discord, types);
         }
         // Telegram
-        if (getConfig().getBoolean("bildirimler.telegram.aktif", false)) {
+        if (getConfig().getBoolean("notifications.telegram.enabled", false)) {
             TelegramProvider telegram = new TelegramProvider(this);
             java.util.Set<NotificationType> types = parseNotificationTypes(
-                    getConfig().getStringList("bildirimler.telegram.bildirim-turleri"));
+                    getConfig().getStringList("notifications.telegram.types"));
             notificationManager.registerProvider(telegram, types);
         }
         // Slack
-        if (getConfig().getBoolean("bildirimler.slack.aktif", false)) {
+        if (getConfig().getBoolean("notifications.slack.enabled", false)) {
             SlackProvider slack = new SlackProvider(this);
             java.util.Set<NotificationType> types = parseNotificationTypes(
-                    getConfig().getStringList("bildirimler.slack.bildirim-turleri"));
+                    getConfig().getStringList("notifications.slack.types"));
             notificationManager.registerProvider(slack, types);
         }
     }
@@ -300,7 +300,7 @@ public class AtomGuard extends JavaPlugin {
             try {
                 types.add(NotificationType.valueOf(name));
             } catch (IllegalArgumentException ignored) {
-                getLogger().warning("Bilinmeyen bildirim türü: " + name);
+                getLogger().warning("Unknown notification type: " + name);
             }
         }
         return types;

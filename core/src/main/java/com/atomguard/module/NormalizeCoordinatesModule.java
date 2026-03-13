@@ -37,7 +37,7 @@ public class NormalizeCoordinatesModule extends AbstractModule implements Listen
      * @param plugin Ana plugin instance
      */
     public NormalizeCoordinatesModule(@NotNull AtomGuard plugin) {
-        super(plugin, "koordinat-normallestirme", "Koordinat normalizasyonu");
+        super(plugin, "coordinate-normalize", "Koordinat normalizasyonu");
     }
 
     @Override

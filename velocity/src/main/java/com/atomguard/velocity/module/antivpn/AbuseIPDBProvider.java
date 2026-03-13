@@ -29,8 +29,8 @@ public class AbuseIPDBProvider {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
-        this.apiKey = plugin.getConfigManager().getString("vpn-proxy-engelleme.abuseipdb.api-anahtari", "");
-        String configUrl = plugin.getConfigManager().getString("harici-servisler.abuseipdb-url", DEFAULT_BASE_URL);
+        this.apiKey = plugin.getConfigManager().getString("vpn-proxy-block.abuseipdb.api-key", "");
+        String configUrl = plugin.getConfigManager().getString("external-services.abuseipdb-url", DEFAULT_BASE_URL);
         this.baseUrl = (configUrl != null && !configUrl.isBlank()) ? configUrl : DEFAULT_BASE_URL;
     }
 

@@ -28,15 +28,15 @@ public class ExplosionLimiterModule extends AbstractModule implements Listener {
     private int taskId = -1;
 
     public ExplosionLimiterModule(@NotNull AtomGuard plugin) {
-        super(plugin, "patlama-sinirlandirici", "Patlama hızı ve hasar sınırlayıcı");
+        super(plugin, "explosion-limiter", "Patlama hızı ve hasar sınırlayıcı");
     }
 
     @Override
 
     public void onEnable() {
         super.onEnable();
-        this.maxPerSecond = getConfigInt("max-patlama-saniye", 10);
-        this.maxBlockDamage = getConfigInt("max-blok-hasari", 1000);
+        this.maxPerSecond = getConfigInt("max-explosions-per-second", 10);
+        this.maxBlockDamage = getConfigInt("max-block-damage", 1000);
 
         taskId = plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, 
             () -> explosionCount.set(0), 20L, 20L).getTaskId();

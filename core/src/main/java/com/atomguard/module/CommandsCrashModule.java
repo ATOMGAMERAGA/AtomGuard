@@ -45,7 +45,7 @@ public class CommandsCrashModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public CommandsCrashModule(@NotNull AtomGuard plugin) {
-        super(plugin, "komut-crash", "Zararlı komutları engeller");
+        super(plugin, "command-crash", "Zararlı komutları engeller");
         this.blockedPatterns = new ArrayList<>();
     }
 
@@ -92,7 +92,7 @@ public class CommandsCrashModule extends AbstractModule implements Listener {
 
         List<String> commandList = plugin.getConfigManager()
             .getConfig()
-            .getStringList("moduller." + name + ".engellenen-komutlar");
+            .getStringList("modules." + name + ".blocked-commands");
 
         if (commandList == null || commandList.isEmpty()) {
             // Varsayılan engellenecek komutlar

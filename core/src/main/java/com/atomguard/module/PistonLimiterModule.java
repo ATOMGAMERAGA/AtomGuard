@@ -27,14 +27,14 @@ public class PistonLimiterModule extends AbstractModule implements Listener {
     private int maxUpdates;
 
     public PistonLimiterModule(@NotNull AtomGuard plugin) {
-        super(plugin, "piston-sinirlandirici", "Piston hızı sınırlayıcı");
+        super(plugin, "piston-limiter", "Piston hızı sınırlayıcı");
     }
 
     @Override
 
     public void onEnable() {
         super.onEnable();
-        this.maxUpdates = getConfigInt("max-piston-hareketi-saniye", 50);
+        this.maxUpdates = getConfigInt("max-piston-moves-per-second", 50);
 
         plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, pistonUpdates::clear, 20L, 20L);
     }

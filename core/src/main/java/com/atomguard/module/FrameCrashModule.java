@@ -121,8 +121,8 @@ public class FrameCrashModule extends AbstractModule implements Listener {
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.maxFramesPerChunk = getConfigInt("chunk-basina-max-frame", 100);
-        this.maxArmorStandsPerChunk = getConfigInt("chunk-basina-max-armor-stand", 50);
+        this.maxFramesPerChunk = getConfigInt("max-frames-per-chunk", 100);
+        this.maxArmorStandsPerChunk = getConfigInt("max-armor-stands-per-chunk", 50);
 
         debug("Config yüklendi: maxFrames=" + maxFramesPerChunk + ", maxArmorStands=" + maxArmorStandsPerChunk);
     }

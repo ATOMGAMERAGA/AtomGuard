@@ -1,137 +1,137 @@
-# AtomGuard Velocity - Ana Yapılandırma Dosyası
-config-versiyon: "1.1.0"
-dil: "tr"
+# AtomGuard Velocity - Main Configuration File
+config-version: "1.1.0"
+language: "en"
 
-# Depolama Ayarları
-depolama:
-  tip: "sqlite"  # sqlite veya mysql
+# Storage Settings
+storage:
+  type: "sqlite"  # sqlite or mysql
   mysql:
     host: "localhost"
     port: 3306
-    veritabani: "atomguard"
-    kullanici: "root"
-    sifre: ""
+    database: "atomguard"
+    username: "root"
+    password: ""
 
-# Metrikler ve İzleme
-metrikler:
+# Metrics and Monitoring
+metrics:
   prometheus:
-    aktif: true
+    enabled: true
     port: 9225
 
-# Redis Senkronizasyon (Bungee/Velocity arası)
+# Redis Synchronization (Between Bungee/Velocity)
 redis:
-  aktif: false
+  enabled: false
   host: "localhost"
   port: 6379
-  sifre: ""
-  zaman-asimi: 3000
+  password: ""
+  timeout: 3000
 
-# Discord Bildirimleri
+# Discord Notifications
 discord-webhook:
-  aktif: false
+  enabled: false
   webhook-url: ""
 
-# Bot ve Davranış Kontrolü
-bot-koruma:
-  analiz-penceresi: 15
-  supheli-esik: 8
-  yuksek-risk-esik: 75
-  orta-risk-esik: 45
-  guven-skoru-esik: 10 # Bu eşiğin altındaki IP'ler TrustScoreCheck tarafından reddedilir
+# Bot and Behavior Control
+bot-protection:
+  analysis-window: 15
+  suspicious-threshold: 8
+  high-risk-threshold: 75
+  medium-risk-threshold: 45
+  trust-score-threshold: 10 # IPs below this threshold are rejected by TrustScoreCheck
 
-# Pipeline Modülleri (Öncelik Sırasına Göre İşlenir)
-moduller:
-  guvenlik-duvari:
-    aktif: true
-    oto-yasak-esik: 150
-    oto-yasak-sure: 3600
-    decay-dakika: 5
-  hiz-siniri:
-    aktif: true
-    baglanti-saniye:
-      ip-basina-max: 3
+# Pipeline Modules (Processed in Priority Order)
+modules:
+  firewall:
+    enabled: true
+    auto-ban-threshold: 150
+    auto-ban-duration: 3600
+    decay-minutes: 5
+  rate-limit:
+    enabled: true
+    connections-per-second:
+      per-ip-max: 3
       global-max: 50
-  ddos-koruma:
-    aktif: true
-    baglanti-limiti:
-      ip-basina-dakika: 5
-      global-saniye: 50
-      subnet-basina-dakika: 20
-      subnet-ban-aktif: false
-      subnet-ban-esik: 10
+  ddos-protection:
+    enabled: true
+    connection-limit:
+      per-ip-per-minute: 5
+      global-per-second: 50
+      per-subnet-per-minute: 20
+      subnet-ban-enabled: false
+      subnet-ban-threshold: 10
     ping-limit: 3
-    saldiri-modu:
-      esik: 30
-    saldiri-seviyeleri:
-      aktif: true
-      hysteresis-yukselme-sn: 3
-      hysteresis-dusme-sn: 15
-      dogrulanmis-ayrilmis-slot: 50
-      captcha-seviyeleri:
+    attack-mode:
+      threshold: 30
+    attack-levels:
+      enabled: true
+      hysteresis-rise-seconds: 3
+      hysteresis-fall-seconds: 15
+      verified-reserved-slots: 50
+      captcha-levels:
         - "ELEVATED"
         - "HIGH"
-    akilli-throttle:
-      aktif: true
+    smart-throttle:
+      enabled: true
       normal-limit: 10
-      dikkatli-limit: 5
-      agresif-limit: 2
+      cautious-limit: 5
+      aggressive-limit: 2
       lockdown-limit: 0
-    anomali-tespiti:
-      aktif: true
-      z-skoru-esigi: 3.0
-      profil-penceresi-saat: 1
-      yavas-rampa-esigi-yuzde: 10.0
-      pulse-tespit-aktif: true
-    parmak-izi:
-      aktif: true
-      bilinen-botnet-patternler:
+    anomaly-detection:
+      enabled: true
+      z-score-threshold: 3.0
+      profile-window-hours: 1
+      slow-ramp-threshold-percent: 10.0
+      pulse-detection-enabled: true
+    fingerprinting:
+      enabled: true
+      known-botnet-patterns:
         - "null|bot-fast"
         - "unknown|bot-fast"
         - "ip-like|bot-fast"
-      kitle-esigi: 20
-    ip-itibar:
-      aktif: true
-      baslangic-skoru: 50
-      basarili-baglanti-bonus: 5
-      rate-limit-ceza: 10
-      gecersiz-handshake-ceza: 15
-      slowloris-ceza: 25
-      saldiri-baglanti-ceza: 20
-      otomatik-ban-esik-1saat: 20
-      otomatik-ban-esik-24saat: 5
-      decay-saat-puan: 3
-      dogrulanmis-minimum-skor: 30
-    saldiri-kayit:
-      aktif: true
-      json-kaydet: true
-      maks-gecmis: 50
-      snapshot-araligi-sn: 5
-    metrikler:
-      aktif: true
-      prometheus-aktif: false
+      mass-threshold: 20
+    ip-reputation:
+      enabled: true
+      initial-score: 50
+      successful-connection-bonus: 5
+      rate-limit-penalty: 10
+      invalid-handshake-penalty: 15
+      slowloris-penalty: 25
+      attack-connection-penalty: 20
+      auto-ban-threshold-1hour: 20
+      auto-ban-threshold-24hours: 5
+      decay-points-per-hour: 3
+      verified-minimum-score: 30
+    attack-recording:
+      enabled: true
+      json-save: true
+      max-history: 50
+      snapshot-interval-seconds: 5
+    metrics:
+      enabled: true
+      prometheus-enabled: false
       prometheus-port: 9225
-      gecmis-dakika: 60
-    slowloris-gelismis:
-      aktif: true
-      maks-pending-ip: 5
-      zaman-asimi-ms: 10000
-      pending-oran-alarm: 0.30
-      keep-alive-kontrol: true
-    geo-engelleme:
-      aktif: false
-      engelli-ulkeler: []
-      izinli-ulkeler: []
-      izinli-ulkeler-modu: false
-  vpn-proxy-engelleme:
-    aktif: true
-    konsensus-esigi: 2
-    guven-skoru-esigi: 60
+      history-minutes: 60
+    slowloris-advanced:
+      enabled: true
+      max-pending-per-ip: 5
+      timeout-ms: 10000
+      pending-rate-alarm: 0.30
+      keep-alive-check: true
+    geo-blocking:
+      enabled: false
+      blocked-countries: []
+      allowed-countries: []
+      allowed-countries-mode: false
+  vpn-proxy-block:
+    enabled: true
+    consensus-threshold: 2
+    trust-score-threshold: 60
     residential-bypass: true
-  hesap-guvenlik-duvari:
-    aktif: true
+  account-firewall:
+    enabled: true
 
-# Harici Servis URL'leri (değiştirmeniz gerekmiyorsa varsayılanları kullanın)
-harici-servisler:
+# External Service URLs (use defaults unless you need to change them)
+external-services:
   proxycheck-url: "https://proxycheck.io/v2/"
   ip-api-url: "http://ip-api.com/json/"
   abuseipdb-url: "https://api.abuseipdb.com/api/v2/check"

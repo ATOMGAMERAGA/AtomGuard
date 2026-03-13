@@ -43,17 +43,17 @@ class TrustScoreManagerTest {
         when(plugin.getLogger()).thenReturn(logger);
 
         // Config defaults
-        when(config.getBoolean("guven-skoru.aktif", true)).thenReturn(true);
-        when(config.getInt("guven-skoru.baz-puan", 20)).thenReturn(20);
-        when(config.getInt("guven-skoru.esikler.regular", 30)).thenReturn(30);
-        when(config.getInt("guven-skoru.esikler.trusted", 60)).thenReturn(60);
-        when(config.getInt("guven-skoru.esikler.veteran", 85)).thenReturn(85);
-        when(config.getInt("guven-skoru.bypass.saldiri-modu-esik", 70)).thenReturn(70);
-        when(config.getBoolean("guven-skoru.bypass.bot-kontrol-atla", true)).thenReturn(true);
-        when(config.getBoolean("guven-skoru.bypass.vpn-kontrol-atla", false)).thenReturn(false);
-        when(config.getInt("guven-skoru.kaydetme-araligi-dk", 10)).thenReturn(10);
-        when(config.getInt("guven-skoru.guncelleme-araligi-dk", 5)).thenReturn(5);
-        when(config.getLong("guven-skoru.ihlal-sifirlama-saat", 24)).thenReturn(24L);
+        when(config.getBoolean("trust-score.enabled", true)).thenReturn(true);
+        when(config.getInt("trust-score.initial-score", 20)).thenReturn(20);
+        when(config.getInt("trust-score.thresholds.regular", 30)).thenReturn(30);
+        when(config.getInt("trust-score.thresholds.trusted", 60)).thenReturn(60);
+        when(config.getInt("trust-score.thresholds.veteran", 85)).thenReturn(85);
+        when(config.getInt("trust-score.attack-mode-bypass-min", 70)).thenReturn(70);
+        when(config.getBoolean("trust-score.bot-check-bypass-min", true)).thenReturn(true);
+        when(config.getBoolean("trust-score.vpn-check-bypass-min", false)).thenReturn(false);
+        when(config.getInt("trust-score.auto-save-minutes", 10)).thenReturn(10);
+        when(config.getInt("trust-score.update-interval-minutes", 5)).thenReturn(5);
+        when(config.getLong("trust-score.violation-reset-hours", 24)).thenReturn(24L);
 
         when(configManager.isDebugEnabled()).thenReturn(false);
 

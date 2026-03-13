@@ -29,7 +29,7 @@ public class ActionExecutor {
                 event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, 
                     module.getPlugin().getMessageManager().getMessage("antibot.kara-liste-mesaji"));
                 module.getBlacklistManager().blacklist(profile.getIpAddress(), 
-                    module.getConfigInt("kara-liste.varsayilan-sure-dk", 60) * 60000L, 
+                    module.getConfigInt("blacklist.default-duration-minutes", 60) * 60000L, 
                     "High threat score: " + result.getScore());
                 module.logExploit(profile.getUsername(), "Blacklisted for very high threat score: " + result.getScore());
             }
@@ -50,7 +50,7 @@ public class ActionExecutor {
                             @Override
                             public void run() {
                                 module.getBlacklistManager().blacklist(ip,
-                                    module.getConfigInt("kara-liste.varsayilan-sure-dk", 60) * 60000L,
+                                    module.getConfigInt("blacklist.default-duration-minutes", 60) * 60000L,
                                     "High threat score during play: " + result.getScore());
                             }
                         }.runTaskLater(module.getPlugin(), 1L);

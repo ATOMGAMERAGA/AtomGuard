@@ -42,7 +42,7 @@ public class PacketDelayModule extends AbstractModule {
      * @param plugin Ana plugin instance
      */
     public PacketDelayModule(@NotNull AtomGuard plugin) {
-        super(plugin, "paket-gecikme", "Paket spam kontrolü ve rate limiting");
+        super(plugin, "packet-delay", "Paket spam kontrolü ve rate limiting");
         this.playerDataMap = new ConcurrentHashMap<>();
     }
 
@@ -75,8 +75,8 @@ public class PacketDelayModule extends AbstractModule {
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.maxPacketsPerSecond = getConfigInt("saniyede-max-paket", 500);
-        this.delayThresholdMs = getConfigLong("gecikme-esigi-ms", 20L);
+        this.maxPacketsPerSecond = getConfigInt("max-packets-per-second", 500);
+        this.delayThresholdMs = getConfigLong("delay-threshold-ms", 20L);
 
         debug("Config yüklendi: maxPackets=" + maxPacketsPerSecond +
               ", delayThreshold=" + delayThresholdMs + "ms");

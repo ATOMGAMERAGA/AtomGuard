@@ -71,17 +71,17 @@ public class TrustScoreManager implements ITrustService {
             return t;
         });
 
-        this.enabled = plugin.getConfig().getBoolean("guven-skoru.aktif", true);
-        this.basePuan = plugin.getConfig().getInt("guven-skoru.baz-puan", 20);
-        this.regularEsik = plugin.getConfig().getInt("guven-skoru.esikler.regular", 30);
-        this.trustedEsik = plugin.getConfig().getInt("guven-skoru.esikler.trusted", 60);
-        this.veteranEsik = plugin.getConfig().getInt("guven-skoru.esikler.veteran", 85);
-        this.attackBypassEsik = plugin.getConfig().getInt("guven-skoru.bypass.saldiri-modu-esik", 70);
-        this.botKontrolBypass = plugin.getConfig().getBoolean("guven-skoru.bypass.bot-kontrol-atla", true);
-        this.vpnKontrolBypass = plugin.getConfig().getBoolean("guven-skoru.bypass.vpn-kontrol-atla", false);
-        this.saveIntervalMinutes = plugin.getConfig().getInt("guven-skoru.kaydetme-araligi-dk", 10);
-        this.updateIntervalMinutes = plugin.getConfig().getInt("guven-skoru.guncelleme-araligi-dk", 5);
-        long resetHours = plugin.getConfig().getLong("guven-skoru.ihlal-sifirlama-saat", 24);
+        this.enabled = plugin.getConfig().getBoolean("trust-score.enabled", true);
+        this.basePuan = plugin.getConfig().getInt("trust-score.initial-score", 20);
+        this.regularEsik = plugin.getConfig().getInt("trust-score.thresholds.regular", 30);
+        this.trustedEsik = plugin.getConfig().getInt("trust-score.thresholds.trusted", 60);
+        this.veteranEsik = plugin.getConfig().getInt("trust-score.thresholds.veteran", 85);
+        this.attackBypassEsik = plugin.getConfig().getInt("trust-score.attack-mode-bypass-min", 70);
+        this.botKontrolBypass = plugin.getConfig().getBoolean("trust-score.bot-check-bypass-min", true);
+        this.vpnKontrolBypass = plugin.getConfig().getBoolean("trust-score.vpn-check-bypass-min", false);
+        this.saveIntervalMinutes = plugin.getConfig().getInt("trust-score.auto-save-minutes", 10);
+        this.updateIntervalMinutes = plugin.getConfig().getInt("trust-score.update-interval-minutes", 5);
+        long resetHours = plugin.getConfig().getLong("trust-score.violation-reset-hours", 24);
         this.recentViolationResetMs = resetHours * 60 * 60 * 1000L;
     }
 

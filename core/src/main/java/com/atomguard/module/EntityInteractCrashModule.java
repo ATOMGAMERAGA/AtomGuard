@@ -30,14 +30,14 @@ public class EntityInteractCrashModule extends AbstractModule {
     private int maxInteractPerSec;
 
     public EntityInteractCrashModule(@NotNull AtomGuard plugin) {
-        super(plugin, "entity-etkilesim-crash", "Entity etkileşim koruması");
+        super(plugin, "entity-interact-crash", "Entity etkileşim koruması");
     }
 
     @Override
     public void onEnable() {
         super.onEnable();
-        this.maxDistance = getConfigDouble("max-etkilesim-mesafesi", 6.0);
-        this.maxInteractPerSec = getConfigInt("saniyede-max-etkilesim", 20);
+        this.maxDistance = getConfigDouble("max-interaction-distance", 6.0);
+        this.maxInteractPerSec = getConfigInt("max-interactions-per-second", 20);
 
         registerReceiveHandler(PacketType.Play.Client.INTERACT_ENTITY, this::handleInteract);
     }

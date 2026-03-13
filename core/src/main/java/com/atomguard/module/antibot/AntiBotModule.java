@@ -45,7 +45,7 @@ public class AntiBotModule extends AbstractModule implements Listener {
     private VerificationManager verificationManager;
 
     public AntiBotModule(@NotNull AtomGuard plugin) {
-        super(plugin, "bot-koruma", "Çok katmanlı gelişmiş bot algılama sistemi");
+        super(plugin, "anti-bot", "Çok katmanlı gelişmiş bot algılama sistemi");
     }
 
     @Override

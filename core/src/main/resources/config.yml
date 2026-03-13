@@ -1,35 +1,35 @@
 # ╔══════════════════════════════════════════════╗
-# ║           Atom Guard Yapılandırma            ║
+# ║           Atom Guard Configuration           ║
 # ║   Server Security Plugin — Paper 1.21.4      ║
-# ║   v1.2.0 — Tehdit İstihbaratı & Adli Analiz ║
+# ║   v2.0.2 — Full English Translation          ║
 # ╚══════════════════════════════════════════════╝
 
-# Config Versiyonu (Değiştirmeyin)
-config-version: "2.0.0"
+# Config Version (Do not change)
+config-version: "2.0.2"
 
-# Genel Ayarlar
-genel:
-  # Plugin dili (tr, en)
-  dil: "tr"
-  # Plugin öneki (mesajlarda kullanılır)
-  onek: "<gradient:#00d4ff:#00ff88>AtomGuard</gradient> <dark_gray>»</dark_gray>"
-  # Debug modu (geliştirici bilgilerini konsola yazdırır)
+# General Settings
+general:
+  # Plugin language (tr, en)
+  language: "en"
+  # Plugin prefix (used in messages)
+  prefix: "<gradient:#00d4ff:#00ff88>AtomGuard</gradient> <dark_gray>»</dark_gray>"
+  # Debug mode (prints developer info to console)
   debug: false
-  # Log sistemi
+  # Log system
   log:
-    aktif: true
-    # Log dosyaları klasörü
-    klasor: "logs/atomguard"
-    # Günlük dosya oluştur
-    gunluk-dosya: true
-    # Eski logları silme süresi (gün, 0 = hiçbir zaman silme)
-    log-saklama-gunu: 7
+    enabled: true
+    # Log files folder
+    folder: "logs/atomguard"
+    # Create daily log file
+    daily-file: true
+    # How long to keep old logs (days, 0 = never delete)
+    retention-days: 7
 
-# Veritabanı Ayarları
+# Database Settings
 database:
-  # Depolama tipi: MYSQL, SQLITE, FLATFILE (Henüz sadece MySQL aktif)
+  # Storage type: MYSQL, SQLITE, FLATFILE (currently only MySQL is active)
   type: "FLATFILE"
-  # MySQL Ayarları
+  # MySQL Settings
   mysql:
     host: "localhost"
     port: 3306
@@ -38,160 +38,160 @@ database:
     password: ""
     use-ssl: false
 
-# Redis Ayarları (Cross-Server Senkronizasyon)
+# Redis Settings (Cross-Server Synchronization)
 redis:
-  # Redis'i aktif et (Birden fazla sunucunuz varsa önerilir)
+  # Enable Redis (recommended if you have multiple servers)
   enabled: false
   host: "localhost"
   port: 6379
   password: ""
-  # Bağlantı zaman aşımı (ms)
+  # Connection timeout (ms)
   timeout: 2000
 
-# Web Panel Ayarları
+# Web Panel Settings
 web-panel:
-  # Web panelini aktif et
+  # Enable web panel
   enabled: true
-  # Web panel portu
+  # Web panel port
   port: 8081
-  # Kimlik doğrulama (HTTP Basic Auth)
-  kimlik-dogrulama:
-    aktif: true
-    kullanici-adi: "admin"
-    sifre: "atomguard2024"
-  # Web panelde gösterilecek maksimum olay sayısı
-  max-olay-sayisi: 100
-  # CORS origin (boş = sadece loopback, "*" = tüm originler)
+  # Authentication (HTTP Basic Auth)
+  auth:
+    enabled: true
+    username: "admin"
+    password: "atomguard2024"
+  # Maximum number of events displayed in web panel
+  max-events: 100
+  # CORS origin (empty = loopback only, "*" = all origins)
   cors-origin: ""
-  # REST API ayarları
+  # REST API settings
   api:
-    aktif: true
+    enabled: true
     rate-limit: 60
-  # Server-Sent Events (gerçek zamanlı bildirimler)
+  # Server-Sent Events (real-time notifications)
   sse:
-    aktif: true
-    heartbeat-saniye: 30
-  # JWT Kimlik Doğrulama
+    enabled: true
+    heartbeat-seconds: 30
+  # JWT Authentication
   jwt:
-    # JWT imza anahtarı (boş bırakılırsa otomatik oluşturulur)
+    # JWT signing key (auto-generated if empty)
     secret: ""
-    # Token geçerlilik süresi (dakika)
-    token-suresi-dakika: 120
-  # Saldırı haritası
-  geo-harita:
-    aktif: true
-    max-olay: 500
-    guncelleme-saniye: 60
+    # Token validity duration (minutes)
+    token-expiry-minutes: 120
+  # Attack map
+  geo-map:
+    enabled: true
+    max-events: 500
+    update-seconds: 60
 
-# Discord Webhook Bildirimleri
+# Discord Webhook Notifications
 discord-webhook:
-  # Webhook sistemini aktif et
-  aktif: false
-  # Discord webhook URL'si
+  # Enable webhook system
+  enabled: false
+  # Discord webhook URL
   webhook-url: ""
-  # Bildirim türleri (her biri ayrı ayrı açılıp kapatılabilir)
-  bildirimler:
-    saldiri-modu: true
-    exploit-engelleme: true
+  # Notification types (each can be toggled individually)
+  notifications:
+    attack-mode: true
+    exploit-block: true
     bot-kick: true
-    panik-komutu: true
-    performans: true
-  # Exploit bildirimleri toplama süresi (saniye)
-  toplama-suresi: 30
+    panic-command: true
+    performance: true
+  # Exploit notification batch interval (seconds)
+  batch-seconds: 30
 
-# İstatistik Kalıcılığı
-istatistik:
-  aktif: true
-  # Otomatik kaydetme aralığı (dakika)
-  otomatik-kaydetme-dakika: 5
-  # Maksimum saldırı geçmişi kaydı
-  max-saldiri-gecmisi: 100
+# Statistics Persistence
+statistics:
+  enabled: true
+  # Auto-save interval (minutes)
+  auto-save-minutes: 5
+  # Maximum attack history records
+  max-attack-history: 100
 
-# Doğrulanmış Oyuncu Önbelleği
-dogrulanmis-onbellek:
-  aktif: true
-  # Önbellek süresi (saat)
-  sure-saat: 48
-  # Doğrulanmış oyuncular için bot kontrolünü atla
-  bot-kontrolu-atla: true
-  # Doğrulanmış oyuncular için IP kontrolünü atla
-  ip-kontrolu-atla: false
+# Verified Player Cache
+verified-cache:
+  enabled: true
+  # Cache duration (hours)
+  ttl-hours: 48
+  # Skip bot check for verified players
+  skip-bot-check: true
+  # Skip IP check for verified players
+  skip-ip-check: false
 
 # ═══════════════════════════════════════
 # Anti-VPN & IP Reputation v2.4.0
-# Gelişmiş Çok Katmanlı Proxy/VPN Engelleme Sistemi
-# 7 Katmanlı Kontrol: Beyaz Liste → Manuel Kara Liste → Proxy Listesi → CIDR → ASN → API → Yedek API
+# Advanced Multi-Layer Proxy/VPN Blocking System
+# 7-Layer Check: Whitelist → Manual Blacklist → Proxy List → CIDR → ASN → API → Fallback API
 # ═══════════════════════════════════════
 anti-vpn:
-  # Sistemi aktif et
+  # Enable system
   enabled: false
-  # Kick mesajı (MiniMessage formatı)
-  kick-message: "<red>Sistemlerimizde Proxy veya VPN kullandığınız tespit edildi.<br><gray>Bu bir hata ise sunucu yöneticisiyle iletişime geçin."
-  # API önbellek süresi (saat)
+  # Kick message (MiniMessage format)
+  kick-message: "<red>Proxy or VPN usage detected in our systems.<br><gray>If this is an error, contact the server administrator."
+  # API cache duration (hours)
   cache-hours: 24
-  # Risk eşiği (0-100) — Botlar genelde 60+. Düşürürseniz daha katı olur.
+  # Risk threshold (0-100) — Bots are usually 60+. Lowering makes it stricter.
   risk-threshold: 60
-  # FP-02: Hosting IP'leri engellensin mi? (Varsayılan false, meşru oyuncuları korur)
-  hosting-engelle: false
-  # Engellenen ülkeler (ISO Kodları, örn: "CN", "RU", "US")
+  # FP-02: Should hosting IPs be blocked? (Default false, protects legitimate players)
+  block-hosting: false
+  # Blocked countries (ISO codes, e.g. "CN", "RU", "US")
   blocked-countries: []
-  # Admin'lere oyun içi bildirim gönder (proxy engellenince, liste güncellenince)
-  admin-bildirim: true
+  # Send in-game notification to admins (when proxy is blocked, when list is updated)
+  admin-notify: true
 
-  # ── Beyaz Liste ──
-  # Bu IP'ler 7 katmanlı kontrolden TAMAMEN muaftır
-  beyaz-liste: []
-  # Oyuncu bazlı beyaz liste (kullanıcı adları, küçük harfle yazın)
-  oyuncu-beyaz-liste: []
+  # ── Whitelist ──
+  # These IPs are COMPLETELY exempt from all 7 layers of checks
+  whitelist: []
+  # Player-based whitelist (usernames, write in lowercase)
+  player-whitelist: []
 
-  # ── Proxy Listesi Sistemi ──
-  # Sunucu başlatıldığında GitHub'dan güncel proxy IP listelerini PARALEL indirir,
-  # birleştirir ve yerel dosyaya (proxy_ips.txt) kaydeder.
-  # Gelen bağlantılar O(1) HashSet lookup ile anında kontrol edilir.
-  proxy-listesi:
-    aktif: true
-    # İndirilecek proxy listesi URL'leri (IP:PORT formatında, satır satır)
-    # İstediğiniz kadar URL ekleyebilirsiniz
-    url-listesi:
+  # ── Proxy List System ──
+  # On server start, downloads up-to-date proxy IP lists from GitHub IN PARALLEL,
+  # merges them and saves to local file (proxy_ips.txt).
+  # Incoming connections are checked instantly with O(1) HashSet lookup.
+  proxy-list:
+    enabled: true
+    # Proxy list URLs to download (IP:PORT format, line by line)
+    # You can add as many URLs as you want
+    urls:
       - "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/refs/heads/master/http.txt"
       - "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/refs/heads/master/socks4.txt"
       - "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/refs/heads/master/socks5.txt"
-    # İndirme timeout (ms) — yavaş bağlantılar için artırın
-    indirme-timeout-ms: 30000
-    # Başarısız indirmelerde kaç kez tekrar denensin (üstel geri çekilme)
-    max-tekrar-deneme: 3
-    # Otomatik yenileme aralığı (dakika, 0 = sadece başlatmada)
-    # Örn: 360 = her 6 saatte bir otomatik güncelle
-    otomatik-yenileme-dakika: 0
+    # Download timeout (ms) — increase for slow connections
+    download-timeout-ms: 30000
+    # How many retries on failed downloads (exponential backoff)
+    max-retries: 3
+    # Auto-refresh interval (minutes, 0 = only on startup)
+    # E.g. 360 = auto-update every 6 hours
+    auto-refresh-minutes: 0
 
-  # ── API Kontrolleri ──
-  # Proxy listesinde bulunmayan IP'ler için API sorgusu yapılır
-  api-kontrol:
-    aktif: true
-    # ProxyCheck.io API Anahtarı (Zorunlu değil ama önerilir, günlük 1000 sorgu ücretsiz)
+  # ── API Checks ──
+  # API queries are made for IPs not found in the proxy list
+  api-check:
+    enabled: true
+    # ProxyCheck.io API Key (not required but recommended, 1000 free queries/day)
     api-key: ""
-    # ip-api.com yedek API (ProxyCheck.io başarısız olursa devreye girer, API key gerekmez)
-    yedek-api-aktif: true
+    # ip-api.com fallback API (activates if ProxyCheck.io fails, no API key required)
+    fallback-enabled: true
 
-  # ── CIDR Subnet Engelleme ──
-  # Bilinen datacenter/hosting IP aralıklarını CIDR formatında engelleyin
-  # Örnek: OVH, Hetzner, DigitalOcean gibi sağlayıcıların IP blokları
-  cidr-engelleme:
-    aktif: false
-    # CIDR aralıkları (IP/prefix formatında)
-    engellenen-araliklar: []
-    # Örnek:
+  # ── CIDR Subnet Blocking ──
+  # Block known datacenter/hosting IP ranges in CIDR format
+  # Example: IP blocks of providers like OVH, Hetzner, DigitalOcean
+  cidr-blocking:
+    enabled: false
+    # CIDR ranges (IP/prefix format)
+    blocked-ranges: []
+    # Example:
     # - "198.51.100.0/24"
     # - "203.0.113.0/24"
 
-  # ── ASN Engelleme ──
-  # Bilinen VPN/datacenter/hosting sağlayıcılarının ASN numaralarını engelleyin
-  # ASN numaraları ProxyCheck.io veya ip-api.com API'sinden otomatik tespit edilir
-  asn-engelleme:
-    aktif: false
-    # Engellenen ASN numaraları
-    engellenen-asnler: []
-    # Örnek popüler hosting/VPN ASN'leri:
+  # ── ASN Blocking ──
+  # Block ASN numbers of known VPN/datacenter/hosting providers
+  # ASN numbers are automatically detected from ProxyCheck.io or ip-api.com API
+  asn-blocking:
+    enabled: false
+    # Blocked ASN numbers
+    blocked-asns: []
+    # Example popular hosting/VPN ASNs:
     # - "AS14061"   # DigitalOcean
     # - "AS16276"   # OVH
     # - "AS24940"   # Hetzner
@@ -200,68 +200,68 @@ anti-vpn:
 
 # Attack Mode (Real-time Protection)
 attack-mode:
-  # Saniyede kaç bağlantıdan sonra "Attack Mode" aktif olsun?
+  # How many connections per second to activate "Attack Mode"?
   threshold: 10
-  # Attack Mode ne kadar sürsün? (Saniye)
+  # How long should Attack Mode last? (Seconds)
   duration-seconds: 60
-  # v2.3 — Saldırı sırasında otomatik aksiyonlar
-  aksiyonlar:
-    # Daha önce başarıyla bağlanmamış IP'leri engelle
-    dogrulanmamis-ip-engelle: true
-    # Paket hız limitlerini sıkılaştır
-    siki-limitler: true
-    # Sıkı limit çarpanı (0.5 = limitler yarıya düşer)
-    siki-limit-carpani: 0.5
-    # Belirli modülleri otomatik etkinleştir
-    otomatik-modul-etkinlestir: true
-    # Otomatik etkinleştirilecek modüller
-    otomatik-moduller:
-      - "paket-exploit"
-      - "jeton-kovasi"
-    # Sadece doğrulanmış IP'lere izin ver (çok katı)
-    sadece-beyaz-liste: false
-    # Discord'a bildirim gönder
-    discord-bildirim: true
+  # v2.3 — Automatic actions during attack
+  actions:
+    # Block IPs that have not successfully connected before
+    block-unverified-ips: true
+    # Tighten packet rate limits
+    strict-limits: true
+    # Strict limit multiplier (0.5 = limits halved)
+    strict-limit-factor: 0.5
+    # Automatically enable certain modules
+    auto-enable-modules: true
+    # Modules to automatically enable
+    auto-modules:
+      - "packet-exploit"
+      - "token-bucket"
+    # Only allow verified IPs (very strict)
+    whitelist-only: false
+    # Send Discord notification
+    discord-notify: true
 
 # ═══════════════════════════════════════
-# Modül Ayarları
-# Her modül ayrı ayrı açılıp kapatılabilir
+# Module Settings
+# Each module can be toggled individually
 # ═══════════════════════════════════════
 
-moduller:
-  # Chunk başına çok fazla kitap (Crasher/Dupe)
-  cok-fazla-kitap:
-    aktif: true
-    # Bir chunk'ta maksimum kitap sayısı
-    chunk-basina-max-kitap: 50
-    # Maksimum sayfa uzunluğu (karakter)
-    max-sayfa-uzunlugu: 256
-    # Maksimum toplam kitap boyutu (byte)
-    max-toplam-boyut: 100000
-    # İhlal durumunda eylem: ENGELLE, KALDIR, AT
-    eylem: "ENGELLE"
+modules:
+  # Too many books per chunk (Crasher/Dupe)
+  too-many-books:
+    enabled: true
+    # Maximum books per chunk
+    max-books-per-chunk: 50
+    # Maximum page length (characters)
+    max-page-length: 256
+    # Maximum total book size (bytes)
+    max-total-size: 100000
+    # Action on violation: BLOCK, REMOVE, KICK
+    action: "BLOCK"
 
-  # Paket gecikme exploit'i (Bundle Dupe)
-  paket-gecikme:
-    aktif: true
-    # Saniyede maksimum paket sayısı (paket türü başına)
-    saniyede-max-paket: 500
-    # Paket gecikme eşiği (ms)
-    gecikme-esigi-ms: 20
+  # Packet delay exploit (Bundle Dupe)
+  packet-delay:
+    enabled: true
+    # Maximum packets per second (per packet type)
+    max-packets-per-second: 500
+    # Packet delay threshold (ms)
+    delay-threshold-ms: 20
 
-  # Paket exploit düzeltmesi (Netty Crasher)
-  paket-exploit:
-    aktif: true
-    # Maksimum paket boyutu (byte)
-    max-paket-boyutu: 32767
-    # Saniyede maksimum toplam paket oranı
-    max-paket-orani: 800
-    # Zaman penceresi (ms)
-    zaman-penceresi-ms: 1000
-    # Kara listedeki paket türleri
-    kara-liste-paketler: []
-    # CR-08: Tür bazlı limitler
-    tur-bazli-limitler:
+  # Packet exploit fix (Netty Crasher)
+  packet-exploit:
+    enabled: true
+    # Maximum packet size (bytes)
+    max-packet-size: 32767
+    # Maximum total packet rate per second
+    max-packet-rate: 800
+    # Time window (ms)
+    time-window-ms: 1000
+    # Blacklisted packet types
+    blacklisted-packets: []
+    # CR-08: Type-based limits
+    type-limits:
       PLUGIN_MESSAGE: 50
       CLICK_WINDOW: 100
       CREATIVE_INVENTORY_ACTION: 50
@@ -269,32 +269,32 @@ moduller:
       UPDATE_SIGN: 10
       CHAT_MESSAGE: 20
 
-  # CustomPayload düzeltmesi
-  ozel-payload:
-    aktif: true
-    # İzin verilen kanallar (boş = varsayılan güvenli kanallar)
-    # minecraft: ve bungeecord: prefix'li kanallar varsayılan olarak izinlidir
-    izinli-kanallar: []
-    # Maksimum payload boyutu (byte)
-    max-payload-boyutu: 32767
-    # Bilinmeyen kanalları engelle
-    bilinmeyen-kanallari-engelle: true
+  # CustomPayload fix
+  custom-payload:
+    enabled: true
+    # Allowed channels (empty = default safe channels)
+    # Channels with minecraft: and bungeecord: prefixes are allowed by default
+    allowed-channels: []
+    # Maximum payload size (bytes)
+    max-payload-size: 32767
+    # Block unknown channels
+    block-unknown-channels: true
 
-  # Komut crash düzeltmesi
-  komut-crash:
-    aktif: true
-    # Engellenen komutlar (regex destekli)
-    # DİKKAT: Çok geniş pattern'lar false positive yaratır!
-    engellenen-komutlar:
+  # Command crash fix
+  command-crash:
+    enabled: true
+    # Blocked commands (regex supported)
+    # WARNING: Overly broad patterns will cause false positives!
+    blocked-commands:
       - "//calc.*"
       - "//eval.*"
       - "/worldedit:.*calc.*"
 
-  # Creative item düzeltmesi (World Crasher)
-  creative-item:
-    aktif: true
-    # Item kara listesi (material adları)
-    item-kara-liste:
+  # Creative item fix (World Crasher)
+  creative-items:
+    enabled: true
+    # Item blacklist (material names)
+    item-blacklist:
       - "COMMAND_BLOCK"
       - "COMMAND_BLOCK_MINECART"
       - "BARRIER"
@@ -302,552 +302,552 @@ moduller:
       - "STRUCTURE_VOID"
       - "JIGSAW"
       - "DEBUG_STICK"
-    # Creative modda maksimum NBT boyutu
-    max-nbt-boyutu-creative: 50000
-    # Özel veriyi soy
-    ozel-veriyi-soy: true
-    # Maksimum büyü seviyesi
-    max-buyu-seviyesi: 255
+    # Maximum NBT size in creative mode
+    max-nbt-size-creative: 50000
+    # Strip custom data
+    strip-custom-data: true
+    # Maximum enchantment level
+    max-enchant-level: 255
 
-  # Tabela crash düzeltmesi (World Crasher)
-  tabela-crash:
-    aktif: true
-    # Maksimum satır uzunluğu (vanilla: ~384 karakter)
-    # CR-04: Güvenlik için 100'e düşürüldü
-    max-satir-uzunlugu: 100
-    # Renk kodlarını temizle
-    renk-kodlarini-temizle: false
-    # Özel karakterleri engelle (Unicode taşması koruması)
-    ozel-karakterleri-engelle: true
+  # Sign crash fix (World Crasher)
+  sign-crash:
+    enabled: true
+    # Maximum line length (vanilla: ~384 chars)
+    # CR-04: Lowered to 100 for security
+    max-line-length: 100
+    # Clean color codes
+    clean-color-codes: false
+    # Block special characters (Unicode overflow protection)
+    block-special-chars: true
 
-  # Kürsü crash düzeltmesi
-  kursu-crash:
-    aktif: true
+  # Lectern crash fix
+  lectern-crash:
+    enabled: true
 
-  # Harita etiketi crash düzeltmesi
-  harita-etiketi-crash:
-    aktif: true
-    # Harita etiketlerini devre dışı bırak
-    etiketleri-devre-disi-birak: false
-    # Harita başına maksimum etiket
-    max-etiket-sayisi: 50
+  # Map label crash fix
+  map-label-crash:
+    enabled: true
+    # Disable map labels
+    disable-labels: false
+    # Maximum labels per map
+    max-label-count: 50
 
-  # Geçersiz envanter slotu düzeltmesi
-  gecersiz-slot:
-    aktif: true
+  # Invalid inventory slot fix
+  invalid-slot:
+    enabled: true
 
-  # NBT crasher düzeltmesi
+  # NBT crasher fix
   nbt-crash:
-    aktif: true
-    # Maksimum NBT etiket sayısı
-    max-nbt-etiket: 1000
-    # Maksimum NBT derinliği
-    max-nbt-derinlik: 16
-    # Maksimum NBT boyutu (byte)
-    max-nbt-boyut-byte: 500000
-    # CR-01: Paket seviyesi boyut limiti
-    max-nbt-boyut-paket: 200000
+    enabled: true
+    # Maximum NBT tag count
+    max-nbt-tags: 1000
+    # Maximum NBT depth
+    max-nbt-depth: 16
+    # Maximum NBT size (bytes)
+    max-nbt-bytes: 500000
+    # CR-01: Packet-level size limit
+    max-nbt-packet: 200000
 
-  # Kitap crash düzeltmesi
-  kitap-crash:
-    aktif: true
-    # Maksimum başlık uzunluğu
-    max-baslik-uzunlugu: 64
-    # Maksimum sayfa sayısı
-    max-sayfa-sayisi: 100
-    # Sayfa başına maksimum boyut
-    max-sayfa-boyutu: 1024
-    # CR-03: JSON derinlik limiti
-    json-derinlik-limiti: 5
-    # Maksimum toplam kitap boyutu
-    max-toplam-kitap-boyutu: 100000
+  # Book crash fix
+  book-crash:
+    enabled: true
+    # Maximum title length
+    max-title-length: 64
+    # Maximum page count
+    max-page-count: 100
+    # Maximum page size
+    max-page-size: 1024
+    # CR-03: JSON depth limit
+    json-depth-limit: 5
+    # Maximum total book size
+    max-total-book-size: 100000
 
-  # İnek duplikasyon düzeltmesi
-  inek-duplikasyon:
-    aktif: true
-    # Kırkma cooldown süresi (ms)
-    kirkma-cooldown-ms: 500
+  # Cow duplication fix
+  cow-duplication:
+    enabled: true
+    # Shearing cooldown duration (ms)
+    shearing-cooldown-ms: 500
 
-  # Dispenser crash düzeltmesi
+  # Dispenser crash fix
   dispenser-crash:
-    aktif: true
+    enabled: true
 
-  # Çevrimdışı paket duplikasyon düzeltmesi
-  cevrimdisi-paket:
-    aktif: true
-    # Tolerans süresi (ms) — yeni giriş yapan oyuncular için bekleme
-    tolerans-suresi-ms: 5000
+  # Offline packet duplication fix
+  offline-packet:
+    enabled: true
+    # Tolerance duration (ms) — wait time for newly joined players
+    tolerance-ms: 5000
 
-  # Envanter duplikasyon düzeltmesi
-  envanter-duplikasyon:
-    aktif: true
+  # Inventory duplication fix
+  inventory-duplication:
+    enabled: true
 
-  # Katır duplikasyon düzeltmesi
-  katir-duplikasyon:
-    aktif: true
+  # Mule duplication fix
+  mule-duplication:
+    enabled: true
 
-  # Portal kırma düzeltmesi
-  portal-kirma:
-    aktif: true
-    # Mantar ile portal kırmayı engelle
-    mantar-engelle: true
-    # Su kovası ile portal kırmayı engelle
-    su-kovasi-engelle: true
+  # Portal break fix
+  portal-break:
+    enabled: true
+    # Block portal breaking with mushroom
+    block-mushroom: true
+    # Block portal breaking with water bucket
+    block-water-bucket: true
 
-  # Bundle duplikasyon düzeltmesi
-  bundle-duplikasyon:
-    aktif: true
-    # Tıklama cooldown süresi (ms) — sadece bundle etkileşimlerine uygulanır
-    tiklama-cooldown-ms: 50
-    # Bırakma cooldown süresi (ms)
-    birakma-cooldown-ms: 50
+  # Bundle duplication fix
+  bundle-duplication:
+    enabled: true
+    # Click cooldown duration (ms) — only applies to bundle interactions
+    click-cooldown-ms: 50
+    # Drop cooldown duration (ms)
+    drop-cooldown-ms: 50
 
-  # Koordinat normalleştirme
-  koordinat-normallestirme:
-    aktif: true
+  # Coordinate normalization
+  coordinate-normalize:
+    enabled: true
 
-  # Item frame crash düzeltmesi
+  # Item frame crash fix
   frame-crash:
-    aktif: true
-    # Chunk başına maksimum frame sayısı
-    chunk-basina-max-frame: 100
-    # Chunk başına maksimum armor stand sayısı
-    chunk-basina-max-armor-stand: 50
+    enabled: true
+    # Maximum frames per chunk
+    max-frames-per-chunk: 100
+    # Maximum armor stands per chunk
+    max-armor-stands-per-chunk: 50
 
-  # NEW-01: Chunk Crash Koruması
+  # NEW-01: Chunk Crash Protection
   chunk-crash:
-    aktif: true
-    saniyede-max-chunk-yuklemesi: 20
-    max-entity-per-chunk-warn: 200
-    max-tile-entity-per-chunk-warn: 100
+    enabled: true
+    max-chunk-loads-per-second: 20
+    max-entities-per-chunk: 200
+    max-tile-entities-per-chunk: 100
 
-  # NEW-02: Anvil ve Crafting Crash Koruması
-  ors-craft-crash:
-    aktif: true
-    anvil-max-isim-uzunlugu: 50
+  # NEW-02: Anvil and Crafting Crash Protection
+  anvil-craft-crash:
+    enabled: true
+    max-anvil-name-length: 50
 
-  # NEW-03: Entity Etkileşim Crash Koruması
-  entity-etkilesim-crash:
-    aktif: true
-    max-etkilesim-mesafesi: 6.0
-    saniyede-max-etkilesim: 20
+  # NEW-03: Entity Interaction Crash Protection
+  entity-interact-crash:
+    enabled: true
+    max-interaction-distance: 6.0
+    max-interactions-per-second: 20
 
-  # NEW-04: Container/Window Crash Koruması
+  # NEW-04: Container/Window Crash Protection
   container-crash:
-    aktif: true
+    enabled: true
 
-  # NEW-05: Bundle ve Component Crash Koruması
+  # NEW-05: Bundle and Component Crash Protection
   component-crash:
-    aktif: true
-    max-bundle-derinligi: 3
+    enabled: true
+    max-bundle-depth: 3
 
   # ═══════════════════════════════════════
-  # v2.2 — Gelişmiş Güvenlik Modülleri
+  # v2.2 — Advanced Security Modules
   # ═══════════════════════════════════════
 
-  # Kum/Çakıl (Falling Block) Sınırlandırıcı
-  kum-cakil-sinirlandirici:
-    aktif: true
-    # Chunk başına maksimum düşen blok sayısı
-    max-dusen-blok-chunk: 64
-    # Blokların birikmesini engelle (aynı lokasyonda üst üste)
-    birikme-engelle: true
+  # Falling Block (Sand/Gravel) Limiter
+  falling-block-limiter:
+    enabled: true
+    # Maximum falling blocks per chunk
+    max-falling-blocks-per-chunk: 64
+    # Block accumulation (stacking at same location)
+    block-accumulation: true
 
-  # Patlama Sınırlandırıcı
-  patlama-sinirlandirici:
-    aktif: true
-    # Saniyede maksimum patlama sayısı
-    max-patlama-saniye: 10
-    # Patlamada maksimum blok hasarı
-    max-blok-hasari: 1000
-    # Not: End Crystal patlamaları bu limitten muaftır.
+  # Explosion Limiter
+  explosion-limiter:
+    enabled: true
+    # Maximum explosions per second
+    max-explosions-per-second: 10
+    # Maximum block damage per explosion
+    max-block-damage: 1000
+    # Note: End Crystal explosions are exempt from this limit.
 
-  # Hareket Güvenliği
-  hareket-guvenligi:
-    aktif: true
-    # Geçersiz koordinat kontrolü (NaN, Sonsuz)
-    gecersiz-koordinat-engelle: true
-    # Maksimum hareket mesafesi (Teleport/Move)
-    max-mesafe: 30000000
-    # Chunk overload kontrolü (aşırı hızlı hareket)
-    hizli-hareket-engelle: true
+  # Movement Security
+  movement-security:
+    enabled: true
+    # Invalid coordinate check (NaN, Infinite)
+    block-invalid-coords: true
+    # Maximum movement distance (Teleport/Move)
+    max-distance: 30000000
+    # Chunk overload check (excessively fast movement)
+    block-fast-movement: true
 
-  # Görsel Crasher Koruması (Havai Fişek/Partikül)
-  gorsel-crasher:
-    aktif: true
-    # Maksimum havai fişek patlama efekti (NBT bazlı)
-    max-havai-fiseke-efekt: 15
-    # CR-09: Efekt başına maksimum renk
-    max-renk-per-efekt: 20
-    # CR-09: Maksimum havai fişek gücü
-    max-havai-fisek-gucu: 5
-    # Saniyede maksimum partikül paketi
-    max-partikul-paketi-saniye: 100
+  # Visual Crasher Protection (Firework/Particle)
+  visual-crasher:
+    enabled: true
+    # Maximum firework explosion effects (NBT-based)
+    max-firework-effects: 15
+    # CR-09: Maximum colors per effect
+    max-colors-per-effect: 20
+    # CR-09: Maximum firework power
+    max-firework-power: 5
+    # Maximum particle packets per second
+    max-particle-packets-per-second: 100
 
-  # Gelişmiş Sohbet ve Tab-Complete
-  gelismis-sohbet:
-    aktif: true
-    unicode-filtre: true
-    max-tab-istegi-saniye: 5
-    komut-karakter-kontrol: true
-    
-    # Hız Limiti (Flood)
-    hiz-limiti:
-      aktif: true
-      saniyede-max: 3
-      
-    # Aynı Mesaj Kontrolü
-    ayni-mesaj:
-      aktif: true
-      hatirlama-sayisi: 5
-      
-    # Büyük Harf Spam
-    buyuk-harf-spam:
-      aktif: true
-      esik-yuzde: 80
-      minimum-uzunluk: 10
+  # Advanced Chat and Tab-Complete
+  advanced-chat:
+    enabled: true
+    unicode-filter: true
+    max-tab-requests-per-second: 5
+    command-char-check: true
 
-  # Şifre Kontrol Modülü (Auth Entegrasyonu)
-  sifre-kontrol:
-    aktif: true
-    # Velocity'ye gönderilecek şifre hash'leri için
+    # Rate Limit (Flood)
+    rate-limit:
+      enabled: true
+      max-per-second: 3
 
-  # Piston Sınırlandırıcı
-  piston-sinirlandirici:
-    aktif: true
-    # Saniyede maksimum piston hareketi (chunk başına)
-    max-piston-hareketi-saniye: 50
-    # Sıfır-tick makinelerini engelle
-    sifir-tick-engelle: true
+    # Duplicate Message Check
+    duplicate-message:
+      enabled: true
+      remember-count: 5
 
-  # Akıllı Lag Tespiti (Heuristik)
-  akilli-lag-tespiti:
-    aktif: true
-    # Lag olarak kabul edilecek tick süresi (ms)
-    lag-esigi-ms: 50
-    # Bir chunk'ta kaç entity varsa "ağır" kabul edilsin
-    entity-esigi-chunk: 50
-    # Bir chunk'ta kaç tile entity varsa "ağır" kabul edilsin
-    tile-entity-esigi-chunk: 30
+    # Caps Spam
+    caps-spam:
+      enabled: true
+      threshold-percent: 80
+      min-length: 10
 
-  # Gelişmiş Duplikasyon (Portal/Shulker)
-  gelismis-duplikasyon:
-    aktif: true
+  # Password Check Module (Auth Integration)
+  password-check:
+    enabled: true
+    # For password hashes to be sent to Velocity
 
-  # v2.3 — Bağlantı Hız Sınırlandırıcı
-  baglanti-sinirlandirici:
-    aktif: true
-    # IP başına dakikada maksimum bağlantı sayısı
-    dakikada-max-baglanti: 3
-    # Saldırı modunda dakikada maksimum bağlantı
-    saldiri-dakikada-max: 1
-    # Muaf IP adresleri
-    muaf-ipler: []
+  # Piston Limiter
+  piston-limiter:
+    enabled: true
+    # Maximum piston moves per second (per chunk)
+    max-piston-moves-per-second: 50
+    # Block zero-tick machines
+    block-zero-tick: true
+
+  # Smart Lag Detection (Heuristic)
+  smart-lag:
+    enabled: true
+    # Tick duration to consider as lag (ms)
+    lag-threshold-ms: 50
+    # How many entities per chunk to consider "heavy"
+    entity-threshold-per-chunk: 50
+    # How many tile entities per chunk to consider "heavy"
+    tile-entity-threshold-per-chunk: 30
+
+  # Advanced Duplication (Portal/Shulker)
+  advanced-duplication:
+    enabled: true
+
+  # v2.3 — Connection Rate Limiter
+  connection-throttle:
+    enabled: true
+    # Maximum connections per minute per IP
+    max-connections-per-minute: 3
+    # Maximum connections per minute during attack mode
+    attack-max-per-minute: 1
+    # Exempt IP addresses
+    exempt-ips: []
 
   # ═══════════════════════════════════════
-  # Gelişmiş AntiBot Sistemi v3.2.0
+  # Advanced AntiBot System v3.2.0
   # ═══════════════════════════════════════
 
-  # Bot Koruması
-  bot-koruma:
-    aktif: true
+  # Bot Protection
+  anti-bot:
+    enabled: true
 
-    # ===== SKOR EŞİKLERİ =====
-    skor-esikleri:
-      izin-ver: 30          # Bu skorun altı = serbest geçiş
-      geciktir: 60          # 30-59 arası = bağlantıyı 1-3 sn geciktir
-      at: 80                # 60-79 arası = kick at, 60 sn sonra tekrar deneyebilir
-      kara-liste: 100       # 80+ = IP kara listesine al
+    # ===== SCORE THRESHOLDS =====
+    score-thresholds:
+      allow: 30          # Below this score = free pass
+      delay: 60          # 30-59 = delay connection 1-3 sec
+      kick: 80           # 60-79 = kick, can retry after 60 sec
+      blacklist: 100     # 80+ = add IP to blacklist
 
-    # ===== KONTROL MODÜLLERI =====
-    kontroller:
-      baglanti-hizi:
-        aktif: true
-        pencere-suresi-ms: 10000
-        global-esik: 20
-        ip-basina-esik: 3
-        saldiri-carpani: 1.5
+    # ===== CHECK MODULES =====
+    checks:
+      connection-rate:
+        enabled: true
+        window-ms: 10000
+        global-threshold: 20
+        per-ip-threshold: 3
+        attack-multiplier: 1.5
 
       ping-handshake:
-        aktif: true
-        ping-cache-suresi-dk: 5
-        ping-yok-skor-normal: 0
-        ping-yok-skor-saldiri: 5
-        saldiri-carpani: 1.0
+        enabled: true
+        ping-cache-minutes: 5
+        no-ping-score-normal: 0
+        no-ping-score-attack: 5
+        attack-multiplier: 1.0
 
-      kullanici-adi:
-        aktif: true
-        entropi-esigi: 4.0
-        benzerlik-kontrolu-sadece-saldiri: true
-        saldiri-carpani: 1.2
+      username:
+        enabled: true
+        entropy-threshold: 4.0
+        similarity-check-attack-only: true
+        attack-multiplier: 1.2
 
-      protokol:
-        aktif: true
-        client-settings-bekleme-tick: 40
-        client-brand-bekleme-tick: 20
-        saldiri-carpani: 1.0
+      protocol:
+        enabled: true
+        client-settings-wait-ticks: 40
+        client-brand-wait-ticks: 20
+        attack-multiplier: 1.0
 
-      ilk-giris-davranis:
-        aktif: true
-        analiz-suresi-tick: 100
-        saldiri-carpani: 1.0
+      first-join-behavior:
+        enabled: true
+        analysis-ticks: 100
+        attack-multiplier: 1.0
 
-      yercekimi:
-        aktif: true
-        tolerans: 0.08
-        min-veri-sayisi: 8
-        saldiri-carpani: 1.0
+      gravity:
+        enabled: true
+        tolerance: 0.08
+        min-data-count: 8
+        attack-multiplier: 1.0
 
-      paket-zamanlama:
-        aktif: true
+      packet-timing:
+        enabled: true
         min-interval-ms: 30
         max-interval-ms: 150
         min-keepalive-ms: 2
-        saldiri-carpani: 1.0
+        attack-multiplier: 1.0
 
-      giris-sonrasi-davranis:
-        aktif: true
-        analiz-suresi-tick: 1200
-        saldiri-carpani: 1.0
+      post-join-behavior:
+        enabled: true
+        analysis-ticks: 1200
+        attack-multiplier: 1.0
 
-    # ===== SALDIRI MODU =====
-    saldiri-modu:
-      aktif: true
-      tetikleme-esigi: 15
-      pencere-suresi-sn: 5
-      kapanma-suresi-sn: 60
-      esik-carpani: 0.85
-      baglanti-kuyrugu: true
-      kuyruk-gecikme-ms: 2000
+    # ===== ATTACK MODE =====
+    attack-mode:
+      enabled: true
+      trigger-threshold: 15
+      window-seconds: 5
+      shutdown-seconds: 60
+      threshold-multiplier: 0.85
+      connection-queue: true
+      queue-delay-ms: 2000
 
-    # ===== BEYAZ LİSTE =====
-    beyaz-liste:
-      aktif: true
-      otomatik-dogrulama: true
-      dogrulama-suresi-tick: 600
-      dogrulama-max-skor: 15
-      oturum-sayisi-dogrulama: 3
-      dosya: "whitelist.json"
+    # ===== WHITELIST =====
+    whitelist:
+      enabled: true
+      auto-verify: true
+      verify-timeout-ticks: 600
+      max-verify-score: 15
+      session-verify-count: 3
+      file: "whitelist.json"
 
-    # ===== DOĞRULAMA =====
-    dogrulama:
-      aktif: true
-      sure: 30
-      dogrulama-mesaji: "&cLütfen doğrulamak için hareket edin!"
-      dogrulandi-mesaji: "&aDoğrulama başarılı!"
+    # ===== VERIFICATION =====
+    verification:
+      enabled: true
+      timeout: 30
+      verify-message: "&cPlease move to verify!"
+      verified-message: "&aVerification successful!"
 
-    # ===== KARA LİSTE =====
-    kara-liste:
-      aktif: true
-      varsayilan-sure-dk: 60
-      max-kayit: 10000
-      temizleme-aralik-dk: 5
-      dosya: "blacklist.json"
+    # ===== BLACKLIST =====
+    blacklist:
+      enabled: true
+      default-duration-minutes: 60
+      max-entries: 10000
+      cleanup-interval-minutes: 5
+      file: "blacklist.json"
 
-    # ===== BILDIRIMLER =====
-    bildirimler:
-      saldiri-baslangic: true
-      saldiri-bitis: true
-      yuksek-skor-kick: true
-      kara-liste-ekleme: true
-      admin-izin: "atomguard.antibot.notify"
+    # ===== NOTIFICATIONS =====
+    notify:
+      attack-start: true
+      attack-end: true
+      high-score-kick: true
+      blacklist-add: true
+      admin-permission: "atomguard.antibot.notify"
 
-    # ===== LOGLAMA =====
+    # ===== LOGGING =====
     log:
-      aktif: true
-      detayli-skor-logu: false
-      saldiri-logu: true
-      kara-liste-logu: true
+      enabled: true
+      detailed-score-log: false
+      attack-log: true
+      blacklist-log: true
 
-  # Bal Kupu (Honeypot) Modülü
-  bal-kupu:
-    aktif: false
-    # Honeypot port (ana sunucu portu dışında bir port)
+  # Honeypot Module
+  honeypot:
+    enabled: false
+    # Honeypot port (a port other than the main server port)
     port: 25566
-    # Maksimum eş zamanlı bağlantı
-    max-baglanti: 100
-    # Bağlantı zaman aşımı (ms)
-    zaman-asimi-ms: 5000
-    # Sahte MOTD metni
-    sahte-motd: "§aMinecraft Server §8| §7Online"
-    # Sahte online oyuncu sayısı
-    sahte-online: 5
-    # Sahte maksimum oyuncu sayısı
-    sahte-max: 20
-    # Yakalanan IP'yi kara listeye ekle
-    kara-listeye-ekle: true
-    # Kara liste süresi (dakika)
-    kara-liste-suresi-dk: 1440
-    # Discord bildirimi gönder
-    discord-bildirim: true
-    # Honeypot istatistik dosyası
-    istatistik-dosyasi: "honeypot-stats.json"
+    # Maximum concurrent connections
+    max-connections: 100
+    # Connection timeout (ms)
+    timeout-ms: 5000
+    # Fake MOTD text
+    fake-motd: "§aMinecraft Server §8| §7Online"
+    # Fake online player count
+    fake-online: 5
+    # Fake maximum player count
+    fake-max: 20
+    # Add captured IP to blacklist
+    add-to-blacklist: true
+    # Blacklist duration (minutes)
+    blacklist-duration-minutes: 1440
+    # Send Discord notification
+    discord-notify: true
+    # Honeypot statistics file
+    stats-file: "honeypot-stats.json"
 
-  # Panik Modu (/panic)
-  panik-modu:
-    # Minimum oynama süresi (dakika) - Altındaki herkes banlanır
-    min-oynama-suresi: 30
-    # Log dosyası adı
-    log-dosyasi: "panic-bans.log"
+  # Panic Mode (/panic)
+  panic-mode:
+    # Minimum play time (minutes) - Everyone below this will be banned
+    min-play-time: 30
+    # Log file name
+    log-file: "panic-bans.log"
 
-  # Bot Koruma Modülü (Legacy — AtomShield protokol kontrolleri)
-  # Bu modül yalnızca saldırı analizinde AtomShield protokol özelliklerini sağlar.
-  # Doğrulama sistemi için AntiBotModule (bot-koruma) kullanın.
-  bot-korumasi:
-    aktif: false
-    dogrulama:
-      aktif: false
+  # Bot Protection Module (Legacy — AtomShield protocol checks)
+  # This module only provides AtomShield protocol features in attack analysis.
+  # Use AntiBotModule (anti-bot) for the verification system.
+  bot-protection:
+    enabled: false
+    verification:
+      enabled: false
     atom-shield:
-      protokol:
-        aktif: true
-        sifreleme-gecikmesi: true
-        min-login-gecikmesi: 0
+      protocol:
+        enabled: true
+        encryption-delay: true
+        min-login-delay: 0
       handshake:
-        aktif: true
-        hostname-zorunlu: false
-        port-kontrolu: true
-      davranissal:
-        rotasyon-analizi: true
-        yercekimi-testi: false
-    benzer-isim-kontrolu:
-      aktif: true
-      karakter-farki: 2
-      max-benzer-sayisi: 15
+        enabled: true
+        hostname-required: false
+        port-check: true
+      behavioral:
+        rotation-analysis: true
+        gravity-test: false
+    similar-name-check:
+      enabled: true
+      char-diff: 2
+      max-similar: 15
 
 # ═══════════════════════════════════════
-# Metrikler v2.0.0
-# TPS, bellek, modul engelleme istatistikleri
+# Metrics v2.0.0
+# TPS, memory, module block statistics
 # ═══════════════════════════════════════
-metrikler:
-  aktif: true
-  guncelleme-araligi-saniye: 1
+metrics:
+  enabled: true
+  update-interval-seconds: 1
 
 # ═══════════════════════════════════════
-# Tehdit İstihbarat Motoru v1.2.0
-# Adaptif EMA tabanlı trafik profili + Z-Score anomali tespiti
+# Threat Intelligence Engine v1.2.0
+# Adaptive EMA-based traffic profile + Z-Score anomaly detection
 # ═══════════════════════════════════════
-tehdit-istihbarati:
-  # Sistemi aktif et
-  aktif: true
-  # Öğrenme modu: açıkken sadece veri toplar, anomali uyarısı vermez
-  ogrenme-modu: false
-  # Öğrenme süresi (saat) — bu kadar süre sonra baseline güvenilir sayılır
-  ogrenme-suresi-saat: 48
-  # Baseline için minimum örnek sayısı
-  min-ornek-sayisi: 10
-  # EMA katsayısı (0.001-1.0) — küçük = yavaş öğrenme, kararlı profil
+threat-intelligence:
+  # Enable system
+  enabled: true
+  # Learning mode: when on, only collects data, does not issue anomaly alerts
+  learning-mode: false
+  # Learning duration (hours) — baseline is considered reliable after this time
+  learning-hours: 48
+  # Minimum sample count for baseline
+  min-samples: 10
+  # EMA coefficient (0.001-1.0) — smaller = slower learning, stable profile
   ema-alpha: 0.1
-  # Hassasiyet çarpanı (0.1-5.0) — büyütmek daha hassas tespit sağlar
-  hassasiyet-carpani: 1.0
-  # Aynı uyarının tekrar gönderilmeden önce bekleme süresi (saniye)
-  uyari-bekleme-saniye: 300
-  # Gerçek zamanlı tampon boyutu (dakika cinsinden son N örnek)
-  tampon-boyutu: 60
-  # Algılama motoru: "zscore", "ewma" veya "isolation-forest"
-  algilama-motoru: "ewma"
-  # Adaptif eşik sistemi
-  adaptif-esik:
-    aktif: true
-    min-ogrenme-haftasi: 2
-    gunduz-gece-ayri: true
-    hafta-ici-sonu-ayri: true
-  # Isolation Forest parametreleri
+  # Sensitivity multiplier (0.1-5.0) — larger = more sensitive detection
+  sensitivity: 1.0
+  # Waiting time before the same alert is sent again (seconds)
+  alert-cooldown-seconds: 300
+  # Real-time buffer size (last N samples in minutes)
+  buffer-size: 60
+  # Detection engine: "zscore", "ewma" or "isolation-forest"
+  detection-engine: "ewma"
+  # Adaptive threshold system
+  adaptive-threshold:
+    enabled: true
+    min-learning-weeks: 2
+    day-night-separation: true
+    weekday-weekend-separation: true
+  # Isolation Forest parameters
   isolation-forest:
-    agac-sayisi: 100
-    ornek-boyutu: 256
-    anomali-esigi: 0.6
-    min-ornek: 50
-    yeniden-olusturma-araligi: 100
+    tree-count: 100
+    sample-size: 256
+    anomaly-threshold: 0.6
+    min-samples: 50
+    rebuild-interval: 100
 
 # ═══════════════════════════════════════
-# Oyuncu Güven Skoru v1.2.0
-# 0-100 arası güven puanı, bypass hakları
+# Player Trust Score v1.2.0
+# 0-100 trust score, bypass rights
 # ═══════════════════════════════════════
-guven-skoru:
-  # Sistemi aktif et
-  aktif: true
-  # Yeni oyuncuların başlangıç puanı (0-100)
-  baslangic-puani: 30
-  # TRUSTED (60+) oyuncular saldırı modunu atlar
-  saldiri-modu-bypass-min: 60
-  # VETERAN (85+) oyuncular bot kontrolünü atlar
-  bot-kontrol-bypass-min: 85
-  # VETERAN (85+) oyuncular VPN kontrolünü atlar
-  vpn-kontrol-bypass-min: 85
-  # İhlal başına skor cezası (son ihlaller için)
-  ihlal-basi-ceza: 5
-  # Temiz seans başına bonus
-  temiz-seans-basi-bonus: 2
-  # Otomatik kaydetme aralığı (dakika)
-  otomatik-kaydetme-dakika: 5
-  # Veri dosyası adı
-  veri-dosyasi: "trust-scores.json"
+trust-score:
+  # Enable system
+  enabled: true
+  # Starting score for new players (0-100)
+  initial-score: 30
+  # TRUSTED (60+) players bypass attack mode
+  attack-mode-bypass-min: 60
+  # VETERAN (85+) players bypass bot check
+  bot-check-bypass-min: 85
+  # VETERAN (85+) players bypass VPN check
+  vpn-check-bypass-min: 85
+  # Score penalty per violation (for recent violations)
+  violation-penalty: 5
+  # Bonus per clean session
+  clean-session-bonus: 2
+  # Auto-save interval (minutes)
+  auto-save-minutes: 5
+  # Data file name
+  data-file: "trust-scores.json"
 
 # ═══════════════════════════════════════
-# Adli Analiz (Saldırı Tekrarı) v1.2.0
-# Saldırı anlık görüntüleri, zaman çizelgesi, JSON export
+# Forensics Analysis (Attack Replay) v1.2.0
+# Attack snapshots, timeline, JSON export
 # ═══════════════════════════════════════
-adli-analiz:
-  # Sistemi aktif et
-  aktif: true
-  # Saklanacak maksimum anlık görüntü sayısı
-  max-anlık-goruntuler: 50
-  # Anlık görüntü kayıt dizini
-  kayit-dizini: "forensics"
-  # JSON formatında dışa aktarma
+forensics:
+  # Enable system
+  enabled: true
+  # Maximum snapshot count
+  max-snapshots: 50
+  # Snapshot save directory
+  save-directory: "forensics"
+  # JSON format export
   json-export: true
-  # Periyodik metrik kayıt aralığı (saniye)
-  metrik-kayit-aralik-saniye: 10
+  # Periodic metric recording interval (seconds)
+  metric-interval-seconds: 10
 
 # ═══════════════════════════════════════
-# Bildirim Sistemi v2.0.0
-# Discord, Telegram ve Slack entegrasyonu
+# Notification System v2.0.0
+# Discord, Telegram and Slack integration
 # ═══════════════════════════════════════
-bildirimler:
+notifications:
   # Discord Webhook
   discord:
-    aktif: false
+    enabled: false
     webhook-url: ""
-    bildirim-turleri: [ATTACK_MODE, EXPLOIT_BLOCKED, PANIC_COMMAND, DDOS_DETECTED]
-    toplama-suresi: 30
+    types: [ATTACK_MODE, EXPLOIT_BLOCKED, PANIC_COMMAND, DDOS_DETECTED]
+    batch-seconds: 30
 
   # Telegram Bot
   telegram:
-    aktif: false
+    enabled: false
     bot-token: ""
     chat-id: ""
-    bildirim-turleri: [ATTACK_MODE, DDOS_DETECTED, PANIC_COMMAND]
+    types: [ATTACK_MODE, DDOS_DETECTED, PANIC_COMMAND]
 
   # Slack Webhook
   slack:
-    aktif: false
+    enabled: false
     webhook-url: ""
-    kanal: "#minecraft-security"
-    bildirim-turleri: [ATTACK_MODE, PERFORMANCE_ALERT]
+    channel: "#minecraft-security"
+    types: [ATTACK_MODE, PERFORMANCE_ALERT]
 
 # ═══════════════════════════════════════
-# Paket Kaydı (Forensics v2.0.0)
-# Şüpheli oyuncuların paket trafiğini kaydeder
+# Packet Recording (Forensics v2.0.0)
+# Records packet traffic of suspicious players
 # ═══════════════════════════════════════
-forensik:
-  paket-kaydi:
-    aktif: true
-    # Her oyuncu için circular buffer süresi (saniye)
-    tampon-suresi-saniye: 30
-    # Aynı anda kaç oyuncu kaydedilebilir
-    max-eszamanli-kayit: 10
-    # Heuristic skor bu eşiği aşınca otomatik kayıt başlat
-    otomatik-kayit-esik: 50
-    # Kayıt dosyası boyut limiti (MB)
-    max-dosya-boyutu-mb: 50
-    # Eski kayıtları silme süresi (gün)
-    saklama-gunu: 7
+packet-forensics:
+  recording:
+    enabled: true
+    # Circular buffer duration per player (seconds)
+    buffer-seconds: 30
+    # How many players can be recorded simultaneously
+    max-concurrent: 10
+    # Automatically start recording when heuristic score exceeds this threshold
+    auto-record-threshold: 50
+    # Recording file size limit (MB)
+    max-file-mb: 50
+    # How long to keep old recordings (days)
+    retention-days: 7
 
 # ═══════════════════════════════════════
-# Harici Servis URL'leri
-# Değiştirilmesi gerekmiyorsa varsayılan bırakın
+# External Service URLs
+# Leave as default if no changes needed
 # ═══════════════════════════════════════
-harici-servisler:
+external-services:
   ashcon-api: "https://api.ashcon.app/mojang/v2/user/"
   proxycheck: "https://proxycheck.io/v2/"
   ip-api: "http://ip-api.com/json/"

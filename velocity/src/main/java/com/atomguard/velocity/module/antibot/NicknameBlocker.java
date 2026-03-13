@@ -33,11 +33,11 @@ public class NicknameBlocker {
         suffixBlock.clear();
         regexBlock.clear();
 
-        exactBlock.addAll(plugin.getConfigManager().getStringList("bot-koruma.nick-engelleme.tam-eslesme"));
-        prefixBlock.addAll(plugin.getConfigManager().getStringList("bot-koruma.nick-engelleme.prefix-listesi"));
-        suffixBlock.addAll(plugin.getConfigManager().getStringList("bot-koruma.nick-engelleme.suffix-listesi"));
+        exactBlock.addAll(plugin.getConfigManager().getStringList("bot-protection.nick-engelleme.tam-eslesme"));
+        prefixBlock.addAll(plugin.getConfigManager().getStringList("bot-protection.nick-engelleme.prefix-listesi"));
+        suffixBlock.addAll(plugin.getConfigManager().getStringList("bot-protection.nick-engelleme.suffix-listesi"));
         
-        List<String> regexes = plugin.getConfigManager().getStringList("bot-koruma.nick-engelleme.regex-listesi");
+        List<String> regexes = plugin.getConfigManager().getStringList("bot-protection.nick-engelleme.regex-listesi");
         for (String regex : regexes) {
             try {
                 regexBlock.add(Pattern.compile(regex));
@@ -46,15 +46,15 @@ public class NicknameBlocker {
             }
         }
 
-        minLength = plugin.getConfigManager().getInt("bot-koruma.nick-engelleme.minimum-uzunluk", 3);
-        maxLength = plugin.getConfigManager().getInt("bot-koruma.nick-engelleme.maksimum-uzunluk", 16);
-        blockNumbersOnly = plugin.getConfigManager().getBoolean("bot-koruma.nick-engelleme.sadece-sayi-engel", true);
-        blockSpecialChars = plugin.getConfigManager().getBoolean("bot-koruma.nick-engelleme.ozel-karakter-engel", true);
-        capsThreshold = plugin.getConfigManager().getInt("bot-koruma.nick-engelleme.buyuk-harf-esik", 10);
+        minLength = plugin.getConfigManager().getInt("bot-protection.nick-engelleme.minimum-uzunluk", 3);
+        maxLength = plugin.getConfigManager().getInt("bot-protection.nick-engelleme.maksimum-uzunluk", 16);
+        blockNumbersOnly = plugin.getConfigManager().getBoolean("bot-protection.nick-engelleme.sadece-sayi-engel", true);
+        blockSpecialChars = plugin.getConfigManager().getBoolean("bot-protection.nick-engelleme.ozel-karakter-engel", true);
+        capsThreshold = plugin.getConfigManager().getInt("bot-protection.nick-engelleme.buyuk-harf-esik", 10);
     }
 
     public NicknameCheckResult check(String username) {
-        if (!plugin.getConfigManager().getBoolean("bot-koruma.nick-engelleme.aktif", true)) {
+        if (!plugin.getConfigManager().getBoolean("bot-protection.nick-engelleme.aktif", true)) {
             return NicknameCheckResult.allowed();
         }
 

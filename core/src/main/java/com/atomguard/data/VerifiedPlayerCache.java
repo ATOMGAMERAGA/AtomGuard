@@ -45,11 +45,11 @@ public class VerifiedPlayerCache {
             return t;
         });
 
-        this.enabled = plugin.getConfig().getBoolean("dogrulanmis-onbellek.aktif", true);
-        long hours = plugin.getConfig().getLong("dogrulanmis-onbellek.sure-saat", 48);
+        this.enabled = plugin.getConfig().getBoolean("verified-cache.enabled", true);
+        long hours = plugin.getConfig().getLong("verified-cache.ttl-hours", 48);
         this.ttlMillis = hours * 3600_000L;
-        this.skipBotCheck = plugin.getConfig().getBoolean("dogrulanmis-onbellek.bot-kontrolu-atla", true);
-        this.skipIpCheck = plugin.getConfig().getBoolean("dogrulanmis-onbellek.ip-kontrolu-atla", false);
+        this.skipBotCheck = plugin.getConfig().getBoolean("verified-cache.skip-bot-check", true);
+        this.skipIpCheck = plugin.getConfig().getBoolean("verified-cache.skip-ip-check", false);
     }
 
     public void start() {

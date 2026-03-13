@@ -27,9 +27,9 @@ public class PacketRecorder {
         this.plugin = plugin;
         // ~20 paket/saniye tahmini ile tampon suresi hesabi
         this.bufferSize = plugin.getConfig()
-                .getInt("forensik.paket-kaydi.tampon-suresi-saniye", 30) * 20;
+                .getInt("packet-forensics.recording.buffer-seconds", 30) * 20;
         this.maxConcurrent = plugin.getConfig()
-                .getInt("forensik.paket-kaydi.max-eszamanli-kayit", 10);
+                .getInt("packet-forensics.recording.max-concurrent", 10);
     }
 
     /**

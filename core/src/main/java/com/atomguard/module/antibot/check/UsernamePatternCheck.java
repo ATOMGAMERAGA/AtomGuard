@@ -45,14 +45,14 @@ public class UsernamePatternCheck extends AbstractCheck {
         // if (name.length() <= 3) score += 3;
 
         // 3. Entropy
-        double entropyThreshold = module.getConfigDouble("kontroller.kullanici-adi.entropi-esigi", 4.0);
+        double entropyThreshold = module.getConfigDouble("checks.username.entropy-threshold", 4.0);
         if (name.length() >= 10 && calculateEntropy(name) > entropyThreshold) {
             score += 5; // 10'dan 5'e düşürüldü
         }
 
         // 4. Similarity
         if (module.getAttackTracker().isUnderAttack() || 
-            !module.getConfigBoolean("kontroller.kullanici-adi.benzerlik-kontrolu-sadece-saldiri", true)) {
+            !module.getConfigBoolean("checks.username.similarity-check-attack-only", true)) {
             score += checkNameSimilarity(name, module.getAttackTracker().getRecentUsernames());
         }
 

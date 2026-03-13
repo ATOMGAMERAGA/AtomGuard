@@ -24,7 +24,7 @@ public class FirewallModule extends VelocityModule {
     private AutoBanEngine autoBanEngine;
 
     public FirewallModule(AtomGuardVelocity plugin) {
-        super(plugin, "guvenlik-duvari");
+        super(plugin, "firewall");
     }
 
     @Override

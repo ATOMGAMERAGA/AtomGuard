@@ -18,7 +18,7 @@ import java.nio.charset.StandardCharsets;
 public class CorePasswordCheckModule extends AbstractModule implements Listener {
 
     public CorePasswordCheckModule(@NotNull AtomGuard plugin) {
-        super(plugin, "sifre-kontrol", "Auth entegrasyonu ve şifre kontrolü");
+        super(plugin, "password-check", "Auth entegrasyonu ve şifre kontrolü");
     }
 
     @Override

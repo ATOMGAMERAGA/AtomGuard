@@ -17,7 +17,7 @@ public class Ip2ProxyProvider {
     }
 
     private void initialize() {
-        String dbPath = plugin.getConfigManager().getString("vpn-proxy-engelleme.ip2proxy.veritabani-yolu", "IP2PROXY-LITE-PX2.BIN");
+        String dbPath = plugin.getConfigManager().getString("vpn-proxy-block.ip2proxy.database-path", "IP2PROXY-LITE-PX2.BIN");
         Path path = plugin.getDataDirectory().resolve(dbPath);
         
         if (path.toFile().exists()) {

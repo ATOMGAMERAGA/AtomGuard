@@ -49,7 +49,7 @@ public class SmartLagModule extends AbstractModule implements Listener {
     private int tileEntityThreshold;
 
     public SmartLagModule(@NotNull AtomGuard plugin) {
-        super(plugin, "akilli-lag-tespiti", "Heuristik lag analizi ve koruması");
+        super(plugin, "smart-lag", "Heuristik lag analizi ve koruması");
     }
 
     @Override
@@ -80,9 +80,9 @@ public class SmartLagModule extends AbstractModule implements Listener {
 
     private void loadConfig() {
         // Config'e varsayılan değerleri eklemek gerekebilir, şimdilik hardcoded/default
-        this.msThreshold = getConfigInt("lag-esigi-ms", 50);
-        this.entityThreshold = getConfigInt("entity-esigi-chunk", 50);
-        this.tileEntityThreshold = getConfigInt("tile-entity-esigi-chunk", 30);
+        this.msThreshold = getConfigInt("lag-threshold-ms", 50);
+        this.entityThreshold = getConfigInt("entity-threshold-per-chunk", 50);
+        this.tileEntityThreshold = getConfigInt("tile-entity-threshold-per-chunk", 30);
     }
 
     private void tickWatchdog() {

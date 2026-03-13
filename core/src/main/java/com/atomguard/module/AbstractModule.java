@@ -82,7 +82,7 @@ public abstract class AbstractModule implements IModule {
         if (this instanceof Listener) {
             Bukkit.getPluginManager().registerEvents((Listener) this, plugin);
         }
-        plugin.getLogManager().info(name + " modülü etkinleştirildi.");
+        plugin.getLogManager().info(name + " module enabled.");
     }
 
     /**
@@ -108,7 +108,7 @@ public abstract class AbstractModule implements IModule {
         if (this instanceof Listener) {
             HandlerList.unregisterAll((Listener) this);
         }
-        plugin.getLogManager().info(name + " modülü devre dışı bırakıldı.");
+        plugin.getLogManager().info(name + " module disabled.");
     }
 
     /**
@@ -289,7 +289,7 @@ public abstract class AbstractModule implements IModule {
      * @return Config değeri
      */
     public boolean getConfigBoolean(@NotNull String key, boolean def) {
-        return plugin.getConfigManager().getBoolean("moduller." + name + "." + key, def);
+        return plugin.getConfigManager().getBoolean("modules." + name + "." + key, def);
     }
 
     /**
@@ -300,7 +300,7 @@ public abstract class AbstractModule implements IModule {
      * @return Config değeri
      */
     public int getConfigInt(@NotNull String key, int def) {
-        return plugin.getConfigManager().getInt("moduller." + name + "." + key, def);
+        return plugin.getConfigManager().getInt("modules." + name + "." + key, def);
     }
 
     /**
@@ -311,7 +311,7 @@ public abstract class AbstractModule implements IModule {
      * @return Config değeri
      */
     public long getConfigLong(@NotNull String key, long def) {
-        return plugin.getConfigManager().getLong("moduller." + name + "." + key, def);
+        return plugin.getConfigManager().getLong("modules." + name + "." + key, def);
     }
 
     /**
@@ -322,7 +322,7 @@ public abstract class AbstractModule implements IModule {
      * @return Config değeri
      */
     public double getConfigDouble(@NotNull String key, double def) {
-        return plugin.getConfigManager().getDouble("moduller." + name + "." + key, def);
+        return plugin.getConfigManager().getDouble("modules." + name + "." + key, def);
     }
 
     /**
@@ -334,7 +334,7 @@ public abstract class AbstractModule implements IModule {
      */
     @NotNull
     public String getConfigString(@NotNull String key, @NotNull String def) {
-        return plugin.getConfigManager().getString("moduller." + name + "." + key, def);
+        return plugin.getConfigManager().getString("modules." + name + "." + key, def);
     }
 
     /**

@@ -32,9 +32,9 @@ public class TelegramProvider implements NotificationProvider {
     }
 
     private void reload() {
-        this.botToken = plugin.getConfig().getString("bildirimler.telegram.bot-token", "");
-        this.chatId = plugin.getConfig().getString("bildirimler.telegram.chat-id", "");
-        this.enabled.set(plugin.getConfig().getBoolean("bildirimler.telegram.aktif", false)
+        this.botToken = plugin.getConfig().getString("notifications.telegram.bot-token", "");
+        this.chatId = plugin.getConfig().getString("notifications.telegram.chat-id", "");
+        this.enabled.set(plugin.getConfig().getBoolean("notifications.telegram.enabled", false)
                 && botToken != null && !botToken.isEmpty()
                 && chatId != null && !chatId.isEmpty());
     }

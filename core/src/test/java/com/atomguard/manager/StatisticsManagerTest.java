@@ -35,9 +35,9 @@ class StatisticsManagerTest {
         when(plugin.getDataFolder()).thenReturn(tempDir);
         when(plugin.getLogger()).thenReturn(logger);
 
-        when(config.getBoolean("istatistik.aktif", true)).thenReturn(true);
-        when(config.getInt("istatistik.otomatik-kaydetme-dakika", 5)).thenReturn(5);
-        when(config.getInt("istatistik.max-saldiri-gecmisi", 100)).thenReturn(100);
+        when(config.getBoolean("statistics.enabled", true)).thenReturn(true);
+        when(config.getInt("statistics.auto-save-minutes", 5)).thenReturn(5);
+        when(config.getInt("statistics.max-attack-history", 100)).thenReturn(100);
 
         manager = new StatisticsManager(plugin);
     }

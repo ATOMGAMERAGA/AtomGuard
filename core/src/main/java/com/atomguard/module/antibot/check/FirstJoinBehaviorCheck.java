@@ -12,7 +12,7 @@ public class FirstJoinBehaviorCheck extends AbstractCheck {
     @Override
     public int calculateThreatScore(PlayerProfile profile) {
         int ticks = profile.getTicksSinceJoin();
-        int analysisTime = module.getConfigInt("kontroller.ilk-giris-davranis.analiz-suresi-tick", 100);
+        int analysisTime = module.getConfigInt("checks.first-join-behavior.analysis-ticks", 100);
         
         if (ticks > analysisTime) {
             return profile.getCachedFirstJoinScore();

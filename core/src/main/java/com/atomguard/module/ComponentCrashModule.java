@@ -27,7 +27,7 @@ public class ComponentCrashModule extends AbstractModule {
 
     public void onEnable() {
         super.onEnable();
-        this.maxBundleDepth = getConfigInt("max-bundle-derinligi", 3);
+        this.maxBundleDepth = getConfigInt("max-bundle-depth", 3);
     }
 
     /**

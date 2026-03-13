@@ -51,7 +51,7 @@ public class StorageEntityLockModule extends AbstractModule implements Listener 
      * @param plugin Ana plugin instance
      */
     public StorageEntityLockModule(@NotNull AtomGuard plugin) {
-        super(plugin, "depolama-entity-kilit", "Depolama entity çift erişim kilidi");
+        super(plugin, "storage-entity-lock", "Depolama entity çift erişim kilidi");
     }
 
     @Override
@@ -77,7 +77,7 @@ public class StorageEntityLockModule extends AbstractModule implements Listener 
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.timeoutSeconds = getConfigInt("zaman-asimi-saniye", 30);
+        this.timeoutSeconds = getConfigInt("timeout-seconds", 30);
     }
 
     /**

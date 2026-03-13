@@ -48,9 +48,9 @@ public class StatisticsManager implements IStatisticsProvider {
             return t;
         });
 
-        this.enabled = plugin.getConfig().getBoolean("istatistik.aktif", true);
-        this.autoSaveMinutes = plugin.getConfig().getInt("istatistik.otomatik-kaydetme-dakika", 5);
-        this.maxAttackHistory = plugin.getConfig().getInt("istatistik.max-saldiri-gecmisi", 100);
+        this.enabled = plugin.getConfig().getBoolean("statistics.enabled", true);
+        this.autoSaveMinutes = plugin.getConfig().getInt("statistics.auto-save-minutes", 5);
+        this.maxAttackHistory = plugin.getConfig().getInt("statistics.max-attack-history", 100);
     }
 
     public void start() {

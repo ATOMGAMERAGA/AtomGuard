@@ -28,7 +28,7 @@ public class AttackModeManager {
     public AttackModeManager(AtomGuardVelocity plugin) {
         this.plugin = plugin;
         this.logger = plugin.getSlf4jLogger();
-        this.normalThreshold = plugin.getConfigManager().getInt("moduller.ddos-koruma.saldiri-modu.esik", 30);
+        this.normalThreshold = plugin.getConfigManager().getInt("ddos-protection.attack-mode.threshold", 30);
     }
 
     public void updateFromRate(int connectionsPerSecond) {

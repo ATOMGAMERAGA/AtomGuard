@@ -44,7 +44,7 @@ public class OfflinePacketModule extends AbstractModule {
      * @param plugin Ana plugin instance
      */
     public OfflinePacketModule(@NotNull AtomGuard plugin) {
-        super(plugin, "cevrimdisi-paket", "Çevrimdışı paket kontrolü");
+        super(plugin, "offline-packet", "Çevrimdışı paket kontrolü");
         this.loginTimes = new ConcurrentHashMap<>();
         this.playerAddresses = new ConcurrentHashMap<>();
     }
@@ -87,7 +87,7 @@ public class OfflinePacketModule extends AbstractModule {
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.toleranceMs = getConfigLong("tolerans-suresi-ms", 5000L); // 5 saniye
+        this.toleranceMs = getConfigLong("tolerance-ms", 5000L); // 5 saniye
 
         debug("Config yüklendi: tolerance=" + toleranceMs + "ms");
     }

@@ -91,9 +91,9 @@ public class NettyCrashModule extends AbstractModule implements Listener {
      */
     private void loadConfig() {
         this.maxPositionValue = plugin.getConfigManager()
-                .getDouble("moduller." + getName() + ".max-konum-degeri", 3.2E7);
+                .getDouble("modules." + getName() + ".max-position-value", 3.2E7);
         this.maxYValue = plugin.getConfigManager()
-                .getDouble("moduller." + getName() + ".max-y-degeri", 4096.0);
+                .getDouble("modules." + getName() + ".max-y-value", 4096.0);
     }
 
     /**

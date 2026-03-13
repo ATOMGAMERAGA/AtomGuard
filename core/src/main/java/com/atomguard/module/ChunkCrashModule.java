@@ -54,8 +54,8 @@ public class ChunkCrashModule extends AbstractModule implements Listener {
     }
 
     private void loadConfig() {
-        this.maxChunkLoadsPerSec = getConfigInt("saniyede-max-chunk-yuklemesi", 20);
-        this.maxEntitiesPerChunkWarn = getConfigInt("max-entity-per-chunk-warn", 200);
+        this.maxChunkLoadsPerSec = getConfigInt("max-chunk-loads-per-second", 20);
+        this.maxEntitiesPerChunkWarn = getConfigInt("max-entities-per-chunk", 200);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

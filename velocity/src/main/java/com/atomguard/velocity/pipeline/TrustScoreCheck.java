@@ -29,7 +29,7 @@ public class TrustScoreCheck implements ConnectionCheck {
         PlayerBehaviorProfile profile = plugin.getBehaviorManager().getProfile(ctx.ip());
         int score = profile.calculateTrustScore();
         
-        int threshold = plugin.getConfigManager().getInt("moduller.bot-koruma.guven-skoru-esik", 10);
+        int threshold = plugin.getConfigManager().getInt("modules.bot-protection.trust-score-threshold", 10);
         
         // Güven skoru eşiğin altındaysa, girişi reddet
         if (score < threshold) {

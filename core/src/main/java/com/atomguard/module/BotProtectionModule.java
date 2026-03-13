@@ -54,7 +54,7 @@ public class BotProtectionModule extends AbstractModule implements Listener {
     private final Map<UUID, RotationData> playerRotations = new ConcurrentHashMap<>();
 
     public BotProtectionModule(AtomGuard plugin) {
-        super(plugin, "bot-korumasi", "Bot algılama ve koruma modülü (Legacy)");
+        super(plugin, "bot-protection", "Bot algılama ve koruma modülü (Legacy)");
     }
 
     @Override

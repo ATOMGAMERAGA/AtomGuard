@@ -30,7 +30,7 @@ public class FirewallExceptionManager {
 
     public FirewallExceptionManager(AtomGuardVelocity plugin) {
         this.plugin = plugin;
-        this.file = new File(plugin.getDataDirectory().toFile(), plugin.getConfigManager().getString("guvenlik-duvari.istisnalar.dosya", "firewall_exceptions.json"));
+        this.file = new File(plugin.getDataDirectory().toFile(), plugin.getConfigManager().getString("firewall.exceptions.file", "firewall_exceptions.json"));
         load();
     }
 

@@ -42,20 +42,20 @@ public class AdvancedChatModule extends AbstractModule implements Listener {
     private boolean antiFlood;
 
     public AdvancedChatModule(@NotNull AtomGuard plugin) {
-        super(plugin, "gelismis-sohbet", "Sohbet ve Tab-Complete güvenliği");
+        super(plugin, "advanced-chat", "Sohbet ve Tab-Complete güvenliği");
     }
 
     @Override
     public void onEnable() {
         super.onEnable();
-        this.maxTabRequests = getConfigInt("max-tab-istegi-saniye", 5);
-        this.filterUnicode = getConfigBoolean("unicode-filtre", true);
-        this.maxMessagesPerSecond = getConfigInt("hiz-limiti.saniyede-max", 3);
-        this.capsThresholdPercent = getConfigInt("buyuk-harf-spam.esik-yuzde", 80);
-        this.minCapsLength = getConfigInt("buyuk-harf-spam.minimum-uzunluk", 10);
-        this.antiSpam = getConfigBoolean("ayni-mesaj.aktif", true);
-        this.antiCaps = getConfigBoolean("buyuk-harf-spam.aktif", true);
-        this.antiFlood = getConfigBoolean("hiz-limiti.aktif", true);
+        this.maxTabRequests = getConfigInt("max-tab-requests-per-second", 5);
+        this.filterUnicode = getConfigBoolean("unicode-filter", true);
+        this.maxMessagesPerSecond = getConfigInt("rate-limit.saniyede-max", 3);
+        this.capsThresholdPercent = getConfigInt("caps-spam.esik-yuzde", 80);
+        this.minCapsLength = getConfigInt("caps-spam.minimum-uzunluk", 10);
+        this.antiSpam = getConfigBoolean("duplicate-message.aktif", true);
+        this.antiCaps = getConfigBoolean("caps-spam.aktif", true);
+        this.antiFlood = getConfigBoolean("rate-limit.aktif", true);
 
         // Clear maps periodically
         plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
@@ -96,7 +96,7 @@ public class AdvancedChatModule extends AbstractModule implements Listener {
             if (last != null && last.equalsIgnoreCase(message)) {
                 int sameCount = sameMessageCount.computeIfAbsent(player.getUniqueId(), k -> 0) + 1;
                 sameMessageCount.put(player.getUniqueId(), sameCount);
-                if (sameCount >= getConfigInt("ayni-mesaj.hatirlama-sayisi", 3)) {
+                if (sameCount >= getConfigInt("duplicate-message.hatirlama-sayisi", 3)) {
                     event.setCancelled(true);
                     incrementBlockedCount();
                     player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Lütfen aynı mesajı tekrarlamayın."));

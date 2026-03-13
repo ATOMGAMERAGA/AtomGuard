@@ -38,7 +38,7 @@ public class PortalBreakModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public PortalBreakModule(@NotNull AtomGuard plugin) {
-        super(plugin, "portal-kirma", "Portal kırma exploit önleme");
+        super(plugin, "portal-break", "Portal kırma exploit önleme");
     }
 
     @Override
@@ -67,8 +67,8 @@ public class PortalBreakModule extends AbstractModule implements Listener {
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.blockMushroom = getConfigBoolean("mantar-engelle", true);
-        this.blockWaterBucket = getConfigBoolean("su-kovasi-engelle", true);
+        this.blockMushroom = getConfigBoolean("block-mushroom", true);
+        this.blockWaterBucket = getConfigBoolean("block-water-bucket", true);
 
         debug("Config yüklendi: mushroom=" + blockMushroom + ", waterBucket=" + blockWaterBucket);
     }

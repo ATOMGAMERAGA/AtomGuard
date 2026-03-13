@@ -72,11 +72,11 @@ public class ForensicsManager implements IForensicsService {
             return t;
         });
 
-        this.enabled = plugin.getConfig().getBoolean("adli-analiz.aktif", true);
-        this.maxSnapshotsInMemory = plugin.getConfig().getInt("adli-analiz.max-bellek", 20);
-        this.maxSnapshotsOnDisk = plugin.getConfig().getInt("adli-analiz.max-disk", 100);
-        this.metricIntervalSeconds = plugin.getConfig().getInt("adli-analiz.metrik-araligi-sn", 10);
-        this.cleanupIntervalHours = plugin.getConfig().getInt("adli-analiz.temizlik-araligi-saat", 24);
+        this.enabled = plugin.getConfig().getBoolean("forensics.enabled", true);
+        this.maxSnapshotsInMemory = plugin.getConfig().getInt("forensics.max-snapshots", 20);
+        this.maxSnapshotsOnDisk = plugin.getConfig().getInt("forensics.max-snapshots", 100);
+        this.metricIntervalSeconds = plugin.getConfig().getInt("forensics.metric-interval-seconds", 10);
+        this.cleanupIntervalHours = plugin.getConfig().getInt("forensics.cleanup-interval-hours", 24);
     }
 
     public void start() {
@@ -209,7 +209,7 @@ public class ForensicsManager implements IForensicsService {
             + " | Engellenen: " + snapshot.getTotalBlocked());
 
         // Discord raporu
-        if (plugin.getConfig().getBoolean("adli-analiz.discord-rapor", true)) {
+        if (plugin.getConfig().getBoolean("forensics.discord-report", true)) {
             plugin.getDiscordWebhookManager().notifyForensicsReport(snapshot);
         }
 

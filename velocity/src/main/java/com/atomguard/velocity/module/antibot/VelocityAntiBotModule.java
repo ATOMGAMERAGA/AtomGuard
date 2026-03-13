@@ -26,7 +26,7 @@ public class VelocityAntiBotModule extends VelocityModule {
     private NicknameBlocker nicknameBlocker;
 
     public VelocityAntiBotModule(AtomGuardVelocity plugin) {
-        super(plugin, "bot-koruma");
+        super(plugin, "bot-protection");
     }
 
     @Override

@@ -25,7 +25,7 @@ public class GlobalRateLimitModule extends VelocityModule {
     private long lastGlobalReset = System.currentTimeMillis();
 
     public GlobalRateLimitModule(AtomGuardVelocity plugin) {
-        super(plugin, "hiz-siniri");
+        super(plugin, "rate-limit");
     }
 
     @Override
@@ -33,8 +33,8 @@ public class GlobalRateLimitModule extends VelocityModule {
 
     @Override
     public void onConfigReload() {
-        int connLimit = getConfigInt("baglanti-saniye.ip-basina-max", 3);
-        int pingLimit = getConfigInt("ping-saniye.ip-basina-max", 5);
+        int connLimit = getConfigInt("connections-per-second.per-ip-max", 3);
+        int pingLimit = getConfigInt("ping-per-second.per-ip-max", 5);
         
         // Sayaçlar sıfırlanabilir (Reload anında küçük bir tolerans), önemli olan yeni limitin devreye girmesi.
         this.connectionLimiter = new ConnectionRateLimiter(connLimit, 1);
@@ -44,8 +44,8 @@ public class GlobalRateLimitModule extends VelocityModule {
 
     @Override
     public void onEnable() {
-        int connLimit = getConfigInt("baglanti-saniye.ip-basina-max", 3);
-        int pingLimit = getConfigInt("ping-saniye.ip-basina-max", 5);
+        int connLimit = getConfigInt("connections-per-second.per-ip-max", 3);
+        int pingLimit = getConfigInt("ping-per-second.per-ip-max", 5);
         
         // Window is 1 second for these "per second" limits
         this.connectionLimiter = new ConnectionRateLimiter(connLimit, 1);
@@ -72,7 +72,7 @@ public class GlobalRateLimitModule extends VelocityModule {
         if (!isEnabled()) return ConnectionRateLimiter.RateLimitResult.ALLOWED;
 
         // Global Check
-        int globalMax = getConfigInt("baglanti-saniye.global-max", 50);
+        int globalMax = getConfigInt("connections-per-second.global-max", 50);
         if (globalConnectionCounter.get() >= globalMax) {
             incrementBlocked();
             return new ConnectionRateLimiter.RateLimitResult(false, 1000); 

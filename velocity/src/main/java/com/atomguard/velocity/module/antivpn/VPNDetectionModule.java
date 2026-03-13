@@ -30,7 +30,7 @@ public class VPNDetectionModule extends VelocityModule {
     private final Queue<String> verifiedCleanIPsOrder = new ConcurrentLinkedQueue<>();
 
     public VPNDetectionModule(AtomGuardVelocity plugin) {
-        super(plugin, "vpn-proxy-engelleme");
+        super(plugin, "vpn-proxy-block");
         this.providerChain = new VPNProviderChain(plugin);
     }
 

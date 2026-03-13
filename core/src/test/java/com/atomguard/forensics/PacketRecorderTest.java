@@ -18,8 +18,8 @@ class PacketRecorderTest {
     void setUp() {
         AtomGuard plugin = TestUtils.mockPlugin();
         FileConfiguration config = plugin.getConfig();
-        when(config.getInt("forensik.paket-kaydi.tampon-suresi-saniye", 30)).thenReturn(30);
-        when(config.getInt("forensik.paket-kaydi.max-eszamanli-kayit", 10)).thenReturn(3);
+        when(config.getInt("packet-forensics.recording.buffer-seconds", 30)).thenReturn(30);
+        when(config.getInt("packet-forensics.recording.max-concurrent", 10)).thenReturn(3);
         recorder = new PacketRecorder(plugin);
     }
 

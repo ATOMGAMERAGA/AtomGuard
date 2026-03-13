@@ -20,7 +20,7 @@ public class PostJoinBehaviorCheck extends AbstractCheck {
     @Override
     public int calculateThreatScore(PlayerProfile profile) {
         int ticks = profile.getTicksSinceJoin();
-        int analysisTime = module.getConfigInt("kontroller.giris-sonrasi-davranis.analiz-suresi-tick", 1200); // 600'den 1200'e çıkarıldı
+        int analysisTime = module.getConfigInt("checks.post-join-behavior.analysis-ticks", 1200); // 600'den 1200'e çıkarıldı
         
         if (ticks < analysisTime) {
             return 0;

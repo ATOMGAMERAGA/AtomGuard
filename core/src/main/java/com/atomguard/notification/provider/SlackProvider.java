@@ -30,8 +30,8 @@ public class SlackProvider implements NotificationProvider {
     }
 
     private void reload() {
-        this.webhookUrl = plugin.getConfig().getString("bildirimler.slack.webhook-url", "");
-        this.enabled.set(plugin.getConfig().getBoolean("bildirimler.slack.aktif", false)
+        this.webhookUrl = plugin.getConfig().getString("notifications.slack.webhook-url", "");
+        this.enabled.set(plugin.getConfig().getBoolean("notifications.slack.enabled", false)
                 && webhookUrl != null && !webhookUrl.isEmpty());
     }
 

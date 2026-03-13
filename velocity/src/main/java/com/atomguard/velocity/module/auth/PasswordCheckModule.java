@@ -21,7 +21,7 @@ public class PasswordCheckModule extends VelocityModule {
     private final MinecraftChannelIdentifier channel;
 
     public PasswordCheckModule(AtomGuardVelocity plugin) {
-        super(plugin, "sifre-kontrol");
+        super(plugin, "password-check");
         this.commonList = new CommonPasswordList(plugin);
         int maxSame = getConfigInt("benzer-sifre.ip-basina-max-ayni-sifre", 3);
         this.similarityDetector = new PasswordSimilarityDetector(maxSame);

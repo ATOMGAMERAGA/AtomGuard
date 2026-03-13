@@ -38,7 +38,7 @@ public class MapLabelCrasherModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public MapLabelCrasherModule(@NotNull AtomGuard plugin) {
-        super(plugin, "harita-etiketi-crash", "Harita etiketi crash kontrolü");
+        super(plugin, "map-label-crash", "Harita etiketi crash kontrolü");
     }
 
     @Override
@@ -67,8 +67,8 @@ public class MapLabelCrasherModule extends AbstractModule implements Listener {
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.disableLabels = getConfigBoolean("etiketleri-devre-disi-birak", false);
-        this.maxLabelCount = getConfigInt("max-etiket-sayisi", 50);
+        this.disableLabels = getConfigBoolean("disable-labels", false);
+        this.maxLabelCount = getConfigInt("max-label-count", 50);
 
         debug("Config yüklendi: disableLabels=" + disableLabels +
               ", maxLabels=" + maxLabelCount);

@@ -15,7 +15,7 @@ import java.util.List;
  * sunucuları çalıştırır. Yakalanan IP'ler yapılandırılmış süre boyunca kara
  * listeye alınır.</p>
  *
- * <p>Config yolu: {@code moduller.bal-kupu.*}</p>
+ * <p>Config yolu: {@code modules.honeypot.*}</p>
  */
 public class HoneypotModule extends AbstractModule {
 
@@ -37,7 +37,7 @@ public class HoneypotModule extends AbstractModule {
     private String logSeviyesi;
 
     public HoneypotModule(AtomGuard plugin) {
-        super(plugin, "bal-kupu", "Bot tarayıcı ve saldırgan IP tuzak sistemi");
+        super(plugin, "honeypot", "Bot tarayıcı ve saldırgan IP tuzak sistemi");
     }
 
     // ═══════════════════════════════════════════════════════
@@ -54,15 +54,15 @@ public class HoneypotModule extends AbstractModule {
         // Sahte MOTD işleyicisi
         if (fakeMotdEnabled) {
             String serverName = plugin.getConfig().getString(
-                    "moduller.bal-kupu.sahte-motd.sunucu-adi", "§a§lPopüler Sunucu");
+                    "modules.honeypot.sahte-motd.sunucu-adi", "§a§lPopüler Sunucu");
             int maxP = plugin.getConfig().getInt(
-                    "moduller.bal-kupu.sahte-motd.max-oyuncu", 200);
+                    "modules.honeypot.sahte-motd.max-oyuncu", 200);
             int onlineP = plugin.getConfig().getInt(
-                    "moduller.bal-kupu.sahte-motd.online-oyuncu", 87);
+                    "modules.honeypot.sahte-motd.online-oyuncu", 87);
             String ver = plugin.getConfig().getString(
-                    "moduller.bal-kupu.sahte-motd.versiyon", "1.21.4");
+                    "modules.honeypot.sahte-motd.versiyon", "1.21.4");
             int proto = plugin.getConfig().getInt(
-                    "moduller.bal-kupu.sahte-motd.protokol", 769);
+                    "modules.honeypot.sahte-motd.protokol", 769);
             this.fakeMotdHandler = new FakeMotdHandler(serverName, maxP, onlineP, ver, proto);
         }
 
@@ -99,29 +99,29 @@ public class HoneypotModule extends AbstractModule {
     // ═══════════════════════════════════════════════════════
 
     private void loadConfig() {
-        honeypotPorts = plugin.getConfig().getIntegerList("moduller.bal-kupu.portlar");
+        honeypotPorts = plugin.getConfig().getIntegerList("modules.honeypot.portlar");
         if (honeypotPorts == null || honeypotPorts.isEmpty()) {
             honeypotPorts = new ArrayList<>(List.of(25566, 25567));
         }
 
         blacklistDurationSeconds = plugin.getConfig().getInt(
-                "moduller.bal-kupu.blacklist.sure-sn", 3600);
+                "modules.honeypot.blacklist.sure-sn", 3600);
         fakeMotdEnabled = plugin.getConfig().getBoolean(
-                "moduller.bal-kupu.sahte-motd.aktif", true);
+                "modules.honeypot.sahte-motd.aktif", true);
         maxConnectionsPerIp = plugin.getConfig().getInt(
-                "moduller.bal-kupu.blacklist.max-baglanti", 3);
+                "modules.honeypot.blacklist.max-baglanti", 3);
         instantBlacklist = plugin.getConfig().getBoolean(
-                "moduller.bal-kupu.blacklist.aninda-engelle", true);
+                "modules.honeypot.blacklist.aninda-engelle", true);
         whitelistExempt = plugin.getConfig().getBoolean(
-                "moduller.bal-kupu.beyaz-liste-muaf", true);
+                "modules.honeypot.beyaz-liste-muaf", true);
         maxConcurrentConnections = plugin.getConfig().getInt(
-                "moduller.bal-kupu.guvenlik.max-eszamanli-baglanti", 50);
+                "modules.honeypot.guvenlik.max-eszamanli-baglanti", 50);
         connectionTimeoutSeconds = plugin.getConfig().getInt(
-                "moduller.bal-kupu.guvenlik.baglanti-zaman-asimi-sn", 5);
+                "modules.honeypot.guvenlik.baglanti-zaman-asimi-sn", 5);
         discordBildirim = plugin.getConfig().getBoolean(
-                "moduller.bal-kupu.discord-bildirim", true);
+                "modules.honeypot.discord-bildirim", true);
         logSeviyesi = plugin.getConfig().getString(
-                "moduller.bal-kupu.log-seviyesi", "SUMMARY");
+                "modules.honeypot.log-seviyesi", "SUMMARY");
     }
 
     // ═══════════════════════════════════════════════════════
