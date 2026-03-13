@@ -21,10 +21,20 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/github/license/ATOMGAMERAGA/AtomGuard?style=flat-square&color=lightgrey" alt="License">
   </a>
+  <a href="https://modrinth.com/plugin/atomguard">
+    <img src="https://img.shields.io/modrinth/dt/atomguard?style=flat-square&color=00AF5C&logo=modrinth&logoColor=white&label=modrinth" alt="Modrinth Downloads">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://modrinth.com/plugin/atomguard">
+    <img src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/available/modrinth_vector.svg" alt="Available on Modrinth" height="40">
+  </a>
 </p>
 
 <p align="center">
   <a href="https://github.com/ATOMGAMERAGA/AtomGuard/releases">📦 Downloads</a> &nbsp;|&nbsp;
+  <a href="https://modrinth.com/plugin/atomguard">🟢 Modrinth</a> &nbsp;|&nbsp;
   <a href="CHANGELOG.md">📋 Changelog</a>
 </p>
 
