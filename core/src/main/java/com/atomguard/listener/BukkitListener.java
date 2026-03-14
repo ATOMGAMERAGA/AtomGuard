@@ -55,10 +55,10 @@ public class BukkitListener implements Listener {
      */
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerPreLogin(@NotNull AsyncPlayerPreLoginEvent event) {
-        // Record connection for Attack Mode tracking
-        plugin.getAttackModeManager().recordConnection();
-
         String ip = event.getAddress().getHostAddress();
+
+        // Record connection for Attack Mode tracking
+        plugin.getAttackModeManager().recordConnection(ip);
 
         // Attack mode connection blocking
         if (plugin.getAttackModeManager().shouldBlockConnection(ip)) {

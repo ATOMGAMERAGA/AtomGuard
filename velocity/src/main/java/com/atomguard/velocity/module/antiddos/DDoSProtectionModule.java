@@ -188,7 +188,8 @@ public class DDoSProtectionModule extends VelocityModule {
         }
 
         // ── 14. SynFloodDetector — tüm bileşenleri bağla ──
-        synFloodDetector = new SynFloodDetector(plugin, baseCpsThreshold);
+        int minUniqueIps = getConfigInt("attack-mode.min-unique-ips", 10);
+        synFloodDetector = new SynFloodDetector(plugin, baseCpsThreshold, minUniqueIps);
         if (levelsEnabled) synFloodDetector.setLevelManager(levelManager);
         if (anomalyDetector != null) synFloodDetector.setAnomalyDetector(anomalyDetector);
         if (metricsCollector != null) synFloodDetector.setMetricsCollector(metricsCollector);
@@ -240,7 +241,7 @@ public class DDoSProtectionModule extends VelocityModule {
         if (!enabled) return new ConnectionCheckResult(true, "disabled", null);
 
         // CPS sayacını artır
-        synFloodDetector.recordConnection();
+        synFloodDetector.recordConnection(ip);
 
         // ── 1. Slowloris kontrolü ──────────────────────────
         if (slowlorisDetector.isSlowlorisIP(ip)) {

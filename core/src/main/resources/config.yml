@@ -202,6 +202,8 @@ anti-vpn:
 attack-mode:
   # How many connections per second to activate "Attack Mode"?
   threshold: 10
+  # Minimum unique IPs required to trigger Attack Mode (prevents a single player from triggering it)
+  min-unique-ips: 10
   # How long should Attack Mode last? (Seconds)
   duration-seconds: 60
   # v2.3 — Automatic actions during attack

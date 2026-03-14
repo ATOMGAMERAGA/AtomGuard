@@ -26,6 +26,9 @@ public class AttackModeManager {
 
     private final int threshold;
     private final int durationSeconds;
+    private final int minUniqueIps;
+
+    private final Set<String> uniqueIpsThisSecond = ConcurrentHashMap.newKeySet();
 
     // Verified IPs (players that successfully joined before) — max 50 000 entries
     private static final int MAX_VERIFIED_IPS = 50_000;
@@ -44,6 +47,7 @@ public class AttackModeManager {
         this.plugin = plugin;
         this.threshold = plugin.getConfig().getInt("attack-mode.threshold", 10);
         this.durationSeconds = plugin.getConfig().getInt("attack-mode.duration-seconds", 60);
+        this.minUniqueIps = plugin.getConfig().getInt("attack-mode.min-unique-ips", 10);
         loadActionConfig();
     }
 
@@ -59,8 +63,10 @@ public class AttackModeManager {
 
     /**
      * Records a connection attempt and checks for attack.
+     *
+     * @param ip Source IP address of the connecting client
      */
-    public void recordConnection() {
+    public void recordConnection(String ip) {
         long now = System.currentTimeMillis();
 
         // CAS ile atomik reset — TOCTOU race condition önleme
@@ -68,8 +74,12 @@ public class AttackModeManager {
         if (now - lastResetVal >= 1000) {
             if (lastReset.compareAndSet(lastResetVal, now)) {
                 connectionCounter.set(0);
+                uniqueIpsThisSecond.clear();
             }
         }
+
+        // Add IP after potential reset so it belongs to the current window
+        if (ip != null) uniqueIpsThisSecond.add(ip);
 
         int currentRate = connectionCounter.incrementAndGet();
 
@@ -86,12 +96,12 @@ public class AttackModeManager {
             plugin.getForensicsManager().recordConnection(null);
         }
 
-        if (currentRate >= threshold) {
+        if (currentRate >= threshold && uniqueIpsThisSecond.size() >= minUniqueIps) {
             // Trigger DDoS Event (every time threshold reached, even if already in attack mode)
             plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
                 plugin.getServer().getPluginManager().callEvent(new com.atomguard.api.event.DDoSDetectedEvent(currentRate, threshold, attackMode));
             });
-            
+
             if (!attackMode) {
                 activateAttackMode(currentRate);
             }

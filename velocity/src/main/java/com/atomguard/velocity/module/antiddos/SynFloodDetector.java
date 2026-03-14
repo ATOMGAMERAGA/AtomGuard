@@ -4,6 +4,8 @@ import com.atomguard.velocity.AtomGuardVelocity;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -22,9 +24,11 @@ public class SynFloodDetector {
 
     private final AtomGuardVelocity plugin;
     private final int               threshold;
+    private final int               minUniqueIps;
 
     private final AtomicInteger connectionsThisSecond = new AtomicInteger(0);
     private final AtomicInteger peakRate              = new AtomicInteger(0);
+    private final Set<String>   uniqueIpsThisSecond   = ConcurrentHashMap.newKeySet();
 
     /** Son 60 saniyelik CPS geçmişi */
     private final Deque<Integer> rateHistory = new ArrayDeque<>();
@@ -46,9 +50,10 @@ public class SynFloodDetector {
     /** AttackClassifier bağlantısı (opsiyonel) */
     private AttackClassifier classifier;
 
-    public SynFloodDetector(AtomGuardVelocity plugin, int threshold) {
-        this.plugin    = plugin;
-        this.threshold = threshold;
+    public SynFloodDetector(AtomGuardVelocity plugin, int threshold, int minUniqueIps) {
+        this.plugin        = plugin;
+        this.threshold     = threshold;
+        this.minUniqueIps  = minUniqueIps;
         this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "atomguard-syn-detector");
             t.setDaemon(true);
@@ -89,22 +94,27 @@ public class SynFloodDetector {
         int rate = connectionsThisSecond.getAndSet(0);
         peakRate.updateAndGet(p -> Math.max(p, rate));
 
+        // Compute effective CPS: zero if unique IPs below threshold (prevents single-player trigger)
+        int uniqueCount = uniqueIpsThisSecond.size();
+        uniqueIpsThisSecond.clear();
+        int effectiveCps = (uniqueCount >= minUniqueIps) ? rate : 0;
+
         synchronized (rateHistory) {
             rateHistory.addLast(rate);
             if (rateHistory.size() > 60) rateHistory.pollFirst();
         }
 
-        // Anomali dedektörüne CPS bildir
+        // Anomali dedektörüne gerçek CPS bildir (monitoring bozulmasın)
         if (anomalyDetector != null) {
             anomalyDetector.recordCps(rate);
         }
 
-        // AttackLevelManager güncelle (hysteresis burada yönetilir)
+        // AttackLevelManager güncelle — effectiveCps ile (hysteresis burada yönetilir)
         if (levelManager != null) {
-            levelManager.update(rate);
+            levelManager.update(effectiveCps);
         }
 
-        // Metrik toplayıcısına bildir
+        // Metrik toplayıcısına gerçek CPS bildir
         if (metricsCollector != null) {
             AttackLevelManager.AttackLevel level = levelManager != null
                     ? levelManager.getCurrentLevel()
@@ -122,9 +132,9 @@ public class SynFloodDetector {
             classifyCurrentTraffic(rate);
         }
 
-        // Eski attack mode uyumluluk kontrolü (levelManager yoksa)
+        // Eski attack mode uyumluluk kontrolü (levelManager yoksa) — effectiveCps ile
         if (levelManager == null) {
-            legacyAttackModeCheck(rate);
+            legacyAttackModeCheck(effectiveCps);
         }
     }
 
@@ -194,8 +204,9 @@ public class SynFloodDetector {
     // ────────────────────────────────────────────────────────
 
     /** Yeni bağlantıyı kaydet. */
-    public void recordConnection() {
+    public void recordConnection(String ip) {
         connectionsThisSecond.incrementAndGet();
+        if (ip != null) uniqueIpsThisSecond.add(ip);
     }
 
     public int getCurrentRate() { return connectionsThisSecond.get(); }

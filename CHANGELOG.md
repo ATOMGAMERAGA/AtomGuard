@@ -3,6 +3,23 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.0.3] - 2026-03-14
+
+### 🐛 Hata Düzeltmeleri
+
+- **Core — Tek oyuncu saldırı modu yanlış tetiklemesi düzeltildi**: `AttackModeManager`
+  artık hem hız eşiğini (`threshold`) hem de benzersiz IP sayısını (`min-unique-ips`,
+  varsayılan: 10) kontrol ediyor. Tek bir oyuncunun hızlı çık/gir yapması artık
+  saldırı modunu tetikleyemiyor.
+- **Velocity — Aynı düzeltme**: `SynFloodDetector`, benzersiz IP sayısı `min-unique-ips`
+  altındaysa `effectiveCps=0` gönderiyor; `AttackLevelManager` NONE seviyesinde kalıyor.
+  `DDoSProtectionModule.checkConnection()` artık IP'yi `recordConnection(ip)` ile iletiyor.
+
+### 🔧 İyileştirmeler
+
+- **Yeni config ayarı**: `attack-mode.min-unique-ips` (core) ve
+  `ddos-protection.attack-mode.min-unique-ips` (velocity) — varsayılan 10
+
 ## [2.0.2] - 2026-03-13
 
 ### 🌐 Full English Translation

@@ -62,6 +62,7 @@ modules:
     ping-limit: 3
     attack-mode:
       threshold: 30
+      min-unique-ips: 10
     attack-levels:
       enabled: true
       hysteresis-rise-seconds: 3
