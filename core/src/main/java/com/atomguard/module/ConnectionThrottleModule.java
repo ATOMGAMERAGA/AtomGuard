@@ -51,6 +51,10 @@ public class ConnectionThrottleModule extends AbstractModule implements Listener
         List<String> exemptIps = plugin.getConfig().getStringList("modules.connection-throttle.exempt-ips");
         if (exemptIps != null && exemptIps.contains(ip)) return;
 
+        // Bypass for verified IPs (players who have successfully joined before)
+        if (plugin.getAttackModeManager().isVerifiedIp(ip)) return;
+        if (plugin.getVerifiedPlayerCache() != null && plugin.getVerifiedPlayerCache().isIpVerified(ip)) return;
+
         // Determine limit based on attack mode
         int normalLimit = getConfigInt("max-connections-per-minute", 3);
         int attackLimit = getConfigInt("attack-max-per-minute", 1);

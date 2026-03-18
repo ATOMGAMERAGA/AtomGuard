@@ -90,8 +90,8 @@ public class ThreatScoreCalculator {
 
         int allowThreshold = (int) (module.getConfigInt("score-thresholds.allow", 30) * multiplier);
         int delayThreshold = (int) (module.getConfigInt("score-thresholds.delay", 60) * multiplier);
-        // FP-07: Minimum 75 — saldırı modu çarpanı kick eşiğini çok düşüremesin
-        int kickThreshold = Math.max(75, (int) (module.getConfigInt("score-thresholds.kick", 80) * multiplier));
+        // FP-07: Minimum 80 — saldırı modu çarpanı kick eşiğini çok düşüremesin
+        int kickThreshold = Math.max(80, (int) (module.getConfigInt("score-thresholds.kick", 90) * multiplier));
 
         if (totalScore < allowThreshold) {
             action = ActionType.ALLOW;

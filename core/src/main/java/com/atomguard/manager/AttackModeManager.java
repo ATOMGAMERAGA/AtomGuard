@@ -45,16 +45,16 @@ public class AttackModeManager {
 
     public AttackModeManager(AtomGuard plugin) {
         this.plugin = plugin;
-        this.threshold = plugin.getConfig().getInt("attack-mode.threshold", 10);
-        this.durationSeconds = plugin.getConfig().getInt("attack-mode.duration-seconds", 60);
-        this.minUniqueIps = plugin.getConfig().getInt("attack-mode.min-unique-ips", 10);
+        this.threshold = plugin.getConfig().getInt("attack-mode.threshold", 30);
+        this.durationSeconds = plugin.getConfig().getInt("attack-mode.duration-seconds", 30);
+        this.minUniqueIps = plugin.getConfig().getInt("attack-mode.min-unique-ips", 20);
         loadActionConfig();
     }
 
     private void loadActionConfig() {
-        this.actionBlockUnverified = plugin.getConfig().getBoolean("attack-mode.actions.block-unverified-ips", true);
+        this.actionBlockUnverified = plugin.getConfig().getBoolean("attack-mode.actions.block-unverified-ips", false);
         this.actionTightLimits = plugin.getConfig().getBoolean("attack-mode.actions.strict-limits", true);
-        this.tightLimitMultiplier = plugin.getConfig().getDouble("attack-mode.actions.strict-limit-factor", 0.5);
+        this.tightLimitMultiplier = plugin.getConfig().getDouble("attack-mode.actions.strict-limit-factor", 0.7);
         this.actionAutoEnableModules = plugin.getConfig().getBoolean("attack-mode.actions.auto-enable-modules", true);
         this.autoModules = plugin.getConfig().getStringList("attack-mode.actions.auto-modules");
         this.actionWhitelistOnly = plugin.getConfig().getBoolean("attack-mode.actions.whitelist-only", false);
@@ -67,6 +67,8 @@ public class AttackModeManager {
      * @param ip Source IP address of the connecting client
      */
     public void recordConnection(String ip) {
+        if (!plugin.getConfigManager().isNetworkProtectionEnabled()) return;
+
         long now = System.currentTimeMillis();
 
         // CAS ile atomik reset — TOCTOU race condition önleme

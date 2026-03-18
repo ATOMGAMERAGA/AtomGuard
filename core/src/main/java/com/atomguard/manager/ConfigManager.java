@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
@@ -62,7 +63,7 @@ public class ConfigManager {
     }
 
     private void checkConfigVersion() {
-        String currentVersion = "2.0.3";
+        String currentVersion = "2.0.4";
         String configVersion = config.getString("config-version", "1.0.0");
 
         if (!configVersion.equals(currentVersion)) {
@@ -368,6 +369,17 @@ public class ConfigManager {
         return getInt("general.log.retention-days", 7);
     }
 
+    private static final Set<String> NETWORK_MODULE_NAMES = Set.of(
+        "anti-bot", "connection-throttle", "honeypot", "packet-exploit", "packet-delay", "token-bucket"
+    );
+
+    /**
+     * Returns whether the network protection master toggle is enabled.
+     */
+    public boolean isNetworkProtectionEnabled() {
+        return getBoolean("network-protection.enabled", false);
+    }
+
     /**
      * Modülün aktif olup olmadığını kontrol eder
      *
@@ -375,6 +387,9 @@ public class ConfigManager {
      * @return Modül aktif ise true
      */
     public boolean isModuleEnabled(@NotNull String moduleName) {
+        if (NETWORK_MODULE_NAMES.contains(moduleName) && !isNetworkProtectionEnabled()) {
+            return false;
+        }
         return getBoolean("modules." + moduleName + ".enabled", false);
     }
 

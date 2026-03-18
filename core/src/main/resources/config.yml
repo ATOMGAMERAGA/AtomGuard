@@ -118,6 +118,15 @@ verified-cache:
   skip-ip-check: false
 
 # ═══════════════════════════════════════
+# Network Protection Master Toggle
+# When disabled, ALL network-based protections are OFF.
+# Set to true and reload to enable: attack-mode, anti-vpn, anti-bot,
+# connection-throttle, honeypot, packet-exploit, packet-delay, token-bucket
+# ═══════════════════════════════════════
+network-protection:
+  enabled: false
+
+# ═══════════════════════════════════════
 # Anti-VPN & IP Reputation v2.4.0
 # Advanced Multi-Layer Proxy/VPN Blocking System
 # 7-Layer Check: Whitelist → Manual Blacklist → Proxy List → CIDR → ASN → API → Fallback API
@@ -201,19 +210,19 @@ anti-vpn:
 # Attack Mode (Real-time Protection)
 attack-mode:
   # How many connections per second to activate "Attack Mode"?
-  threshold: 10
+  threshold: 30
   # Minimum unique IPs required to trigger Attack Mode (prevents a single player from triggering it)
-  min-unique-ips: 10
+  min-unique-ips: 20
   # How long should Attack Mode last? (Seconds)
-  duration-seconds: 60
+  duration-seconds: 30
   # v2.3 — Automatic actions during attack
   actions:
     # Block IPs that have not successfully connected before
-    block-unverified-ips: true
+    block-unverified-ips: false
     # Tighten packet rate limits
     strict-limits: true
-    # Strict limit multiplier (0.5 = limits halved)
-    strict-limit-factor: 0.5
+    # Strict limit multiplier (0.7 = limits reduced by 30%)
+    strict-limit-factor: 0.7
     # Automatically enable certain modules
     auto-enable-modules: true
     # Modules to automatically enable
@@ -540,9 +549,9 @@ modules:
   connection-throttle:
     enabled: true
     # Maximum connections per minute per IP
-    max-connections-per-minute: 3
+    max-connections-per-minute: 5
     # Maximum connections per minute during attack mode
-    attack-max-per-minute: 1
+    attack-max-per-minute: 3
     # Exempt IP addresses
     exempt-ips: []
 
@@ -556,19 +565,19 @@ modules:
 
     # ===== SCORE THRESHOLDS =====
     score-thresholds:
-      allow: 30          # Below this score = free pass
-      delay: 60          # 30-59 = delay connection 1-3 sec
-      kick: 80           # 60-79 = kick, can retry after 60 sec
-      blacklist: 100     # 80+ = add IP to blacklist
+      allow: 40          # Below this score = free pass
+      delay: 70          # 40-69 = delay connection 1-3 sec
+      kick: 90           # 70-89 = kick, can retry after 60 sec
+      blacklist: 120     # 90+ = add IP to blacklist
 
     # ===== CHECK MODULES =====
     checks:
       connection-rate:
         enabled: true
         window-ms: 10000
-        global-threshold: 20
-        per-ip-threshold: 3
-        attack-multiplier: 1.5
+        global-threshold: 30
+        per-ip-threshold: 5
+        attack-multiplier: 1.2
 
       ping-handshake:
         enabled: true
@@ -615,10 +624,10 @@ modules:
     # ===== ATTACK MODE =====
     attack-mode:
       enabled: true
-      trigger-threshold: 15
+      trigger-threshold: 30
       window-seconds: 5
-      shutdown-seconds: 60
-      threshold-multiplier: 0.85
+      shutdown-seconds: 30
+      threshold-multiplier: 0.95
       connection-queue: true
       queue-delay-ms: 2000
 

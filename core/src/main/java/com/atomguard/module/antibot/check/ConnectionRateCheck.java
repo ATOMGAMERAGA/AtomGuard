@@ -37,15 +37,15 @@ public class ConnectionRateCheck extends AbstractCheck {
         cleanOldEntries(ipDeque, now, windowMs);
         int ipRate = ipDeque.size();
 
-        int globalThreshold = module.getConfigInt("checks.connection-rate.global-threshold", 20);
-        int ipThreshold = module.getConfigInt("checks.connection-rate.per-ip-threshold", 3);
+        int globalThreshold = module.getConfigInt("checks.connection-rate.global-threshold", 30);
+        int ipThreshold = module.getConfigInt("checks.connection-rate.per-ip-threshold", 5);
 
         if (globalRate > globalThreshold) {
-            score += Math.min((globalRate - globalThreshold), 10);
+            score += Math.min((globalRate - globalThreshold), 8);
         }
 
         if (ipRate > ipThreshold) {
-            score += Math.min((ipRate - ipThreshold) * 10, 40);
+            score += Math.min((ipRate - ipThreshold) * 5, 30);
         }
 
         return score;
