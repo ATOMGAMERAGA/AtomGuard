@@ -195,6 +195,13 @@ public class PacketListener extends PacketListenerAbstract {
         }
         if (player == null) return;
 
+        // Auth grace period kontrolü — auth bekleyen oyuncuların heuristic analizini atla
+        com.atomguard.module.OfflinePacketModule offlineModule = plugin.getModuleManager()
+                .getModule(com.atomguard.module.OfflinePacketModule.class);
+        if (offlineModule != null && offlineModule.isInGracePeriod(player.getUniqueId())) {
+            return;
+        }
+
         if (event.getPacketType() == PacketType.Play.Client.PLAYER_ROTATION) {
             WrapperPlayClientPlayerRotation wrapper = new WrapperPlayClientPlayerRotation(event);
             plugin.getHeuristicEngine().analyzeRotation(player, wrapper.getYaw(), wrapper.getPitch());

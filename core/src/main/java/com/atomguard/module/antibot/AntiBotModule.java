@@ -235,4 +235,5 @@ public class AntiBotModule extends AbstractModule implements Listener {
     public VerificationManager getVerificationManager() { return verificationManager; }
     public ThreatScoreCalculator getThreatScoreCalculator() { return threatScoreCalculator; }
     public ActionExecutor getActionExecutor() { return actionExecutor; }
+    public PlayerProfile getPlayerProfile(UUID uuid) { return playerProfiles.get(uuid); }
 }

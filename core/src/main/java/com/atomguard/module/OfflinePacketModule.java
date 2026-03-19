@@ -97,7 +97,8 @@ public class OfflinePacketModule extends AbstractModule {
                 .getStringList("modules." + getName() + ".auth-commands");
         if (cmds == null || cmds.isEmpty()) {
             cmds = List.of("/login", "/l", "/register", "/reg", "/changepassword", "/cp",
-                           "/giriş", "/giris", "/kayıt", "/kayit");
+                           "/giriş", "/giris", "/kayıt", "/kayit", "/sifre", "/şifre",
+                           "/auth", "/2fa", "/totp", "/pin");
         }
         this.authCommands = new HashSet<>(cmds);
 

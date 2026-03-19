@@ -7,6 +7,8 @@ import com.atomguard.module.OfflinePacketModule;
 import com.atomguard.module.PacketDelayModule;
 import com.atomguard.module.PacketExploitModule;
 import com.atomguard.module.TokenBucketModule;
+import com.atomguard.module.antibot.AntiBotModule;
+import com.atomguard.module.antibot.PlayerProfile;
 import com.atomguard.reputation.IPReputationManager;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.entity.Player;
@@ -137,7 +139,32 @@ public class BukkitListener implements Listener {
                         ? offlineModuleForCache.getToleranceMs() : 30000L) / 50;
 
                 plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                    if (player.isOnline() && plugin.getVerifiedPlayerCache() != null) {
+                    if (!player.isOnline() || plugin.getVerifiedPlayerCache() == null) return;
+
+                    // Auth tamamlanmış mı kontrol et
+                    boolean authCompleted = true;
+
+                    // AuthListener üzerinden kontrol
+                    if (plugin.getAuthListener() != null
+                            && plugin.getAuthListener().isPendingAuth(player.getUniqueId())) {
+                        authCompleted = false;
+                    }
+
+                    // AntiBotModule PlayerProfile üzerinden kontrol
+                    if (authCompleted) {
+                        AntiBotModule antiBotModule = plugin.getModuleManager().getModule(AntiBotModule.class);
+                        OfflinePacketModule offlineModuleCheck = plugin.getModuleManager()
+                                .getModule(OfflinePacketModule.class);
+                        if (antiBotModule != null && offlineModuleCheck != null
+                                && !offlineModuleCheck.getAuthCommands().isEmpty()) {
+                            PlayerProfile profile = antiBotModule.getPlayerProfile(player.getUniqueId());
+                            if (profile != null && !profile.isAuthenticated()) {
+                                authCompleted = false;
+                            }
+                        }
+                    }
+
+                    if (authCompleted) {
                         plugin.getVerifiedPlayerCache().addVerified(player.getName(), ip);
 
                         // Trigger API Events (async-only events)
@@ -148,6 +175,13 @@ public class BukkitListener implements Listener {
                                 new com.atomguard.api.event.PostVerificationEvent(
                                     player.getUniqueId(), true, "trusted"));
                         });
+                    } else {
+                        // Auth henüz tamamlanmamış — 30 saniye sonra tekrar dene (koşulsuz)
+                        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                            if (player.isOnline() && plugin.getVerifiedPlayerCache() != null) {
+                                plugin.getVerifiedPlayerCache().addVerified(player.getName(), ip);
+                            }
+                        }, 600L);
                     }
                 }, graceTicks);
             }

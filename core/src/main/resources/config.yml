@@ -614,6 +614,9 @@ modules:
 
     # ===== CHECK MODULES =====
     checks:
+      # Auth grace period: login plugini beklerken bot check yapma (ms)
+      auth-grace-period-ms: 120000
+
       connection-rate:
         enabled: true
         window-ms: 10000

@@ -2,6 +2,8 @@ package com.atomguard.listener;
 
 import com.atomguard.AtomGuard;
 import com.atomguard.module.OfflinePacketModule;
+import com.atomguard.module.antibot.AntiBotModule;
+import com.atomguard.module.antibot.PlayerProfile;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -81,10 +83,30 @@ public class AuthListener implements Listener {
      */
     public void markAuthenticated(@NotNull UUID uuid) {
         pendingAuth.remove(uuid);
+
+        // OfflinePacketModule grace period'unu bitir
         OfflinePacketModule offlineModule = plugin.getModuleManager()
                 .getModule(OfflinePacketModule.class);
         if (offlineModule != null) {
             offlineModule.onAuthComplete(uuid);
+        }
+
+        // AntiBotModule PlayerProfile'ını authenticated olarak işaretle
+        AntiBotModule antiBotModule = plugin.getModuleManager().getModule(AntiBotModule.class);
+        if (antiBotModule != null) {
+            PlayerProfile profile = antiBotModule.getPlayerProfile(uuid);
+            if (profile != null) {
+                profile.markAuthenticated();
+            }
+        }
+
+        // VerifiedPlayerCache'e ekle (auth başarılı = verified)
+        if (plugin.getVerifiedPlayerCache() != null) {
+            org.bukkit.entity.Player player = org.bukkit.Bukkit.getPlayer(uuid);
+            if (player != null && player.getAddress() != null && player.getAddress().getAddress() != null) {
+                String ip = player.getAddress().getAddress().getHostAddress();
+                plugin.getVerifiedPlayerCache().addVerified(player.getName(), ip);
+            }
         }
     }
 }

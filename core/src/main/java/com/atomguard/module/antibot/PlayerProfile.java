@@ -61,6 +61,10 @@ public class PlayerProfile {
     private final AtomicLong lastKeepAliveSent = new AtomicLong(0);
     private final Deque<Long> keepAliveResponseTimes = new ConcurrentLinkedDeque<>();
     
+    // Auth state
+    private volatile boolean authenticated = false;
+    private volatile long authCompletedTime = 0;
+
     private volatile int cachedFirstJoinScore = 0;
     private volatile int currentThreatScore = 0;
     private final java.util.concurrent.atomic.AtomicInteger maxThreatScore = new java.util.concurrent.atomic.AtomicInteger(0);
@@ -275,4 +279,12 @@ public class PlayerProfile {
     public void incrementSuccessfulSessionCount() { successfulSessionCount++; }
     public long getLastSeen() { return lastSeen; }
     public int getPositionPacketCount() { return positionPacketTimestamps.size(); }
+
+    public void markAuthenticated() {
+        this.authenticated = true;
+        this.authCompletedTime = System.currentTimeMillis();
+    }
+
+    public boolean isAuthenticated() { return authenticated; }
+    public long getAuthCompletedTime() { return authCompletedTime; }
 }

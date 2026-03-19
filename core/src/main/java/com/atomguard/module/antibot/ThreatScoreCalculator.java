@@ -37,6 +37,22 @@ public class ThreatScoreCalculator {
             return new ThreatResult(0, ActionType.ALLOW, Collections.emptyMap());
         }
 
+        // Auth grace period: auth bekleyen oyuncuları bot olarak puanlama
+        if (!profile.isAuthenticated() && profile.getFirstJoinTime() > 0) {
+            long timeSinceJoin = System.currentTimeMillis() - profile.getFirstJoinTime();
+            long authGraceMs = module.getConfigLong("checks.auth-grace-period-ms", 120000L);
+
+            com.atomguard.module.OfflinePacketModule offlineModule = module.getPlugin()
+                    .getModuleManager().getModule(com.atomguard.module.OfflinePacketModule.class);
+            boolean hasAuthPlugin = offlineModule != null && offlineModule.isEnabled()
+                    && !offlineModule.getAuthCommands().isEmpty();
+
+            if (hasAuthPlugin && timeSinceJoin < authGraceMs) {
+                return new ThreatResult(0, ActionType.ALLOW,
+                        Collections.singletonMap("auth-grace", 0));
+            }
+        }
+
         // FP-08: Doğrulanmış oyuncu cache'indeki oyuncular için kontrolü gevşet veya atla
         boolean isVerified = false;
         if (module.getPlugin().getVerifiedPlayerCache() != null && 

@@ -70,6 +70,7 @@ public class AtomGuard extends JavaPlugin {
     private NotificationManager notificationManager;
     private ExecutorManager executorManager;
     private com.atomguard.metrics.CoreMetrics coreMetrics;
+    private AuthListener authListener;
 
     @Override
     public void onLoad() {
@@ -125,7 +126,8 @@ public class AtomGuard extends JavaPlugin {
             getServer().getPluginManager().registerEvents(new InventoryListener(this), this);
 
             // Generic auth listener — herhangi bir login plugini ile çalışır
-            getServer().getPluginManager().registerEvents(new AuthListener(this), this);
+            this.authListener = new AuthListener(this);
+            getServer().getPluginManager().registerEvents(authListener, this);
             getLogger().info("Generic auth listener active.");
 
             // Messaging
@@ -373,4 +375,5 @@ public class AtomGuard extends JavaPlugin {
     public NotificationManager getNotificationManager() { return notificationManager; }
     public ExecutorManager getExecutorManager() { return executorManager; }
     public com.atomguard.metrics.CoreMetrics getCoreMetrics() { return coreMetrics; }
+    public AuthListener getAuthListener() { return authListener; }
 }

@@ -1,6 +1,7 @@
 package com.atomguard.module;
 
 import com.atomguard.AtomGuard;
+import com.atomguard.module.OfflinePacketModule;
 import com.atomguard.util.TokenBucket;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
@@ -143,6 +144,12 @@ public class TokenBucketModule extends AbstractModule {
         if (!(event.getPacketType() instanceof PacketType.Play.Client clientPacket)) return;
 
         if (!(event.getPlayer() instanceof Player player)) return;
+
+        // Auth grace period kontrolü — auth bekleyen oyunculara rate limit uygulanmaz
+        OfflinePacketModule offlineModule = plugin.getModuleManager().getModule(OfflinePacketModule.class);
+        if (offlineModule != null && offlineModule.isInGracePeriod(player.getUniqueId())) {
+            return;
+        }
 
         // CHAT_COMMAND paketleri için auth komut muafiyeti
         if (clientPacket == PacketType.Play.Client.CHAT_COMMAND) {

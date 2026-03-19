@@ -3,6 +3,24 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.0.6] - 2026-03-19
+
+### ✨ Yeni Özellikler
+
+- **Core — Özel Login Plugini Uyumluluğu**: AtomGuard artık herhangi bir özel login plugini ile tam uyumlu. `AuthListener.markAuthenticated(UUID)` API'si üzerinden login plugin'leri auth tamamlandığında AtomGuard'a bildirimde bulunabilir.
+- **Core — Auth Grace Period (AntiBotModule)**: Auth bekleyen oyuncular artık bot olarak puanlanmıyor. `modules.anti-bot.checks.auth-grace-period-ms` (varsayılan: 120 saniye) süresince `ThreatScoreCalculator` auth bekleyen oyuncuyu serbest geçiriyor.
+- **Core — AtomGuard.getAuthListener()**: `AuthListener` instance'ı artık dışarıdan erişilebilir. Login pluginleri `AtomGuard.getInstance().getAuthListener().markAuthenticated(uuid)` ile auth tamamlandığını bildirebilir.
+- **Core — PlayerProfile.markAuthenticated()**: AntiBotModule player profiline auth durumu eklendi. Auth tamamlandığında profil işaretleniyor; tüm periyodik threat evaluation'lar bu durumu görerek skor hesaplamayı atlıyor.
+
+### 🔧 İyileştirmeler
+
+- **Core — TokenBucketModule grace period muafiyeti**: Auth grace period'u aktif oyunculara movement paketleri de dahil olmak üzere hiçbir rate limit uygulanmıyor (önceki versiyonda yalnızca komut paketleri muaftı, hareket paketleri cezalandırılıyordu).
+- **Core — HeuristicEngine auth muafiyeti**: `PacketListener.handleLegacyIncoming()` artık auth grace period içindeki oyuncuların rotation/animation analizini atlıyor. Login ekranında fare hareketi artık yanlışlıkla suspicion olarak birikmiyor.
+- **Core — VerifiedPlayerCache auth öncesi koruma**: Grace period bittiğinde oyuncu hâlâ auth bekliyor olabilir. `BukkitListener` artık auth tamamlanmadan oyuncuyu "verified" olarak işaretlemiyor; tamamlanmamışsa +30 saniye daha bekleyerek ikinci kontrol yapıyor.
+- **Core — AntiBotModule.getPlayerProfile()**: `PlayerProfile` nesnesi artık dışarıdan erişilebilir public getter ile sunuluyor.
+- **Core — OfflinePacketModule auth komut listesi genişletildi**: Varsayılan fallback listesine `/sifre`, `/şifre`, `/auth`, `/2fa`, `/totp`, `/pin` eklendi.
+- **Core — config.yml**: `modules.anti-bot.checks.auth-grace-period-ms` ayarı eklendi (varsayılan: 120000 ms = 2 dakika).
+
 ## [2.0.5] - 2026-03-19
 
 ### 🐛 Hata Düzeltmeleri
