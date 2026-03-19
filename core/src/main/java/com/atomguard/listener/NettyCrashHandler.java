@@ -97,9 +97,11 @@ public class NettyCrashHandler extends ChannelDuplexHandler {
                     || lowerMsg.contains("encryption")
                     || lowerMsg.contains("recursion")
                     || lowerMsg.contains("stack overflow")
-                    || lowerMsg.contains("buffer")
+                    || lowerMsg.contains("buffer overflow")
+                    || lowerMsg.contains("buffer underflow")
                     || lowerMsg.contains("slice")
-                    || lowerMsg.contains("index");
+                    || lowerMsg.contains("index out of bounds")
+                    || lowerMsg.contains("array index");
         }
         
         // StackOverflowError kontrolü (tür bazlı)

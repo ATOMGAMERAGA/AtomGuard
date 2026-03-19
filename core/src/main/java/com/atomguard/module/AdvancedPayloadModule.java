@@ -194,8 +194,9 @@ public class AdvancedPayloadModule extends AbstractModule {
         // Tam eşleşme
         if (allowedChannels.contains(channel)) return true;
 
-        // Varsayılan güvenli prefix'ler — modded client'lar ve plugin'ler için
-        if (channel.startsWith("minecraft:") || channel.startsWith("bungeecord:")) return true;
+        // Varsayılan güvenli prefix'ler — modded client'lar, plugin'ler ve AtomGuard dahili kanallar
+        if (channel.startsWith("minecraft:") || channel.startsWith("bungeecord:")
+                || channel.startsWith("atomguard:")) return true;
 
         // Wildcard kontrolü (örn: "myplugin:*")
         for (String allowed : allowedChannels) {

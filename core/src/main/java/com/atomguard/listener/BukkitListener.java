@@ -128,18 +128,28 @@ public class BukkitListener implements Listener {
             String ip = player.getAddress().getAddress().getHostAddress();
             plugin.getAttackModeManager().recordVerifiedIp(ip);
 
-            // Add to verified player cache
+            // Add to verified player cache — grace period sonrasına ertele
+            // (Henüz auth yapılmamış oyuncunun verified olarak işaretlenmesini önler)
             if (plugin.getVerifiedPlayerCache() != null) {
-                plugin.getVerifiedPlayerCache().addVerified(player.getName(), ip);
+                OfflinePacketModule offlineModuleForCache = plugin.getModuleManager()
+                        .getModule(OfflinePacketModule.class);
+                long graceTicks = (offlineModuleForCache != null
+                        ? offlineModuleForCache.getToleranceMs() : 30000L) / 50;
 
-                // Trigger API Events (async-only events — scheduler ile tetiklenmeli)
-                plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
-                    plugin.getServer().getPluginManager().callEvent(
-                        new com.atomguard.api.event.PlayerVerifiedEvent(player, ip));
-                    plugin.getServer().getPluginManager().callEvent(
-                        new com.atomguard.api.event.PostVerificationEvent(
-                            player.getUniqueId(), true, "trusted"));
-                });
+                plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                    if (player.isOnline() && plugin.getVerifiedPlayerCache() != null) {
+                        plugin.getVerifiedPlayerCache().addVerified(player.getName(), ip);
+
+                        // Trigger API Events (async-only events)
+                        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                            plugin.getServer().getPluginManager().callEvent(
+                                new com.atomguard.api.event.PlayerVerifiedEvent(player, ip));
+                            plugin.getServer().getPluginManager().callEvent(
+                                new com.atomguard.api.event.PostVerificationEvent(
+                                    player.getUniqueId(), true, "trusted"));
+                        });
+                    }
+                }, graceTicks);
             }
 
             // Başarılı giriş — önceki false-positive API cache kaydını temizle (FP-15)

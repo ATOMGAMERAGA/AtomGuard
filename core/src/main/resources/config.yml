@@ -279,6 +279,39 @@ modules:
       EDIT_BOOK: 5
       UPDATE_SIGN: 10
       CHAT_MESSAGE: 20
+      CHAT_COMMAND: 30
+
+  # Token Bucket Rate Limiter
+  token-bucket:
+    enabled: false
+    # Flood kick threshold — kick when token count drops below this
+    flood-kick-threshold: -200
+    # Auth-exempt commands — these commands are NEVER rate limited
+    # Works with any login plugin (AuthMe, nLogin, OpeNLogin, LoginSecurity, etc.)
+    auth-exempt-commands:
+      - "login"
+      - "l"
+      - "register"
+      - "reg"
+      - "changepassword"
+      - "cp"
+    # Per-bucket configuration
+    buckets:
+      movement:
+        kapasite: 200
+        dolum-saniye: 80
+      chat:
+        kapasite: 20
+        dolum-saniye: 5
+      command:
+        kapasite: 50
+        dolum-saniye: 20
+      inventory:
+        kapasite: 100
+        dolum-saniye: 50
+      other:
+        kapasite: 150
+        dolum-saniye: 60
 
   # CustomPayload fix
   custom-payload:
@@ -386,8 +419,17 @@ modules:
   # Offline packet duplication fix
   offline-packet:
     enabled: true
-    # Tolerance duration (ms) — wait time for newly joined players
-    tolerance-ms: 5000
+    # Tolerance duration (ms) — wait time for newly joined players (30s default for auth-agnostic mode)
+    tolerance-ms: 30000
+    # Auth commands — these commands renew the grace period when executed
+    # Works with any login plugin (AuthMe, nLogin, OpeNLogin, LoginSecurity, etc.)
+    auth-commands:
+      - "/login"
+      - "/l"
+      - "/register"
+      - "/reg"
+      - "/changepassword"
+      - "/cp"
 
   # Inventory duplication fix
   inventory-duplication:

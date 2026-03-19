@@ -20,7 +20,10 @@ import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -42,6 +45,8 @@ public class SmartLagModule extends AbstractModule implements Listener {
     private boolean isFreezingActive = false;
     private int freezeDurationTicks = 100; // 5 saniye dondur
     private int watchdogTaskId = -1;
+    private static final int MAX_FROZEN_CHUNKS = 10; // Aşırı freeze'i önler
+    private static final double SAMPLE_RATIO = 0.20; // Chunk'ların %20'sini tara
 
     // Config
     private int msThreshold; // 50ms
@@ -122,14 +127,24 @@ public class SmartLagModule extends AbstractModule implements Listener {
         int found = 0;
 
         for (World world : Bukkit.getWorlds()) {
-            for (Chunk chunk : world.getLoadedChunks()) {
+            Chunk[] loadedChunks = world.getLoadedChunks();
+
+            // %20 örnekleme — tüm chunk'ları taramak kendisi lag yapar
+            List<Chunk> sample = new ArrayList<>(List.of(loadedChunks));
+            Collections.shuffle(sample);
+            int sampleSize = Math.max(1, (int) (sample.size() * SAMPLE_RATIO));
+            sample = sample.subList(0, sampleSize);
+
+            for (Chunk chunk : sample) {
+                if (found >= MAX_FROZEN_CHUNKS) break; // Maksimum sınıra ulaşıldı
+
                 int entities = chunk.getEntities().length;
                 int tiles = chunk.getTileEntities().length;
 
                 if (entities > entityThreshold || tiles > tileEntityThreshold) {
                     frozenChunks.add(Chunk.getChunkKey(chunk.getX(), chunk.getZ()));
                     found++;
-                    
+
                     // Chunk'taki mobları dondur (AI kapat)
                     for (Entity e : chunk.getEntities()) {
                         if (e instanceof Mob mob) {
@@ -142,6 +157,7 @@ public class SmartLagModule extends AbstractModule implements Listener {
                     }
                 }
             }
+            if (found >= MAX_FROZEN_CHUNKS) break;
         }
 
         if (found > 0) {

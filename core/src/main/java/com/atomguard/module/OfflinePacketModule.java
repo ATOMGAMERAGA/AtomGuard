@@ -8,7 +8,10 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.InetAddress;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -37,6 +40,7 @@ public class OfflinePacketModule extends AbstractModule {
 
     // Config cache
     private long toleranceMs;
+    private Set<String> authCommands;
 
     /**
      * OfflinePacketModule constructor
@@ -87,9 +91,17 @@ public class OfflinePacketModule extends AbstractModule {
      * Config değerlerini yükler
      */
     private void loadConfig() {
-        this.toleranceMs = getConfigLong("tolerance-ms", 5000L); // 5 saniye
+        this.toleranceMs = getConfigLong("tolerance-ms", 30000L); // 30 saniye (varsayılan artırıldı)
 
-        debug("Config yüklendi: tolerance=" + toleranceMs + "ms");
+        List<String> cmds = plugin.getConfigManager()
+                .getStringList("modules." + getName() + ".auth-commands");
+        if (cmds == null || cmds.isEmpty()) {
+            cmds = List.of("/login", "/l", "/register", "/reg", "/changepassword", "/cp",
+                           "/giriş", "/giris", "/kayıt", "/kayit");
+        }
+        this.authCommands = new HashSet<>(cmds);
+
+        debug("Config yüklendi: tolerance=" + toleranceMs + "ms, auth-komut: " + authCommands.size());
     }
 
     /**
@@ -170,6 +182,47 @@ public class OfflinePacketModule extends AbstractModule {
         loginTimes.remove(uuid);
         playerAddresses.remove(uuid);
         debug("Login bilgileri kaldırıldı: " + uuid);
+    }
+
+    /**
+     * Auth komutu çalıştırıldığında grace period'u yeniler.
+     * Herhangi bir login plugini tarafından çağrılabilir.
+     *
+     * @param uuid Oyuncu UUID'si
+     */
+    public void onAuthCommand(@NotNull UUID uuid) {
+        loginTimes.put(uuid, System.currentTimeMillis());
+        debug("Auth komutu tespit edildi — grace period yenilendi: " + uuid);
+    }
+
+    /**
+     * Auth başarılı tamamlandığında grace period'u anında sonlandırır.
+     *
+     * @param uuid Oyuncu UUID'si
+     */
+    public void onAuthComplete(@NotNull UUID uuid) {
+        loginTimes.put(uuid, System.currentTimeMillis() - toleranceMs - 1);
+        debug("Auth tamamlandı — grace period sona erdi: " + uuid);
+    }
+
+    /**
+     * Yapılandırılmış auth komutlarını döndürür.
+     * AuthListener ve diğer modüller tarafından kullanılır.
+     *
+     * @return Auth komut seti (değiştirilemez)
+     */
+    @NotNull
+    public Set<String> getAuthCommands() {
+        return authCommands != null ? authCommands : Set.of();
+    }
+
+    /**
+     * Grace period süresini ms olarak döndürür.
+     *
+     * @return Tolerans süresi (ms)
+     */
+    public long getToleranceMs() {
+        return toleranceMs;
     }
 
     /**

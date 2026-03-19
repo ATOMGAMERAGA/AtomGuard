@@ -5,6 +5,7 @@ import com.atomguard.data.PlayerData;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientClickWindow;
+import com.atomguard.module.OfflinePacketModule;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -90,12 +91,24 @@ public class PacketDelayModule extends AbstractModule {
             return;
         }
 
+        // KeepAlive ve Pong paketlerini ASLA rate limit'leme — timeout'u önler
+        if (event.getPacketType() == PacketType.Play.Client.KEEP_ALIVE
+                || event.getPacketType() == PacketType.Play.Client.PONG) {
+            return;
+        }
+
         // Login/Handshake aşamasında player henüz Bukkit Player değil, ClassCastException önleme
         if (!(event.getPlayer() instanceof Player player)) {
             return;
         }
 
         UUID uuid = player.getUniqueId();
+
+        // Grace period içindeki oyuncuları rate limit'leme
+        OfflinePacketModule offlineModule = plugin.getModuleManager().getModule(OfflinePacketModule.class);
+        if (offlineModule != null && offlineModule.isInGracePeriod(uuid)) {
+            return;
+        }
 
         // PlayerData al veya oluştur
         PlayerData playerData = getOrCreatePlayerData(uuid, player.getName());

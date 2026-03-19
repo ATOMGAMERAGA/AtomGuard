@@ -1,7 +1,6 @@
 package com.atomguard.module.auth;
 
 import com.atomguard.AtomGuard;
-import com.atomguard.listener.AuthListener;
 import com.atomguard.module.AbstractModule;
 import com.google.common.hash.Hashing;
 import org.bukkit.event.EventHandler;
@@ -25,17 +24,6 @@ public class CorePasswordCheckModule extends AbstractModule implements Listener 
     public void onEnable() {
         super.onEnable();
         plugin.getServer().getMessenger().registerOutgoingPluginChannel(plugin, "atomguard:auth");
-
-        // Integrate with AuthMe if available
-        if (plugin.getServer().getPluginManager().getPlugin("AuthMe") != null) {
-            plugin.getLogger().info("AuthMe detected. Enabling direct password check integration.");
-            try {
-                // Register AuthListener safely
-                plugin.getServer().getPluginManager().registerEvents(new AuthListener(plugin), plugin);
-            } catch (NoClassDefFoundError e) {
-                plugin.getLogger().warning("AuthMe detected but class not found. Skipping AuthMe listener.");
-            }
-        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

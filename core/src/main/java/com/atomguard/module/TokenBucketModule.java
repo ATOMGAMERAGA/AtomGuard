@@ -2,26 +2,23 @@ package com.atomguard.module;
 
 import com.atomguard.AtomGuard;
 import com.atomguard.util.TokenBucket;
-import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.event.PacketListenerAbstract;
-import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientChatCommand;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Token Bucket Rate Limiter Modülü
  *
- * Her oyuncu için 4 ayrı kova ile paket rate limiting uygular:
+ * Her oyuncu için 5 ayrı kova ile paket rate limiting uygular:
  * - HAREKET: Position, PositionRotation, Rotation paketleri
- * - SOHBET: Chat, ChatCommand paketleri
+ * - SOHBET: Chat mesaj paketleri (komutlar HARİÇ)
+ * - KOMUT: ChatCommand paketleri — auth komutları tamamen muaf
  * - ENVANTER: WindowClick, CreativeSlot, CloseWindow paketleri
  * - DIGER: Geri kalan tüm client→server paketleri
  *
@@ -29,13 +26,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * Token < kickThreshold → oyuncuyu kick et (sürekli flood)
  *
  * @author AtomGuard Team
- * @version 2.0.0
+ * @version 2.0.5
  */
 public class TokenBucketModule extends AbstractModule {
 
     /** Kova türleri */
     private enum BucketType {
-        HAREKET, SOHBET, ENVANTER, DIGER
+        HAREKET, SOHBET, KOMUT, ENVANTER, DIGER
     }
 
     /** Hareket paketleri — PLAYER_FLYING dahil (client her tick gönderir) */
@@ -46,9 +43,13 @@ public class TokenBucketModule extends AbstractModule {
             PacketType.Play.Client.PLAYER_FLYING
     );
 
-    /** Sohbet paketleri */
+    /** Sohbet paketleri — CHAT_COMMAND ARTIK BURAYA DAHİL DEĞİL */
     private static final Set<PacketType.Play.Client> CHAT_PACKETS = Set.of(
-            PacketType.Play.Client.CHAT_MESSAGE,
+            PacketType.Play.Client.CHAT_MESSAGE
+    );
+
+    /** Komut paketleri — auth komutları bu kovadan da muaf tutulacak */
+    private static final Set<PacketType.Play.Client> COMMAND_PACKETS = Set.of(
             PacketType.Play.Client.CHAT_COMMAND
     );
 
@@ -59,7 +60,7 @@ public class TokenBucketModule extends AbstractModule {
             PacketType.Play.Client.CLOSE_WINDOW
     );
 
-    /** Oyuncu başına 4 kova — ConcurrentHashMap[UUID → BucketType → TokenBucket] */
+    /** Oyuncu başına 5 kova — ConcurrentHashMap[UUID → BucketType → TokenBucket] */
     private final Map<UUID, Map<BucketType, TokenBucket>> playerBuckets = new ConcurrentHashMap<>();
 
     // Config cache
@@ -67,11 +68,16 @@ public class TokenBucketModule extends AbstractModule {
     private long hareketDolum;
     private long sohbetKapasite;
     private long sohbetDolum;
+    private long komutKapasite;
+    private long komutDolum;
     private long envanterKapasite;
     private long envanterDolum;
     private long digerKapasite;
     private long digerDolum;
     private long floodKickThreshold;
+
+    /** Auth komutu muafiyeti — bu komutlar hiç rate limit'lenmez */
+    private Set<String> authExemptCommands;
 
     /**
      * TokenBucketModule constructor
@@ -90,7 +96,8 @@ public class TokenBucketModule extends AbstractModule {
         // Tüm paketleri dinlemek için null type kullanıyoruz (Merkezi Listener)
         registerReceiveHandler(null, this::handlePacketReceive);
 
-        debug("Token bucket modülü başlatıldı. Kick eşiği: " + floodKickThreshold);
+        debug("Token bucket modülü başlatıldı. Kick eşiği: " + floodKickThreshold +
+              ", Auth muaf komut: " + authExemptCommands.size());
     }
 
     @Override
@@ -108,11 +115,22 @@ public class TokenBucketModule extends AbstractModule {
         this.hareketDolum = getConfigLong("buckets.movement.dolum-saniye", 80L);
         this.sohbetKapasite = getConfigLong("buckets.chat.kapasite", 20L);
         this.sohbetDolum = getConfigLong("buckets.chat.dolum-saniye", 5L);
+        this.komutKapasite = getConfigLong("buckets.command.kapasite", 50L);
+        this.komutDolum = getConfigLong("buckets.command.dolum-saniye", 20L);
         this.envanterKapasite = getConfigLong("buckets.inventory.kapasite", 100L);
         this.envanterDolum = getConfigLong("buckets.inventory.dolum-saniye", 50L);
         this.digerKapasite = getConfigLong("buckets.other.kapasite", 150L);
         this.digerDolum = getConfigLong("buckets.other.dolum-saniye", 60L);
         this.floodKickThreshold = getConfigLong("flood-kick-threshold", -200L);
+
+        // Auth komutu muafiyeti — config'den veya varsayılan liste
+        List<String> exemptList = plugin.getConfigManager()
+                .getStringList("modules." + getName() + ".auth-exempt-commands");
+        if (exemptList == null || exemptList.isEmpty()) {
+            exemptList = List.of("login", "l", "register", "reg", "changepassword", "cp",
+                                 "giriş", "giris", "kayıt", "kayit");
+        }
+        this.authExemptCommands = new HashSet<>(exemptList);
     }
 
     /**
@@ -125,6 +143,20 @@ public class TokenBucketModule extends AbstractModule {
         if (!(event.getPacketType() instanceof PacketType.Play.Client clientPacket)) return;
 
         if (!(event.getPlayer() instanceof Player player)) return;
+
+        // CHAT_COMMAND paketleri için auth komut muafiyeti
+        if (clientPacket == PacketType.Play.Client.CHAT_COMMAND) {
+            try {
+                WrapperPlayClientChatCommand wrapper = new WrapperPlayClientChatCommand(event);
+                String command = wrapper.getCommand().split(" ")[0].toLowerCase();
+                if (authExemptCommands.contains(command)) {
+                    return; // Auth komutu — rate limit YOK
+                }
+            } catch (Exception e) {
+                // Paket parse edilemezse sessizce geç
+                debug("CHAT_COMMAND parse hatası: " + e.getMessage());
+            }
+        }
 
         UUID uuid = player.getUniqueId();
         BucketType bucketType = classifyPacket(clientPacket);
@@ -164,6 +196,7 @@ public class TokenBucketModule extends AbstractModule {
     private BucketType classifyPacket(@NotNull PacketType.Play.Client packetType) {
         if (MOVEMENT_PACKETS.contains(packetType)) return BucketType.HAREKET;
         if (CHAT_PACKETS.contains(packetType)) return BucketType.SOHBET;
+        if (COMMAND_PACKETS.contains(packetType)) return BucketType.KOMUT;
         if (INVENTORY_PACKETS.contains(packetType)) return BucketType.ENVANTER;
         return BucketType.DIGER;
     }
@@ -186,6 +219,7 @@ public class TokenBucketModule extends AbstractModule {
         return switch (type) {
             case HAREKET -> new TokenBucket(hareketKapasite, hareketDolum);
             case SOHBET -> new TokenBucket(sohbetKapasite, sohbetDolum);
+            case KOMUT -> new TokenBucket(komutKapasite, komutDolum);
             case ENVANTER -> new TokenBucket(envanterKapasite, envanterDolum);
             case DIGER -> new TokenBucket(digerKapasite, digerDolum);
         };

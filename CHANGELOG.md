@@ -3,19 +3,63 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.0.5] - 2026-03-19
+
+### 🐛 Hata Düzeltmeleri
+
+- **Core — Login/Timeout sorunu düzeltildi**: `TokenBucketModule` artık auth komutlarını
+  rate limit'lemiyor. `CHAT_COMMAND` paketleri ayrı `KOMUT` kovasına yönlendirildi.
+  Auth komut listesi `modules.token-bucket.auth-exempt-commands` ile özelleştirilebilir.
+- **Core — KeepAlive paketleri artık asla engellenmez**: `PacketDelayModule` ve
+  `PacketExploitModule`, `KEEP_ALIVE` ve `PONG` paketlerini bypass ediyor.
+- **Core — Grace period 30 saniyeye çıkarıldı**: Auth komutu algılandığında grace period
+  otomatik yenilenir; auth tamamlandığında anında biter.
+- **Core — Auth sistemi tamamen plugin-agnostic**: AuthMe hard-dependency kaldırıldı.
+  `AuthListener` generic yeniden yazıldı — herhangi bir login plugini ile çalışır.
+- **Core — PacketExploitModule race condition düzeltildi**: Tür bazlı sayaçlarda
+  `HashMap` → `ConcurrentHashMap` (Netty thread güvenliği).
+- **Core — CustomPayloadModule çifte kayıt kaldırıldı**: `AdvancedPayloadModule` zaten
+  aynı işlevi kapsıyor; eski modülün kaydı `registerModules()`'den silindi.
+- **Core — `atomguard:auth` kanalı whitelist'e eklendi**: `AdvancedPayloadModule` artık
+  `atomguard:` prefix'li kanalları engellemez; `CorePasswordCheckModule` çalışıyor.
+- **Core — NettyCrashHandler false positive düzeltildi**: `"buffer"` ve `"index"` tek
+  başına crash tespiti tetiklemiyor; `"buffer overflow"` ve `"index out of bounds"` olarak
+  daraltıldı.
+- **Core — VerifiedPlayerCache zamanlaması düzeltildi**: Oyuncu artık grace period
+  dolmadan `verified` olarak işaretlenmiyor (`BukkitListener` geciktirildi).
+- **Velocity — Auth komut rate limiti düzeltildi**: `CommandFloodBlocker`'da login/register
+  komutları artık 2 token değil, tamamen muaf tutuluyor.
+
+### 🔧 İyileştirmeler
+
+- **Core — Unicode crash filtresi daraltıldı**: `AdvancedChatModule` artık Arapça, İbranice,
+  Korece ve CJK karakterlerini engellemiyor; yalnızca gerçek crash vektörü olan Unicode
+  yön kontrol karakterleri filtreleniyor.
+- **Core — SmartLagModule chunk tarama optimizasyonu**: Lag spike'ta tüm chunk'lar yerine
+  rastgele `%20` örnekleme yapılıyor; maksimum 10 chunk freeze limiti eklendi.
+- **Core — `PacketExploitModule` CHAT_COMMAND limiti eklendi**: Type-based limitlerde
+  `CHAT_COMMAND: 30/s` varsayılanı eklendi.
+- **Config — Yeni ayarlar**:
+  - `modules.token-bucket.auth-exempt-commands`
+  - `modules.token-bucket.buckets.command.kapasite` (varsayılan: 50)
+  - `modules.token-bucket.buckets.command.dolum-saniye` (varsayılan: 20)
+  - `modules.offline-packet.auth-commands`
+  - `modules.offline-packet.tolerance-ms` varsayılanı `5000` → `30000`
+  - `modules.packet-exploit.type-limits.CHAT_COMMAND` (varsayılan: 30)
+
 ## [2.0.4] - 2026-03-18
 
 ### ✨ Yeni Özellikler
 
-- 
+-
 
 ### 🔧 İyileştirmeler
 
-- 
+-
 
 ### 🐛 Hata Düzeltmeleri
 
-- 
+-
 
 ## [2.0.3] - 2026-03-14
 

@@ -24,7 +24,10 @@ import java.util.regex.Pattern;
  */
 public class AdvancedChatModule extends AbstractModule implements Listener {
 
-    private static final Pattern CRASH_PATTERN = Pattern.compile("[\u0590-\u05ff\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\u0fb0-\u0fff\u1100-\u11ff\u1200-\u137f\u2000-\u206f\u3130-\u318f\ua960-\ua97f\uac00-\ud7af\ud7b0-\ud7ff\ufe70-\ufeff]");
+    // Sadece gerçek crash vektörleri: Unicode yön kontrol karakterleri ve private use alan sonu
+    // Arapça/İbranice/Korece/CJK gibi meşru dilleri engellemiyor
+    private static final Pattern CRASH_PATTERN = Pattern.compile(
+            "[\u2066-\u2069\u202a-\u202e\u200b-\u200f\ufff0-\uffff]");
     
     private final Map<UUID, AtomicInteger> tabRequests = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastChatTime = new ConcurrentHashMap<>();

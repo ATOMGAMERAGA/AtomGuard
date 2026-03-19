@@ -1,59 +1,90 @@
 package com.atomguard.listener;
 
 import com.atomguard.AtomGuard;
-import com.google.common.io.ByteArrayDataOutput;
-import com.google.common.io.ByteStreams;
-import fr.xephi.authme.events.LoginEvent;
+import com.atomguard.module.OfflinePacketModule;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.jetbrains.annotations.NotNull;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Generic Auth Listener — herhangi bir login plugini ile çalışır.
+ *
+ * AuthMe, nLogin, OpeNLogin, LoginSecurity, JPremium vb. hepsi desteklenir.
+ * Auth komutlarını tespit ederek OfflinePacketModule grace period'unu yönetir.
+ * Yapılandırma: modules.offline-packet.auth-commands
+ *
+ * @author AtomGuard Team
+ * @version 2.0.5
+ */
 public class AuthListener implements Listener {
 
     private final AtomGuard plugin;
+    /** Auth beklenen oyuncular — UUID → pending */
+    private final Map<UUID, Boolean> pendingAuth = new ConcurrentHashMap<>();
 
-    public AuthListener(AtomGuard plugin) {
+    public AuthListener(@NotNull AtomGuard plugin) {
         this.plugin = plugin;
     }
 
-    // AuthMe LoginEvent and RegisterEvent do NOT easily provide raw password in 5.6+
-    // CorePasswordCheckModule uses PlayerCommandPreprocessEvent as a fallback.
-    // This listener can be used for other AuthMe specific checks if needed.
-    
+    /**
+     * Oyuncu komut girdiğinde kontrol eder.
+     * Auth komutuysa grace period'u yeniler.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onCommand(@NotNull PlayerCommandPreprocessEvent event) {
+        Player player = event.getPlayer();
+        String command = event.getMessage().split(" ")[0].toLowerCase();
+
+        OfflinePacketModule offlineModule = plugin.getModuleManager()
+                .getModule(OfflinePacketModule.class);
+        if (offlineModule == null) return;
+
+        Set<String> authCmds = offlineModule.getAuthCommands();
+        if (authCmds.contains(command)) {
+            offlineModule.onAuthCommand(player.getUniqueId());
+            pendingAuth.put(player.getUniqueId(), true);
+        }
+    }
+
+    /**
+     * Oyuncu ayrıldığında pending auth verisini temizler.
+     */
     @EventHandler
-    public void onLogin(LoginEvent event) {
-        // Can be used for logging or other integrations
-    }
-    
-    private void sendHash(org.bukkit.entity.Player player, String password) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
-            String hexHash = bytesToHex(hash);
-
-            ByteArrayDataOutput out = ByteStreams.newDataOutput();
-            out.writeUTF("PasswordCheck");
-            out.writeUTF(player.getName());
-            out.writeUTF(hexHash);
-
-            player.sendPluginMessage(plugin, "atomguard:auth", out.toByteArray());
-        } catch (Exception e) {
-            plugin.getLogger().warning("Failed to hash password for check: " + e.getMessage());
-        }
+    public void onQuit(@NotNull PlayerQuitEvent event) {
+        pendingAuth.remove(event.getPlayer().getUniqueId());
     }
 
-    private static String bytesToHex(byte[] hash) {
-        StringBuilder hexString = new StringBuilder(2 * hash.length);
-        for (byte b : hash) {
-            String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) {
-                hexString.append('0');
-            }
-            hexString.append(hex);
+    /**
+     * Oyuncunun auth bekleyip beklemediğini döndürür.
+     *
+     * @param uuid Oyuncu UUID'si
+     * @return Auth bekliyorsa true
+     */
+    public boolean isPendingAuth(@NotNull UUID uuid) {
+        return pendingAuth.getOrDefault(uuid, false);
+    }
+
+    /**
+     * Oyuncunun auth işlemini tamamladığını işaretler.
+     * Başarılı login sonrası login plugin'i tarafından çağrılabilir.
+     *
+     * @param uuid Oyuncu UUID'si
+     */
+    public void markAuthenticated(@NotNull UUID uuid) {
+        pendingAuth.remove(uuid);
+        OfflinePacketModule offlineModule = plugin.getModuleManager()
+                .getModule(OfflinePacketModule.class);
+        if (offlineModule != null) {
+            offlineModule.onAuthComplete(uuid);
         }
-        return hexString.toString();
     }
 }

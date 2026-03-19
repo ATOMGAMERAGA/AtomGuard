@@ -124,12 +124,9 @@ public class AtomGuard extends JavaPlugin {
             getServer().getPluginManager().registerEvents(new BukkitListener(this), this);
             getServer().getPluginManager().registerEvents(new InventoryListener(this), this);
 
-            if (getServer().getPluginManager().getPlugin("AuthMe") != null) {
-                getServer().getPluginManager().registerEvents(new AuthListener(this), this);
-                getLogger().info("AuthMe integration active.");
-            } else {
-                getLogger().info("AuthMe not found, auth integration disabled.");
-            }
+            // Generic auth listener — herhangi bir login plugini ile çalışır
+            getServer().getPluginManager().registerEvents(new AuthListener(this), this);
+            getLogger().info("Generic auth listener active.");
 
             // Messaging
             if (getConfig().getBoolean("messaging.enabled", true)) {
@@ -336,7 +333,6 @@ public class AtomGuard extends JavaPlugin {
         moduleManager.registerModule(new SignCrasherModule(this));
         moduleManager.registerModule(new VisualCrasherModule(this));
         moduleManager.registerModule(new ChunkCrashModule(this));
-        moduleManager.registerModule(new CustomPayloadModule(this));
         moduleManager.registerModule(new AdvancedChatModule(this));
         moduleManager.registerModule(new OfflinePacketModule(this));
         moduleManager.registerModule(new CreativeItemsModule(this));
