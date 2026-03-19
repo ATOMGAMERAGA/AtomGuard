@@ -17,6 +17,11 @@ public class ConnectionRateCheck extends AbstractCheck {
 
     @Override
     public int calculateThreatScore(PlayerProfile profile) {
+        // Oyuncu zaten sunucuda — connection rate artık irrelevant
+        if (profile.getFirstJoinTime() > 0) {
+            return 0;
+        }
+
         int score = 0;
         String ip = profile.getIpAddress();
         long now = System.currentTimeMillis();

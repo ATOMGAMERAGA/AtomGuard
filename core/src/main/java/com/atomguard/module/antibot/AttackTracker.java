@@ -3,6 +3,8 @@ package com.atomguard.module.antibot;
 import org.bukkit.Bukkit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -12,14 +14,16 @@ public class AttackTracker {
     private volatile boolean underAttack = false;
     private final AtomicLong lastBotDetection = new AtomicLong(0);
     private final AtomicInteger recentConnectionCount = new AtomicInteger(0);
+    private final Set<String> recentUniqueIps = ConcurrentHashMap.newKeySet();
     private final ConcurrentLinkedDeque<String> recentUsernames = new ConcurrentLinkedDeque<>();
 
     public AttackTracker(AntiBotModule module) {
         this.module = module;
     }
 
-    public void recordConnection() {
+    public void recordConnection(String ip) {
         recentConnectionCount.incrementAndGet();
+        if (ip != null) recentUniqueIps.add(ip);
     }
     
     public void recordUsername(String username) {
@@ -29,12 +33,17 @@ public class AttackTracker {
 
     public void evaluateAttackStatus() {
         int connections = recentConnectionCount.getAndSet(0);
-        int threshold = module.getConfigInt("attack-mode.trigger-threshold", 15);
+        int uniqueIps = recentUniqueIps.size();
+        recentUniqueIps.clear();
 
-        if (connections >= threshold) {
+        int threshold = module.getConfigInt("attack-mode.trigger-threshold", 15);
+        int minUniqueIps = module.getConfigInt("attack-mode.min-unique-ips", 10);
+
+        // Saldırı = hem çok bağlantı HEM DE çok farklı IP
+        if (connections >= threshold && uniqueIps >= minUniqueIps) {
             if (!underAttack) {
                 underAttack = true;
-                notifyAdmins("<gold>⚠ Bot saldırısı tespit edildi! Son 5 saniyede " + connections + " bağlantı.");
+                notifyAdmins("<gold>⚠ Bot saldırısı tespit edildi! Son 5 saniyede " + connections + " bağlantı (" + uniqueIps + " farklı IP).");
             }
             lastBotDetection.set(System.currentTimeMillis());
         }

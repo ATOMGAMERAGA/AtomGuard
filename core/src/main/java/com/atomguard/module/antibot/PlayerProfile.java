@@ -29,10 +29,10 @@ public class PlayerProfile {
     private final long firstSeen;
     private volatile long lastSeen;
     
-    // Identity
-    private int protocolVersion;
-    private String clientBrand;
-    private String handshakeHostname;
+    // Identity (volatile — Netty thread'inde yazılır, async timer'da okunur)
+    private volatile int protocolVersion;
+    private volatile String clientBrand;
+    private volatile String handshakeHostname;
     
     // Timing and stats
     private final AtomicInteger ticksSinceJoin = new AtomicInteger(0);
@@ -58,7 +58,7 @@ public class PlayerProfile {
     
     private final AtomicLong firstMovementTime = new AtomicLong(0);
     private final AtomicLong firstChatTime = new AtomicLong(0);
-    private final AtomicLong lastKeepAliveSent = new AtomicLong(0);
+    private final java.util.concurrent.ConcurrentHashMap<Long, Long> keepAliveSentTimes = new java.util.concurrent.ConcurrentHashMap<>();
     private final Deque<Long> keepAliveResponseTimes = new ConcurrentLinkedDeque<>();
     
     // Auth state
@@ -126,13 +126,46 @@ public class PlayerProfile {
     }
 
     public void recordPluginMessage(PacketReceiveEvent event) {
-        WrapperPlayClientPluginMessage wrapper = new WrapperPlayClientPluginMessage(event);
-        if (wrapper.getChannelName().equals("minecraft:brand") || wrapper.getChannelName().equals("brand")) {
-            try {
-                // PacketEvents 2.x handles brand reading differently, usually it's a string in the buffer
-                // For simplicity, we just mark that we got a brand
-                this.clientBrand = "unknown"; // In a real implementation, read from buffer
-            } catch (Exception ignored) {}
+        try {
+            String channelName;
+            byte[] data;
+
+            // Configuration phase ve Play phase farklı wrapper kullanır (1.20.2+ / 1.21.4)
+            if (event.getPacketType() == com.github.retrooper.packetevents.protocol.packettype.PacketType
+                    .Configuration.Client.PLUGIN_MESSAGE) {
+                var wrapper = new com.github.retrooper.packetevents.wrapper.configuration.client
+                        .WrapperConfigClientPluginMessage(event);
+                channelName = wrapper.getChannelName();
+                data = wrapper.getData();
+            } else {
+                var wrapper = new WrapperPlayClientPluginMessage(event);
+                channelName = wrapper.getChannelName();
+                data = wrapper.getData();
+            }
+
+            if ("minecraft:brand".equals(channelName) || "MC|Brand".equals(channelName)) {
+                if (data != null && data.length > 0) {
+                    // Brand verisi: VarInt length prefix + UTF-8 string
+                    int strStart = 1; // İlk byte genellikle uzunluk
+                    int strLen = data[0] & 0x7F;
+                    if (strLen > 0 && strLen <= data.length - strStart) {
+                        this.clientBrand = new String(data, strStart,
+                                Math.min(strLen, data.length - strStart),
+                                java.nio.charset.StandardCharsets.UTF_8).trim();
+                    } else {
+                        // Fallback: tüm data'yı string olarak oku
+                        this.clientBrand = new String(data, java.nio.charset.StandardCharsets.UTF_8).trim();
+                    }
+                    // Boş veya çok uzun brand'ları normalize et
+                    if (this.clientBrand.isEmpty()) this.clientBrand = "empty";
+                    if (this.clientBrand.length() > 128) this.clientBrand = this.clientBrand.substring(0, 128);
+                } else {
+                    this.clientBrand = "empty";
+                }
+            }
+        } catch (Exception e) {
+            // Parse hatası — brand'ı unknown olarak işaretle ama null bırakma
+            if (this.clientBrand == null) this.clientBrand = "parse-error";
         }
         lastSeen = System.currentTimeMillis();
     }
@@ -182,16 +215,23 @@ public class PlayerProfile {
         lastSeen = System.currentTimeMillis();
     }
 
-    public void recordKeepAliveSent() {
-        lastKeepAliveSent.set(System.currentTimeMillis());
+    public void recordKeepAliveSent(long keepAliveId) {
+        keepAliveSentTimes.put(keepAliveId, System.currentTimeMillis());
+        // Eski kayıtları temizle — 30 saniyeden eski olanları sil (timeout)
+        long now = System.currentTimeMillis();
+        keepAliveSentTimes.entrySet().removeIf(e -> now - e.getValue() > 30000);
     }
 
-    public void recordKeepAliveResponse() {
-        long sent = lastKeepAliveSent.get();
-        if (sent > 0) {
-            keepAliveResponseTimes.addLast(System.currentTimeMillis() - sent);
-            if (keepAliveResponseTimes.size() > 10) keepAliveResponseTimes.removeFirst();
+    public void recordKeepAliveResponse(long keepAliveId) {
+        Long sentTime = keepAliveSentTimes.remove(keepAliveId);
+        if (sentTime != null) {
+            long responseTime = System.currentTimeMillis() - sentTime;
+            if (responseTime >= 0) {
+                keepAliveResponseTimes.addLast(responseTime);
+                if (keepAliveResponseTimes.size() > 10) keepAliveResponseTimes.removeFirst();
+            }
         }
+        // Eşleşmeyen ID → eski/duplicate paket, sessizce atla
         lastSeen = System.currentTimeMillis();
     }
 

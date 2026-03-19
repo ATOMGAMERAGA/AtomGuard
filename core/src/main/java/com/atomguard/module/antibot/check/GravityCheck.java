@@ -16,22 +16,23 @@ public class GravityCheck extends AbstractCheck {
 
     @Override
     public int calculateThreatScore(PlayerProfile profile) {
-        // FP-06: TPS Kontrolü
         double tps = Bukkit.getTPS()[0];
-        if (tps < 15.0) return 0; // Çok yoğun lag varsa devre dışı bırak
+        if (tps < 16.0) return 0; // Ağır lag — tamamen devre dışı
 
         List<Double> yPositions = profile.getRecentYPositions();
-        int minData = module.getConfigInt("checks.gravity.min-data-count", 8); // 5'ten 8'e çıkarıldı
-        
+        int minData = module.getConfigInt("checks.gravity.min-data-count", 10);
+
         if (yPositions.size() < minData) return 0;
 
         int violations = 0;
         int totalChecks = 0;
-        double tolerance = module.getConfigDouble("checks.gravity.tolerance", 0.08); // 0.03'ten 0.08'e çıkarıldı
+        double baseTolerance = module.getConfigDouble("checks.gravity.tolerance", 0.08);
 
-        // FP-06/07: Düşük TPS durumunda toleransı artır — eşik 19'a yükseltildi, çarpan 3x'e çıkarıldı
-        if (tps < 19.0) {
-            tolerance *= 3.0;
+        // KADEMELİ tolerans: TPS düştükçe lineer artış (19-20 arası da kapsanıyor)
+        double tolerance = baseTolerance;
+        if (tps < 20.0) {
+            double lagFactor = (20.0 - tps) / 4.0; // TPS=20→0, TPS=19→0.25, TPS=18→0.5, TPS=16→1.0
+            tolerance = baseTolerance * (1.0 + lagFactor * 5.0);
         }
 
         for (int i = 2; i < yPositions.size(); i++) {
@@ -49,14 +50,13 @@ public class GravityCheck extends AbstractCheck {
             }
         }
 
-        if (totalChecks < 5) return 0; // Minimum 5 gerçek kontrol
+        if (totalChecks < 5) return 0;
 
         double violationRate = (double) violations / totalChecks;
 
-        // FP-06: Eşikleri yükselt (0.4, 0.6, 0.8)
-        if (violationRate > 0.8) return 40;
-        if (violationRate > 0.6) return 25;
-        if (violationRate > 0.4) return 10;
+        if (violationRate > 0.85) return 30;
+        if (violationRate > 0.70) return 15;
+        if (violationRate > 0.55) return 5;
 
         return 0;
     }

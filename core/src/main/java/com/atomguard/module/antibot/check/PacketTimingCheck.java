@@ -31,10 +31,13 @@ public class PacketTimingCheck extends AbstractCheck {
             else if (avgInterval > maxInterval) score += 5;
         }
 
-        // 2. Variance
+        // 2. Variance — çok düşük variance = perfect timer = muhtemelen bot
         double variance = profile.getPositionPacketVariance();
-        if (variance >= 0 && variance < 0.1 && profile.getPositionPacketCount() > 50) {
-            score += 10; // 15'ten 10'a düşürüldü, eşikler sıkılaştırıldı (1.0 -> 0.1, 20 -> 50)
+        if (variance >= 0 && profile.getPositionPacketCount() > 30) {
+            if (variance < 5.0) {
+                // Neredeyse sıfır varyans — insan olamaz
+                score += 15;
+            }
         }
 
         // 3. Keep-alive response

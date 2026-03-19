@@ -124,7 +124,8 @@ public class AntiBotModule extends AbstractModule implements Listener {
         } else if (event.getPacketType() == PacketType.Play.Client.PLAYER_ROTATION) {
             profile.recordRotation(event);
         } else if (event.getPacketType() == PacketType.Play.Client.KEEP_ALIVE) {
-            profile.recordKeepAliveResponse();
+            var kaWrapper = new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientKeepAlive(event);
+            profile.recordKeepAliveResponse(kaWrapper.getId());
         } else if (event.getPacketType() == PacketType.Play.Client.CHAT_MESSAGE ||
                    event.getPacketType() == PacketType.Play.Client.CHAT_COMMAND) {
             profile.recordChat();
@@ -140,10 +141,13 @@ public class AntiBotModule extends AbstractModule implements Listener {
     private void handleOutgoingPacket(PacketSendEvent event) {
         if (event.getPacketType() == PacketType.Login.Server.ENCRYPTION_REQUEST) {
             PlayerProfile profile = getOrCreateProfile(event.getUser());
-            profile.recordEncryptionRequest();
+            if (profile != null) profile.recordEncryptionRequest();
         } else if (event.getPacketType() == PacketType.Play.Server.KEEP_ALIVE) {
             PlayerProfile profile = getOrCreateProfile(event.getUser());
-            profile.recordKeepAliveSent();
+            if (profile != null) {
+                var wrapper = new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerKeepAlive(event);
+                profile.recordKeepAliveSent(wrapper.getId());
+            }
         }
     }
 
@@ -174,7 +178,7 @@ public class AntiBotModule extends AbstractModule implements Listener {
             }
         }
         
-        attackTracker.recordConnection();
+        attackTracker.recordConnection(ip);
         
         PlayerProfile profile = ipProfiles.get(ip);
         if (profile == null) {
@@ -221,9 +225,25 @@ public class AntiBotModule extends AbstractModule implements Listener {
         UUID uuid = user.getUUID();
         java.net.InetSocketAddress addr = user.getAddress();
         String ip = (addr != null) ? addr.getAddress().getHostAddress() : "0.0.0.0";
-        
+
         if (uuid != null) {
-            return playerProfiles.computeIfAbsent(uuid, k -> new PlayerProfile(uuid, null, ip));
+            // 1. Önce UUID ile bak
+            PlayerProfile existing = playerProfiles.get(uuid);
+            if (existing != null) return existing;
+
+            // 2. UUID yok — IP ile bak, varsa UUID'ye bağla (profil birleştirme)
+            PlayerProfile ipProfile = ipProfiles.get(ip);
+            if (ipProfile != null) {
+                ipProfile.updateIdentity(uuid, ipProfile.getUsername());
+                playerProfiles.put(uuid, ipProfile);
+                return ipProfile;
+            }
+
+            // 3. Hiçbiri yok — yeni oluştur, her iki map'e koy
+            PlayerProfile newProfile = new PlayerProfile(uuid, null, ip);
+            playerProfiles.put(uuid, newProfile);
+            ipProfiles.put(ip, newProfile);
+            return newProfile;
         } else {
             return ipProfiles.computeIfAbsent(ip, k -> new PlayerProfile(null, null, ip));
         }

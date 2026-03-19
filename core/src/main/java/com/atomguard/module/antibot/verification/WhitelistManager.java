@@ -35,13 +35,16 @@ public class WhitelistManager {
     public void evaluateForWhitelist(PlayerProfile profile) {
         if (profile.getUuid() == null || whitelistedPlayers.contains(profile.getUuid())) return;
 
-        int verificationTick = module.getConfigInt("whitelist.verify-timeout-ticks", 600);
-        int maxScore = module.getConfigInt("whitelist.max-verify-score", 15);
+        // Tick düzeltmesi sonrası: 300 tick = 300 saniye = 5 dakika
+        int verificationTick = module.getConfigInt("whitelist.verify-timeout-ticks", 300);
+        int maxScore = module.getConfigInt("whitelist.max-verify-score", 25);
 
         if (profile.getTicksSinceJoin() >= verificationTick
             && profile.getMaxThreatScore() < maxScore
-            && profile.hasSentClientSettings()
-            && profile.hasSentPositionPacket()) {
+            && profile.hasSentClientSettings()) {
+            // Position packet zorunluluğu KALDIRILDI:
+            // Auth plugin altındaki oyuncular hareket edemez,
+            // ama client settings her zaman gönderilir.
 
             whitelist(profile.getUuid());
         }

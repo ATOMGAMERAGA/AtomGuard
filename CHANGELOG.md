@@ -3,6 +3,31 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.0.7] - 2026-03-19
+
+### 🐛 Hata Düzeltmeleri
+
+- **Core — VerificationManager tick sayacı düzeltildi**: Timer periyodu 40→20 tick'e düşürüldü; `cycleCounter` eklendi. `ticksSinceJoin` artık gerçek saniyeyle 1:1 eşleşiyor (önceki versiyonda 40x yavaştı; whitelist'e ulaşmak 20 dakika sürüyordu).
+- **Core — PlayerProfile client brand gerçekten okunuyor**: `recordPluginMessage()` artık `minecraft:brand` paketinin payload'ını VarInt prefix ile doğru parse ediyor. Configuration phase (`WrapperConfigClientPluginMessage`) ve Play phase ayrı ayrı handle ediliyor. Önceki versiyonda brand her zaman `"unknown"` döndürüyordu.
+- **Core — PlayerProfile volatile eksikliği giderildi**: `protocolVersion`, `clientBrand`, `handshakeHostname` field'larına `volatile` eklendi (Netty thread'inde yazılır, async timer thread'inde okunur).
+- **Core — KeepAlive ID bazlı eşleşme**: `recordKeepAliveSent()` / `recordKeepAliveResponse()` artık KeepAlive ID'sini kullanıyor. Önceki tek-timestamp yaklaşımı `0ms` response time üretiyor ve `+20` puan yazıyordu.
+- **Core — AntiBotModule getOrCreateProfile race condition**: Pre-login'de IP profili oluşturuluyordu; Login'de UUID ile farklı profil açılıyordu. `CLIENT_SETTINGS` IP profilinde kalıyor, UUID profilinde yoktu → `+15` puan. Artık UUID geldiğinde IP profili birleştiriliyor.
+- **Core — AttackTracker unique IP kontrolü**: Saldırı tespiti artık hem bağlantı sayısını hem de farklı IP sayısını kontrol ediyor (`attack-mode.min-unique-ips`, varsayılan: 10). Tek IP'den gelen 30 bağlantı artık saldırı olarak algılanmıyor.
+- **Core — GravityCheck TPS 19-20 edge case**: Kademeli tolerans hesaplaması eklendi (`tps < 20.0` için lineer lagFactor). Önceki versiyonda yalnızca `tps < 19.0` koşulu vardı; 19-20 arası TPS'de false positive oluşuyordu.
+- **Core — PostJoinBehaviorCheck mantık hatası**: Sohbet eden oyuncu muafiyeti düzeltildi (önceden dead code'du). AFK oyuncular artık cezalandırılmıyor; check yalnızca etkileşim olmayan ve hareketsiz oyuncuları puanlıyor. Maksimum skor 25→10'a düşürüldü.
+- **Core — WhitelistManager ulaşılamaz eşikler**: `verify-timeout-ticks` 600→300, `max-verify-score` 15→25. Position packet zorunluluğu kaldırıldı (auth plugin altında hareket edilemiyor; client settings yeterli).
+- **Core — PacketTimingCheck variance eşiği**: Variance eşiği `0.1 ms²`→`5.0 ms²` (önceki değer pratikte hiç tetiklenmiyordu).
+- **Core — ConnectionRateCheck online oyuncu**: `firstJoinTime > 0` ise erken dönüş eklendi; sunucuda aktif oyuncuya gereksiz bağlantı hızı puanı verilmiyordu.
+- **Core — ConfigManager NETWORK_MODULE_NAMES**: `"bot-protection"` eklendi; eski `BotProtectionModule` ağ koruma kontrolünden hariç tutuluyordu.
+
+### 🔧 İyileştirmeler
+
+- **Config — Score eşikleri yükseltildi**: `allow: 40→45`, `delay: 70→75`, `kick: 90→100`, `blacklist: 120→150` (false positive sonrası bant genişletme).
+- **Config — AttackMode**: `shutdown-seconds` 30→60; `min-unique-ips: 10` yeni ayar eklendi.
+- **Config — Whitelist**: `verify-timeout-ticks: 300`, `max-verify-score: 25`.
+- **Config — Gravity**: `min-data-count` 8→10; `min-interval-ms` 30→25; `max-interval-ms` 150→200; `min-keepalive-ms` 2→1.
+- **Config — PostJoinBehavior**: `analysis-ticks` 1200→600 (tick düzeltmesi sonrası gerçek anlamı aynı: 10 dakika).
+
 ## [2.0.6] - 2026-03-19
 
 ### ✨ Yeni Özellikler

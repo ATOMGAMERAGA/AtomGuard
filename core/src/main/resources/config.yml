@@ -607,10 +607,10 @@ modules:
 
     # ===== SCORE THRESHOLDS =====
     score-thresholds:
-      allow: 40          # Below this score = free pass
-      delay: 70          # 40-69 = delay connection 1-3 sec
-      kick: 90           # 70-89 = kick, can retry after 60 sec
-      blacklist: 120     # 90+ = add IP to blacklist
+      allow: 45          # Below this score = free pass
+      delay: 75          # 45-74 = delay connection 1-3 sec
+      kick: 100          # 75-99 = kick, can retry after 60 sec
+      blacklist: 150     # 100+ = add IP to blacklist
 
     # ===== CHECK MODULES =====
     checks:
@@ -622,56 +622,57 @@ modules:
         window-ms: 10000
         global-threshold: 30
         per-ip-threshold: 5
-        attack-multiplier: 1.2
+        attack-multiplier: 1.1
 
       ping-handshake:
         enabled: true
         ping-cache-minutes: 5
         no-ping-score-normal: 0
-        no-ping-score-attack: 5
+        no-ping-score-attack: 3
         attack-multiplier: 1.0
 
       username:
         enabled: true
-        entropy-threshold: 4.0
+        entropy-threshold: 4.2
         similarity-check-attack-only: true
-        attack-multiplier: 1.2
+        attack-multiplier: 1.1
 
       protocol:
         enabled: true
-        client-settings-wait-ticks: 40
-        client-brand-wait-ticks: 20
+        client-settings-wait-ticks: 40    # 40 gerçek saniye (tick düzeltmesi sonrası)
+        client-brand-wait-ticks: 20       # 20 gerçek saniye
         attack-multiplier: 1.0
 
       first-join-behavior:
         enabled: true
-        analysis-ticks: 100
+        analysis-ticks: 120              # 120 saniye = 2 dakika
         attack-multiplier: 1.0
 
       gravity:
         enabled: true
         tolerance: 0.08
-        min-data-count: 8
+        min-data-count: 10
         attack-multiplier: 1.0
 
       packet-timing:
         enabled: true
-        min-interval-ms: 30
-        max-interval-ms: 150
-        min-keepalive-ms: 2
+        min-interval-ms: 25
+        max-interval-ms: 200
+        min-keepalive-ms: 1
         attack-multiplier: 1.0
 
       post-join-behavior:
         enabled: true
-        analysis-ticks: 1200
+        analysis-ticks: 600              # 600 saniye = 10 dakika
         attack-multiplier: 1.0
 
     # ===== ATTACK MODE =====
     attack-mode:
       enabled: true
       trigger-threshold: 30
+      min-unique-ips: 10               # Saldırı için minimum farklı IP sayısı
       window-seconds: 5
-      shutdown-seconds: 30
+      shutdown-seconds: 60
       threshold-multiplier: 0.95
       connection-queue: true
       queue-delay-ms: 2000
@@ -680,8 +681,8 @@ modules:
     whitelist:
       enabled: true
       auto-verify: true
-      verify-timeout-ticks: 600
-      max-verify-score: 15
+      verify-timeout-ticks: 300        # 300 saniye = 5 dakika
+      max-verify-score: 25
       session-verify-count: 3
       file: "whitelist.json"
 

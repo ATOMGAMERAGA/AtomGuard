@@ -63,7 +63,7 @@ public class ConfigManager {
     }
 
     private void checkConfigVersion() {
-        String currentVersion = "2.0.6";
+        String currentVersion = "2.0.7";
         String configVersion = config.getString("config-version", "1.0.0");
 
         if (!configVersion.equals(currentVersion)) {
@@ -370,7 +370,8 @@ public class ConfigManager {
     }
 
     private static final Set<String> NETWORK_MODULE_NAMES = Set.of(
-        "anti-bot", "connection-throttle", "honeypot", "packet-exploit", "packet-delay", "token-bucket"
+        "anti-bot", "bot-protection", "connection-throttle", "honeypot",
+        "packet-exploit", "packet-delay", "token-bucket"
     );
 
     /**

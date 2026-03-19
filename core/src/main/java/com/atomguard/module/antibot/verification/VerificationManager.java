@@ -38,6 +38,8 @@ public class VerificationManager {
         }
 
         BukkitTask task = new BukkitRunnable() {
+            private int cycleCounter = 0;
+
             @Override
             public void run() {
                 if (!player.isOnline()) {
@@ -46,17 +48,20 @@ public class VerificationManager {
                 }
 
                 profile.tick();
-                
-                // Periodic threat evaluation
-                ThreatScoreCalculator.ThreatResult result = module.getThreatScoreCalculator().evaluate(profile);
-                module.getActionExecutor().executePeriodic(player, profile, result);
-                
-                // Whitelist evaluation
-                if (module.getConfigBoolean("whitelist.auto-verify", true)) {
+                cycleCounter++;
+
+                // Threat evaluation — her 2 cycle'da bir (2 saniyede bir)
+                if (cycleCounter % 2 == 0) {
+                    ThreatScoreCalculator.ThreatResult result = module.getThreatScoreCalculator().evaluate(profile);
+                    module.getActionExecutor().executePeriodic(player, profile, result);
+                }
+
+                // Whitelist evaluation — her 10 cycle'da bir (10 saniyede bir)
+                if (cycleCounter % 10 == 0 && module.getConfigBoolean("whitelist.auto-verify", true)) {
                     module.getWhitelistManager().evaluateForWhitelist(profile);
                 }
             }
-        }.runTaskTimerAsynchronously(module.getPlugin(), 20L, 40L);
+        }.runTaskTimerAsynchronously(module.getPlugin(), 20L, 20L);
         
         verificationTasks.put(player.getUniqueId(), task);
     }
