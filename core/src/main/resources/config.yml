@@ -419,8 +419,11 @@ modules:
   # Offline packet duplication fix
   offline-packet:
     enabled: true
-    # Tolerance duration (ms) — wait time for newly joined players (30s default for auth-agnostic mode)
-    tolerance-ms: 30000
+    # Bilinen auth plugini (AuthMe, nLogin vb.) yoksa bu modul otomatik devre disi kalir.
+    # Zorla acmak icin asagidaki ayari true yapin:
+    zorla-aktif: false
+    # Tolerance duration (ms) — wait time for newly joined players
+    tolerance-ms: 60000
     # Auth commands — these commands renew the grace period when executed
     # Works with any login plugin (AuthMe, nLogin, OpeNLogin, LoginSecurity, etc.)
     auth-commands:

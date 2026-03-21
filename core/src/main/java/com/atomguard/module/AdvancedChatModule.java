@@ -70,8 +70,14 @@ public class AdvancedChatModule extends AbstractModule implements Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onChat(io.papermc.paper.event.player.AsyncChatEvent event) {
         if (!isEnabled()) return;
-        
+
         org.bukkit.entity.Player player = event.getPlayer();
+
+        // Grace period içindeki oyuncuların chatini engelleme (auth sürecinde)
+        OfflinePacketModule offlineModule = plugin.getModuleManager().getModule(OfflinePacketModule.class);
+        if (offlineModule != null && offlineModule.isInGracePeriod(player.getUniqueId())) {
+            return;
+        }
         String message = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(event.message());
 
         // Unicode Check

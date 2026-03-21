@@ -3,6 +3,21 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.0.8] - 2026-03-21
+
+### 🐛 Bug Fixes
+
+- **Core — OfflinePacketModule auto-disable when no auth plugin detected**: If no known auth plugin (AuthMe, nLogin, OpeNLogin, LoginSecurity, JPremium, FastLogin, LimboAuth) is found at startup, OfflinePacketModule and AuthListener are no longer loaded. This was the root cause of players getting "timed out" on servers with custom login plugins. Can be force-enabled via `modules.offline-packet.zorla-aktif: true`.
+- **Core — OfflinePacketModule KEEP_ALIVE/PONG packet exemption**: KEEP_ALIVE, PONG, CLIENT_SETTINGS, RESOURCE_PACK_STATUS, and PLUGIN_MESSAGE packets are now unconditionally exempted from all checks. Previously, these connection-critical packets could be cancelled after the grace period expired, causing the server to think the player was unresponsive and kicking them for timeout.
+- **Core — OfflinePacketModule grace period check order fixed**: Grace period check now runs BEFORE IP validation. Previously, an IP mismatch (e.g. IPv4/IPv6 dual-stack) would cancel all packets including KEEP_ALIVE even during the grace period, because the IP check ran first.
+- **Core — OfflinePacketModule IPv4/IPv6 IP comparison fix**: IP validation now uses `getHostAddress()` string comparison instead of `InetAddress.equals()`, which fails on dual-stack connections (e.g. `127.0.0.1` vs `::ffff:127.0.0.1`).
+- **Core — AdvancedChatModule grace period bypass**: Chat rate limiting and spam detection now skip players in the auth grace period, preventing chat blocks during the login process.
+
+### 🔧 Improvements
+
+- **Config — offline-packet.tolerance-ms**: Default increased from 30000ms (30s) to 60000ms (60s) to accommodate slower auth flows.
+- **Config — offline-packet.zorla-aktif**: New config key (default: `false`) to force-enable OfflinePacketModule even when no known auth plugin is detected.
+
 ## [2.0.7] - 2026-03-19
 
 ### 🐛 Hata Düzeltmeleri

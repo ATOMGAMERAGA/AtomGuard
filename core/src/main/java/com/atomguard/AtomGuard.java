@@ -71,6 +71,7 @@ public class AtomGuard extends JavaPlugin {
     private ExecutorManager executorManager;
     private com.atomguard.metrics.CoreMetrics coreMetrics;
     private AuthListener authListener;
+    private boolean hasAuthPlugin;
 
     @Override
     public void onLoad() {
@@ -125,10 +126,12 @@ public class AtomGuard extends JavaPlugin {
             getServer().getPluginManager().registerEvents(new BukkitListener(this), this);
             getServer().getPluginManager().registerEvents(new InventoryListener(this), this);
 
-            // Generic auth listener — herhangi bir login plugini ile çalışır
-            this.authListener = new AuthListener(this);
-            getServer().getPluginManager().registerEvents(authListener, this);
-            getLogger().info("Generic auth listener active.");
+            // Generic auth listener — sadece bilinen auth plugini varsa aktif
+            if (hasAuthPlugin) {
+                this.authListener = new AuthListener(this);
+                getServer().getPluginManager().registerEvents(authListener, this);
+                getLogger().info("Generic auth listener active.");
+            }
 
             // Messaging
             if (getConfig().getBoolean("messaging.enabled", true)) {
@@ -336,7 +339,22 @@ public class AtomGuard extends JavaPlugin {
         moduleManager.registerModule(new VisualCrasherModule(this));
         moduleManager.registerModule(new ChunkCrashModule(this));
         moduleManager.registerModule(new AdvancedChatModule(this));
-        moduleManager.registerModule(new OfflinePacketModule(this));
+        // Auth plugin kontrolü — yoksa OfflinePacketModule gereksiz ve timeout'a yol açar
+        this.hasAuthPlugin = getServer().getPluginManager().getPlugin("AuthMe") != null
+                || getServer().getPluginManager().getPlugin("nLogin") != null
+                || getServer().getPluginManager().getPlugin("OpeNLogin") != null
+                || getServer().getPluginManager().getPlugin("LoginSecurity") != null
+                || getServer().getPluginManager().getPlugin("JPremium") != null
+                || getServer().getPluginManager().getPlugin("FastLogin") != null
+                || getServer().getPluginManager().getPlugin("LimboAuth") != null
+                || getConfig().getBoolean("modules.offline-packet.zorla-aktif", false);
+
+        if (hasAuthPlugin) {
+            moduleManager.registerModule(new OfflinePacketModule(this));
+        } else {
+            getLogger().warning("[AtomGuard] Bilinen auth plugini bulunamadi — OfflinePacketModule devre disi birakildi.");
+            getLogger().warning("[AtomGuard] Zorla acmak icin config.yml: modules.offline-packet.zorla-aktif: true");
+        }
         moduleManager.registerModule(new CreativeItemsModule(this));
         moduleManager.registerModule(new DuplicationFixModule(this));
         moduleManager.registerModule(new FallingBlockLimiterModule(this));

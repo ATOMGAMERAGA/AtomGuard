@@ -119,6 +119,15 @@ public class OfflinePacketModule extends AbstractModule {
             return;
         }
 
+        // Bağlantı-kritik paketleri ASLA engelleme — timeout'u önler
+        if (event.getPacketType() == PacketType.Play.Client.KEEP_ALIVE
+                || event.getPacketType() == PacketType.Play.Client.PONG
+                || event.getPacketType() == PacketType.Play.Client.CLIENT_SETTINGS
+                || event.getPacketType() == PacketType.Play.Client.RESOURCE_PACK_STATUS
+                || event.getPacketType() == PacketType.Play.Client.PLUGIN_MESSAGE) {
+            return;
+        }
+
         Object playerObj = event.getPlayer();
         if (!(playerObj instanceof Player player)) {
             return;
@@ -133,17 +142,7 @@ public class OfflinePacketModule extends AbstractModule {
             if (currentAddr != null) playerAddresses.put(uuid, currentAddr);
         }
 
-        // 1. IP Doğrulaması (Session Hijacking / Offline Injection önleme)
-        InetAddress loginAddr = playerAddresses.get(uuid);
-        if (loginAddr != null && currentAddr != null && !loginAddr.equals(currentAddr)) {
-            incrementBlockedCount();
-            logExploit(player.getName(), String.format("IP Uyuşmazlığı! Login IP: %s, Paket IP: %s", 
-                    loginAddr.getHostAddress(), currentAddr.getHostAddress()));
-            event.setCancelled(true);
-            return;
-        }
-
-        // 2. Grace period kontrolü - yeni giriş yapan oyuncuları engelleme
+        // 1. Grace period kontrolü — ÖNCE kontrol et, grace period içinde hiçbir şey engelleme
         Long loginTime = loginTimes.get(uuid);
         if (loginTime != null) {
             long timeSinceLogin = System.currentTimeMillis() - loginTime;
@@ -153,8 +152,18 @@ public class OfflinePacketModule extends AbstractModule {
             }
         }
 
-        // Oyuncunun online olup olmadığını kontrol et
-        // event.getPlayer() zaten Bukkit Player ise online demektir; isOnline() kontrolü yeterli
+        // 2. IP Doğrulaması (Session Hijacking / Offline Injection önleme)
+        InetAddress loginAddr = playerAddresses.get(uuid);
+        if (loginAddr != null && currentAddr != null
+                && !loginAddr.getHostAddress().equals(currentAddr.getHostAddress())) {
+            incrementBlockedCount();
+            logExploit(player.getName(), String.format("IP Uyuşmazlığı! Login IP: %s, Paket IP: %s",
+                    loginAddr.getHostAddress(), currentAddr.getHostAddress()));
+            event.setCancelled(true);
+            return;
+        }
+
+        // 3. Oyuncunun online olup olmadığını kontrol et
         if (!player.isOnline()) {
             incrementBlockedCount();
 
