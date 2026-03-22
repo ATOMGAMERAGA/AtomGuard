@@ -12,6 +12,11 @@ public class PlayerBehaviorProfile {
     private long lastSeen;
     private final Set<String> usedUsernames = new HashSet<>();
     private String lastCountry;
+    /**
+     * Offline-mode sunucularda farklı kullanıcı adı penaltısını devre dışı bırakır.
+     * Aynı IP'den birden fazla hesap normal bir davranıştır (aile, cracked).
+     */
+    private boolean offlineModeLenient = false;
 
     public PlayerBehaviorProfile(String ip) {
         this.ip = ip;
@@ -28,6 +33,8 @@ public class PlayerBehaviorProfile {
 
     public void recordLoginSuccess() { this.successfulLogins++; }
     public void recordViolation() { this.failedChecks++; }
+    public void setOfflineModeLenient(boolean lenient) { this.offlineModeLenient = lenient; }
+    public boolean isOfflineModeLenient() { return offlineModeLenient; }
 
     // Trust Score: 0-100 (davranışa dayalı güven)
     public int calculateTrustScore() {
@@ -35,9 +42,10 @@ public class PlayerBehaviorProfile {
         
         score += Math.min(25, successfulLogins * 3);  // Başarılı girişler güveni artırır
         score -= Math.min(40, failedChecks * 8);       // İhlaller güveni hızla düşürür
-        
+
         if (totalSessions > 20) score += 15;           // Sadık kullanıcı bonusu
-        if (usedUsernames.size() > 3) score -= 20;     // Sık isim değiştirme şüphelidir
+        // Offline-mode'da aynı IP'den farklı isimle giriş normaldir (aile, cracked launcher)
+        if (!offlineModeLenient && usedUsernames.size() > 6) score -= 10; // eşik: 3→6, ceza: 20→10
         
         long ageDays = (System.currentTimeMillis() - firstSeen) / 86_400_000L;
         score += (int) Math.min(10, ageDays);          // Hesap yaşı bonusu

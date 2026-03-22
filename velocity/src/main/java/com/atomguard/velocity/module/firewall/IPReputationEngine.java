@@ -56,8 +56,18 @@ public class IPReputationEngine {
 
     /**
      * Bağlamsal skor ekle — ihlal türüne göre farklı çarpanlar uygular.
+     *
+     * <p>Grace period içindeyken (ilk GRACE_VIOLATIONS ihlal) skor eklenmez ve
+     * ban kontrolü tetiklenmez. violationCount atomik olarak artırılır, bu sayede
+     * eşzamanlı çağrılarda race condition oluşmaz.
      */
     public void addContextualScore(String ip, int basePoints, String violationType) {
+        // Atomik ihlal sayımı — iki thread aynı anda "3. ihlal" göremez
+        int currentViolations = violationCounts.computeIfAbsent(ip, k -> new AtomicInteger(0)).incrementAndGet();
+        if (currentViolations <= GRACE_VIOLATIONS) {
+            return; // Grace period: skor ekleme, downstream ban kontrolü tetikleme
+        }
+
         double multiplier = getMultiplier(violationType);
         int actualPoints = (int) Math.ceil(basePoints * multiplier);
 
@@ -68,7 +78,6 @@ public class IPReputationEngine {
 
         int oldScore = getScore(ip);
         int newScore = scores.computeIfAbsent(ip, k -> new AtomicInteger(0)).addAndGet(actualPoints);
-        violationCounts.computeIfAbsent(ip, k -> new AtomicInteger(0)).incrementAndGet();
         
         // 1. Veritabanına kaydet (Live Sync)
         if (plugin.getStorageProvider() != null) {

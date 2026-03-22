@@ -136,6 +136,14 @@ public class ConnectionListener {
             // Doğrulanmış oyuncuları atla
             if (antiBot.isVerified(ip)) return;
 
+            // Race condition düzeltmesi: brand event bazen login event'ten ÖNCE gelir.
+            // Oyuncu zaten bir backend sunucusuna bağlıysa login tamamlanmış demektir
+            // → verified olarak işaretle ve devam et, kick yapma.
+            if (event.getPlayer().getCurrentServer().isPresent()) {
+                antiBot.markVerified(ip);
+                return;
+            }
+
             antiBot.recordBrand(ip, event.getBrand());
             if (antiBot.isHighRisk(ip)) {
                 event.getPlayer().disconnect(

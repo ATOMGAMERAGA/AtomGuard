@@ -93,6 +93,20 @@ public class BotDetectionEngine {
         return score;
     }
 
+    /**
+     * Mevcut ThreatScore üzerinde sadece brand skorunu günceller.
+     * resetForNewAnalysis() çağrılmaz — diğer kategori skorları korunur.
+     * recordBrand() tarafından kullanılır; ikinci tam analyze() çağrısını engeller.
+     */
+    public void updateBrandScore(String ip, String brand) {
+        if (verifiedPlayers.contains(ip)) return;
+        ThreatScore score = threatScores.get(ip);
+        if (score == null) return; // Henüz analyze edilmemişse brand skoru kayıpsız atla
+        BrandAnalyzer.BrandCheckResult brandResult = brandAnalyzer.check(brand);
+        score.setBrandScore(brandResult.scoreContribution());
+        score.calculate(); // Reset yok — mevcut skorlarla yeniden hesapla
+    }
+
     public void recordConnection(String ip) {
         // Doğrulanmış IP'lerde sayma yapma
         if (!verifiedPlayers.contains(ip)) {

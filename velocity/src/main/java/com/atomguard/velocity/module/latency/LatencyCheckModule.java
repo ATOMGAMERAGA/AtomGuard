@@ -47,7 +47,7 @@ public class LatencyCheckModule extends VelocityModule {
         long duration = tracker.recordLogin(ip);
 
         if (duration != -1) {
-            long min = getConfigLong("handshake-login-suresi.minimum-ms", 15);
+            long min = getConfigLong("handshake-login-suresi.minimum-ms", 5); // 15 → 5: lokal proxy/veri merkezi bağlantılarında false kick önleme
             long max = getConfigLong("handshake-login-suresi.maksimum-ms", 30000);
             
             if (duration < min) {

@@ -5,7 +5,9 @@ import com.atomguard.velocity.data.ThreatScore;
 import com.atomguard.velocity.module.VelocityModule;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Anti-bot modülü. Config key: "bot-koruma"
@@ -41,6 +43,14 @@ public class VelocityAntiBotModule extends VelocityModule {
         boolean enforceProtocols = getConfigBoolean("protokol-dogrulama", true);
         boolean allowUnknownBrands = getConfigBoolean("bilinmeyen-brand-izin", true);
         List<String> blockedBrands = getConfigStringList("engelli-brandlar");
+        List<String> allowedBrands = getConfigStringList("izinli-brandlar");
+
+        // Config'den ek protokol numaraları — yeni MC sürümleri için plugin güncellemesi gerektirmez
+        List<String> rawProtocols = getConfigStringList("ek-protokoller");
+        Set<Integer> extraProtocols = rawProtocols.stream()
+            .map(s -> { try { return Integer.parseInt(s.trim()); } catch (NumberFormatException e) { return null; } })
+            .filter(p -> p != null && p > 0)
+            .collect(Collectors.toSet());
 
         captchaEnabled = getConfigBoolean("captcha.aktif", false);
         int captchaTimeout = getConfigInt("captcha.sure", 60);
@@ -48,8 +58,8 @@ public class VelocityAntiBotModule extends VelocityModule {
         nicknameBlocker = new NicknameBlocker(plugin);
 
         ConnectionAnalyzer connAnalyzer = new ConnectionAnalyzer(windowSec, suspiciousThreshold);
-        HandshakeValidator hsValidator = new HandshakeValidator(enforceProtocols);
-        BrandAnalyzer brandAnalyzer = new BrandAnalyzer(blockedBrands, allowUnknownBrands);
+        HandshakeValidator hsValidator = new HandshakeValidator(enforceProtocols, extraProtocols);
+        BrandAnalyzer brandAnalyzer = new BrandAnalyzer(blockedBrands, allowedBrands, allowUnknownBrands);
         // maxJoinsInWindow=8, maxQuitsBeforeSuspect=15 (minimum değerler)
         JoinPatternDetector joinDetector = new JoinPatternDetector(120, 8, 15);
 
@@ -76,14 +86,11 @@ public class VelocityAntiBotModule extends VelocityModule {
 
         NicknameBlocker.NicknameCheckResult nickResult = nicknameBlocker.check(username);
         if (nickResult.isBlocked()) {
+            // Sadece username kategorisini işaretle — diğer kategorileri sahte şişirme.
+            // flagCount=1 olduğunda ThreatScore.calculate() %60 indirim uygular,
+            // bu sayede tek başına NicknameBlocker ban tetikleyemez (anlık-engel mekanizması ayrı).
             ThreatScore score = new ThreatScore();
             score.setUsernameScore(100);
-            score.setConnectionRateScore(100);
-            score.setHandshakeScore(100);
-            score.setBrandScore(100);
-            score.setJoinPatternScore(100);
-            score.setGeoScore(100);
-            score.setProtocolScore(100);
             score.calculate();
             return score;
         }
@@ -94,7 +101,9 @@ public class VelocityAntiBotModule extends VelocityModule {
 
     public void recordBrand(String ip, String brand) {
         if (!engine.isVerified(ip)) {
-            engine.analyze(ip, null, brand, null, 0, 0);
+            // updateBrandScore kullan — tam analyze() çağırma.
+            // Aksi hâlde resetForNewAnalysis() önceki analyzePreLogin() skorlarını siler.
+            engine.updateBrandScore(ip, brand);
         }
     }
 

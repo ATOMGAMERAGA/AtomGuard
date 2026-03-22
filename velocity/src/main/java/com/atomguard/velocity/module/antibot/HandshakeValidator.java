@@ -10,14 +10,22 @@ public class HandshakeValidator {
 
     private static final Pattern VALID_HOSTNAME = Pattern.compile("^[a-zA-Z0-9._\\-]{1,253}$");
     private static final Set<Integer> KNOWN_PROTOCOLS = Set.of(
-        766, 765, 764, 763, 762, 761, 760, 759, 758, 757, // 1.21.x - 1.20.x
+        769, 768, 767,                                     // 1.21.4, 1.21.3, 1.21.2 — eklendi
+        766, 765, 764, 763, 762, 761, 760, 759, 758, 757, // 1.21.1 - 1.20.x
         756, 755, 754, 753, 752, 751, 736, 735, 578, 477  // 1.17.x - 1.14.x
     );
 
     private final boolean enforceKnownProtocols;
+    /** Config'den okunan ek izinli protokoller (yeni MC sürümleri için) */
+    private final Set<Integer> extraProtocols;
 
     public HandshakeValidator(boolean enforceKnownProtocols) {
+        this(enforceKnownProtocols, Set.of());
+    }
+
+    public HandshakeValidator(boolean enforceKnownProtocols, Set<Integer> extraProtocols) {
         this.enforceKnownProtocols = enforceKnownProtocols;
+        this.extraProtocols = extraProtocols != null ? extraProtocols : Set.of();
     }
 
     public ValidationResult validate(String hostname, int port, int protocolVersion, String username) {
@@ -27,7 +35,9 @@ public class HandshakeValidator {
             return new ValidationResult(false, "Geçersiz hostname formatı");
         if (port < 1 || port > 65535)
             return new ValidationResult(false, "Geçersiz port: " + port);
-        if (enforceKnownProtocols && protocolVersion > 0 && !KNOWN_PROTOCOLS.contains(protocolVersion))
+        if (enforceKnownProtocols && protocolVersion > 0
+                && !KNOWN_PROTOCOLS.contains(protocolVersion)
+                && !extraProtocols.contains(protocolVersion))
             return new ValidationResult(false, "Bilinmeyen protokol: " + protocolVersion);
         if (username != null) {
             if (username.length() < 3 || username.length() > 16)

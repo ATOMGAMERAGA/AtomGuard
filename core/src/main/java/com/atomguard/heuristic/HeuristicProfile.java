@@ -28,6 +28,8 @@ public class HeuristicProfile {
     private static final double DECAY_RATE_PER_SECOND = 0.5;
     private final AtomicInteger violationCount;
     private int rotationSpikes = 0;
+    /** Ardışık spike aralık kontrolü için son spike zaman damgası */
+    private long lastSpikeTime = 0;
 
     public HeuristicProfile(UUID uuid) {
         this.uuid = uuid;
@@ -49,6 +51,9 @@ public class HeuristicProfile {
     public int getRotationSpikes() {
         return rotationSpikes;
     }
+
+    public long getLastSpikeTime() { return lastSpikeTime; }
+    public void setLastSpikeTime(long time) { this.lastSpikeTime = time; }
 
     public UUID getUuid() {
         return uuid;

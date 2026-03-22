@@ -3,6 +3,20 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.0.9] - 2026-03-22
+
+### 🐛 Bug Fixes
+
+- **Velocity — HandshakeValidator: missing protocol IDs for 1.21.2–1.21.4**: Protocol numbers `769` (1.21.4), `768` (1.21.3), and `767` (1.21.2) were absent from `KNOWN_PROTOCOLS`. With `enforce-known-protocols: true`, every legitimate 1.21.2+ client received a `handshakeScore=50`, which combined with other categories could trigger a false-positive kick. A new `ek-protokoller` config list allows adding future protocol numbers without a plugin update.
+- **Velocity — BrandAnalyzer: unknown-brand false positives**: Many widely-used clients were missing from the legitimate brand list (`sodium`, `iris`, `fml,forge`, `fml`, `tlauncher`, `shiginima`, `pojav`, `meteor`, `wurst`). With `allow-unknown: false` these players received an unnecessary `brandScore=20`. A new `izinli-brandlar` config list allows operators to add their own allowed brands.
+- **Velocity — ConnectionListener.onBrand() race condition**: `PlayerClientBrandEvent` can fire before `LoginEvent`, meaning `isVerified(ip)` returns `false` at brand-check time even for legitimate players. If the player already has a backend server connection (`getCurrentServer().isPresent()`), the handler now calls `markVerified(ip)` and returns immediately instead of scoring and potentially kicking.
+- **Velocity — VelocityAntiBotModule: NicknameBlocker sets all 7 score categories to 100**: When a blocked nickname was detected, all categories (`connectionRate`, `handshake`, `brand`, `joinPattern`, `geo`, `protocol`) were forced to 100 in addition to `username`. This produced misleading audit logs and inflated `flagCount`, bypassing the single-category 60 % penalty in `ThreatScore.calculate()`. Now only `usernameScore=100` is set; `flagCount` stays at 1 and the penalty is applied correctly.
+- **Velocity — recordBrand() double analyze clears previous scores**: `recordBrand()` called a full `engine.analyze()` as a second pass, which triggered `resetForNewAnalysis()` and wiped all scores built by the initial `analyzePreLogin()`. Brand is now applied via the new `BotDetectionEngine.updateBrandScore()` method, which sets `brandScore` and calls `calculate()` without resetting other categories.
+- **Velocity — IPReputationEngine: grace-period race condition**: Two concurrent pipeline checks for the same IP could both pass the 3-violation grace period by reading `violations.get()` before either had incremented. The violation counter is now incremented atomically at the top of `addContextualScore()` and the method returns early if the IP is still within the grace window, preventing any score accumulation or downstream ban checks during the grace period.
+- **Velocity — PlayerBehaviorProfile: username-diversity penalty on offline-mode servers**: The trust score applied a −20 penalty when more than 3 different usernames were seen from the same IP. On offline-mode servers (cracked launchers, multiple household accounts) this is completely normal behaviour. The threshold is raised to 6 unique usernames, the penalty reduced to −10, and a new `offlineModeLenient` flag disables the penalty entirely when set.
+- **Velocity — LatencyCheckModule: fast-login threshold too aggressive**: The default minimum handshake-to-login duration was 15 ms, which caused false kicks for players connecting from the same data centre or through a local proxy. Default lowered to 5 ms.
+- **Core — HeuristicEngine: high-DPI mouse users flagged for rotation speed**: Default `max-rotation-speed` raised from 5.0 to 8.0 degrees/ms, and `max-rotation-spikes` raised from 3 to 5. A new `min-spike-interval-ms` guard (default 100 ms) ensures that rapid successive packets at high FPS are counted as at most one spike per interval, preventing false suspicion accumulation from legitimate 360° PvP movement.
+
 ## [2.0.8] - 2026-03-21
 
 ### 🐛 Bug Fixes

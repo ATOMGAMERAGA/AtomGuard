@@ -12,7 +12,12 @@ public class BrandAnalyzer {
     private static final Set<String> LEGITIMATE_BRANDS = Set.of(
         "vanilla", "fabric", "forge", "quilt", "neoforge",
         "optifine", "lunar client", "badlion client", "feather client",
-        "pvplounge", "labymod", "essential", "multimc"
+        "pvplounge", "labymod", "essential", "multimc",
+        // Yaygın kullanılan mod/client'lar — false positive önleme
+        "sodium", "iris", "liteclient", "liteloader",
+        "fml,forge", "fml", "indium", "starlight",
+        "tlauncher", "shiginima", "pojav",   // Cracked launcher'lar (offline-mode sunucular)
+        "meteor", "wurst"                    // PvP client'ları
     );
 
     private static final Set<String> SUSPICIOUS_KEYWORDS = Set.of(
@@ -21,10 +26,17 @@ public class BrandAnalyzer {
     );
 
     private final List<String> customBlockedBrands;
+    /** Config'den okunan ek izinli brand'ler */
+    private final List<String> additionalAllowedBrands;
     private final boolean allowUnknown;
 
     public BrandAnalyzer(List<String> customBlockedBrands, boolean allowUnknown) {
+        this(customBlockedBrands, List.of(), allowUnknown);
+    }
+
+    public BrandAnalyzer(List<String> customBlockedBrands, List<String> additionalAllowedBrands, boolean allowUnknown) {
         this.customBlockedBrands = customBlockedBrands;
+        this.additionalAllowedBrands = additionalAllowedBrands != null ? additionalAllowedBrands : List.of();
         this.allowUnknown = allowUnknown;
     }
 
@@ -49,6 +61,11 @@ public class BrandAnalyzer {
 
         for (String legit : LEGITIMATE_BRANDS) {
             if (lower.contains(legit))
+                return new BrandCheckResult(BrandStatus.CLEAN, "ok", 0);
+        }
+
+        for (String allowed : additionalAllowedBrands) {
+            if (lower.contains(allowed.toLowerCase(Locale.ROOT)))
                 return new BrandCheckResult(BrandStatus.CLEAN, "ok", 0);
         }
 

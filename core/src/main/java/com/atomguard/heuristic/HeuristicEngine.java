@@ -63,14 +63,20 @@ public class HeuristicEngine {
         if (yawDiff > 180) yawDiff = 360 - yawDiff;
 
         // Check 1: Impossible Rotation Speed (Snapping)
-        // FP-11: Eşik yükseltildi (3.5 -> 5.0) ve ardışık spike kontrolü eklendi
+        // FP-11: Eşik yükseltildi (3.5 -> 5.0 -> 8.0) ve ardışık spike aralık kontrolü eklendi
         double speed = Math.sqrt(yawDiff * yawDiff + pitchDiff * pitchDiff) / timeDiff; // degrees per ms
-        
-        double maxSpeed = plugin.getConfig().getDouble("heuristic.max-rotation-speed", 5.0);
-        int maxSpikes = plugin.getConfig().getInt("heuristic.max-rotation-spikes", 3);
+
+        double maxSpeed = plugin.getConfig().getDouble("heuristic.max-rotation-speed", 8.0);   // 5.0 → 8.0: yüksek DPI fare kullanıcıları
+        int maxSpikes = plugin.getConfig().getInt("heuristic.max-rotation-spikes", 5);          // 3 → 5: PvP'de hızlı rotation normal
+        long minSpikeIntervalMs = plugin.getConfig().getLong("heuristic.min-spike-interval-ms", 100); // yeni: spike'lar en az 100ms aralıklı olmalı
 
         if (speed > maxSpeed) {
-            profile.incrementRotationSpikes();
+            // Spike aralık kontrolü: 100ms içindeki birden fazla spike'ı tek sayma
+            // Yüksek FPS'de paket bombardımanı false positive'i önler
+            if (now - profile.getLastSpikeTime() >= minSpikeIntervalMs) {
+                profile.incrementRotationSpikes();
+                profile.setLastSpikeTime(now);
+            }
             if (profile.getRotationSpikes() >= maxSpikes) {
                 double oldScore = profile.getSuspicionLevel();
                 profile.addSuspicion(5.0);
