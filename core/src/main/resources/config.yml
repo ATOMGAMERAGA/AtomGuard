@@ -904,6 +904,20 @@ packet-forensics:
     retention-days: 7
 
 # ═══════════════════════════════════════
+# Heuristic Engine — Davranış Analizi
+# False positive durumunda bu değerleri artırın
+# ═══════════════════════════════════════
+heuristic:
+  action: "KICK"
+  kick-threshold: 150.0
+  max-rotation-speed: 12.0
+  max-rotation-spikes: 8
+  min-spike-interval-ms: 150
+  min-click-samples: 15
+  min-click-variance: 5.0
+  max-avg-click-interval: 100.0
+
+# ═══════════════════════════════════════
 # External Service URLs
 # Leave as default if no changes needed
 # ═══════════════════════════════════════

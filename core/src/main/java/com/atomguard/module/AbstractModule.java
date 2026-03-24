@@ -136,9 +136,20 @@ public abstract class AbstractModule implements IModule {
             ExploitBlockedEvent event = new ExploitBlockedEvent(moduleName, player, playerName, ip, details);
             Bukkit.getPluginManager().callEvent(event);
 
-            // Heuristic Engine'e bildir
+            // Heuristic Engine'e bildir — modül türüne göre ağırlıklı
             if (plugin.getHeuristicEngine() != null) {
-                plugin.getHeuristicEngine().getProfile(uuid).addSuspicion(1.0);
+                double heuristicWeight;
+                switch (moduleName) {
+                    case "piston-limiter":
+                    case "redstone-limiter":
+                    case "falling-block-limiter":
+                    case "explosion-limiter":
+                        heuristicWeight = 0.1;
+                        break;
+                    default:
+                        heuristicWeight = 0.5;
+                }
+                plugin.getHeuristicEngine().getProfile(uuid).addSuspicion(heuristicWeight);
             }
 
             // Trust Score ihlal kaydı

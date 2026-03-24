@@ -8,6 +8,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
@@ -83,11 +84,23 @@ public class DuplicationFixModule extends AbstractModule implements Listener {
         }
 
         // 2. Hotbar swap tuşu ile koyma
-        if (event.getClick().isKeyboardClick()) {
-            ItemStack swapped = event.getWhoClicked().getInventory().getItem(event.getHotbarButton());
-            if (swapped != null && isShulkerBox(swapped.getType())) {
+        ClickType clickType = event.getClick();
+        if (clickType == ClickType.SWAP_OFFHAND) {
+            // F tuşu — offhand'deki item shulker'a taşınmak isteniyorsa engelle
+            ItemStack offhand = event.getWhoClicked().getInventory().getItemInOffHand();
+            if (isShulkerBox(offhand.getType())) {
                 event.setCancelled(true);
-                debug(event.getWhoClicked().getName() + " shulker içine shulker koymaya çalıştı (Swap)");
+                debug(event.getWhoClicked().getName() + " shulker içine shulker koymaya çalıştı (Offhand Swap)");
+            }
+        } else if (clickType.isKeyboardClick()) {
+            int hotbarSlot = event.getHotbarButton();
+            int invSize = event.getWhoClicked().getInventory().getSize();
+            if (hotbarSlot >= 0 && hotbarSlot < invSize) {
+                ItemStack swapped = event.getWhoClicked().getInventory().getItem(hotbarSlot);
+                if (swapped != null && isShulkerBox(swapped.getType())) {
+                    event.setCancelled(true);
+                    debug(event.getWhoClicked().getName() + " shulker içine shulker koymaya çalıştı (Swap)");
+                }
             }
         }
         

@@ -3,6 +3,19 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.0.10] - 2026-03-24
+
+### 🐛 Bug Fixes
+
+- **Core — DuplicationFixModule: ArrayIndexOutOfBoundsException on hotbar swap**: `InventoryClickEvent.getHotbarButton()` returns `-1` for non-hotbar keyboard clicks (including `SWAP_OFFHAND`), causing `PlayerInventory.getItem(-1)` to throw `ArrayIndexOutOfBoundsException`. The slot value is now validated with `>= 0 && < inventory.getSize()` before use. The `SWAP_OFFHAND` (`F` key) click type is now handled separately — if the item in the player's offhand is a Shulker Box while a Shulker Box inventory is open, the swap is cancelled, closing the shulker-in-shulker duplication vector.
+- **Core — HeuristicEngine: false-positive kicks for legitimate players**: Several thresholds were too aggressive for normal gameplay. `max-rotation-speed` default raised from `8.0` to `12.0` degrees/ms (high-DPI mice), `max-rotation-spikes` from `5` to `8`. Rotation suspicion added per burst lowered from `5.0` to `3.0`, click suspicion from `15.0` to `8.0`. The kick threshold in `checkSuspicionLevel()` raised from `100.0` to `150.0`; after a kick the suspicion score is now fully zeroed instead of only reducing by 50. Players with the `atomguard.bypass` permission now skip both rotation and click analysis entirely. Rotation analysis is skipped for the first 5 seconds after a player joins (session grace period) to avoid false spikes from initial position packets. Click intervals below 10 ms are filtered out as lag-induced packet merging artifacts. When speed falls below the threshold, spikes now decrement by 1 (`decrementRotationSpikes`) instead of resetting to zero, preventing a single normal packet from clearing accumulated evidence. The minimum click sample count raised from `10` to `15`.
+- **Core — HeuristicProfile: decay too slow and suspicion cap too low**: `DECAY_RATE_PER_SECOND` raised from `0.5` to `2.0` (4× faster natural decay), `MAX_CLICK_SAMPLES` from `20` to `30`. The `addSuspicion()` internal cap raised from `100.0` to `200.0` so the score can actually reach the new `150.0` kick threshold. New `sessionStartTime` field (set to `System.currentTimeMillis()` at profile creation) with getter/setter for grace period checks. New `decrementRotationSpikes()` method decrements `rotationSpikes` by 1 if positive (gradual cooldown instead of instant reset).
+- **Core — AbstractModule: blockExploit() applies uniform +1.0 heuristic weight regardless of module type**: High-frequency limiter modules (`piston-limiter`, `redstone-limiter`, `falling-block-limiter`, `explosion-limiter`) fire hundreds of times per second during normal lag spikes, causing innocent players to accumulate suspicion rapidly. These modules now contribute `+0.1` per block event; all other modules contribute `+0.5` (was always `+1.0`).
+
+### 🔧 Improvements
+
+- **Config — New `heuristic` section**: Added a dedicated `heuristic:` block to `config.yml` (placed before `external-services:`) exposing all tunable thresholds: `action`, `kick-threshold` (150.0), `max-rotation-speed` (12.0), `max-rotation-spikes` (8), `min-spike-interval-ms` (150), `min-click-samples` (15), `min-click-variance` (5.0), `max-avg-click-interval` (100.0). These values were previously hard-coded in the engine; operators can now raise them on high-activity servers to further reduce false positives without touching the source.
+
 ## [2.0.9] - 2026-03-22
 
 ### 🐛 Bug Fixes

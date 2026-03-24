@@ -20,16 +20,18 @@ public class HeuristicProfile {
     // Click Consistency (CPS & Intervals)
     private final Queue<Long> clickIntervals;
     private long lastClickTime;
-    private static final int MAX_CLICK_SAMPLES = 20;
+    private static final int MAX_CLICK_SAMPLES = 30;
 
     // Suspicion System
-    private double suspicionLevel; // 0.0 to 100.0
+    private double suspicionLevel; // 0.0 to 200.0
     private long lastSuspicionUpdate;
-    private static final double DECAY_RATE_PER_SECOND = 0.5;
+    private static final double DECAY_RATE_PER_SECOND = 2.0;
     private final AtomicInteger violationCount;
     private int rotationSpikes = 0;
     /** Ardışık spike aralık kontrolü için son spike zaman damgası */
     private long lastSpikeTime = 0;
+    /** Session başlangıç zamanı — grace period hesabı için */
+    private long sessionStartTime = 0;
 
     public HeuristicProfile(UUID uuid) {
         this.uuid = uuid;
@@ -38,6 +40,7 @@ public class HeuristicProfile {
         this.lastSuspicionUpdate = System.currentTimeMillis();
         this.violationCount = new AtomicInteger(0);
         this.suspicionLevel = 0.0;
+        this.sessionStartTime = System.currentTimeMillis();
     }
 
     public void incrementRotationSpikes() {
@@ -48,12 +51,19 @@ public class HeuristicProfile {
         this.rotationSpikes = 0;
     }
 
+    public void decrementRotationSpikes() {
+        if (this.rotationSpikes > 0) this.rotationSpikes--;
+    }
+
     public int getRotationSpikes() {
         return rotationSpikes;
     }
 
     public long getLastSpikeTime() { return lastSpikeTime; }
     public void setLastSpikeTime(long time) { this.lastSpikeTime = time; }
+
+    public long getSessionStartTime() { return sessionStartTime; }
+    public void setSessionStartTime(long time) { this.sessionStartTime = time; }
 
     public UUID getUuid() {
         return uuid;
@@ -113,7 +123,7 @@ public class HeuristicProfile {
 
     public void addSuspicion(double amount) {
         getSuspicionLevel(); // Update with decay first
-        this.suspicionLevel = Math.min(100.0, this.suspicionLevel + amount);
+        this.suspicionLevel = Math.min(200.0, this.suspicionLevel + amount);
         this.lastSuspicionUpdate = System.currentTimeMillis();
     }
     
