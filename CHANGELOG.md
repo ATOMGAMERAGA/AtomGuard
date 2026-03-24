@@ -3,6 +3,12 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.0.11] - 2026-03-24
+
+### 🐛 Bug Fixes
+
+- **Core — TrustScoreManager: `IllegalStateException` on player quit**: `PostVerificationEvent` is declared as an async event (`super(true)`), but `recalculate()` was firing it synchronously via `Bukkit.getPluginManager().callEvent()` from the main server thread. This was triggered on every player disconnect through the `PlayerQuitEvent → recordQuit() → recalculate()` call chain, as well as from `recordViolation()` and `recordKick()`. Paper 1.21.4 enforces that async events may only be called from off-thread, throwing `IllegalStateException` and leaving the trust score partially updated. The event dispatch in `recalculate()` is now wrapped in `Bukkit.getScheduler().runTaskAsynchronously()`, covering all three call sites at once.
+
 ## [2.0.10] - 2026-03-24
 
 ### 🐛 Bug Fixes

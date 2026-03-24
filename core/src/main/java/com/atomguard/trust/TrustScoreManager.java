@@ -329,10 +329,13 @@ public class TrustScoreManager implements ITrustService {
         profile.setLastCalculatedScore(score);
 
         // Fire PostVerificationEvent when trust reaches bypass threshold
+        // Must be called asynchronously — PostVerificationEvent is declared as async
         if (score >= attackBypassEsik) {
-            org.bukkit.Bukkit.getPluginManager().callEvent(
-                new com.atomguard.api.event.PostVerificationEvent(
-                    profile.getUuid(), true, "behavior"));
+            UUID eventUuid = profile.getUuid();
+            org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(plugin, () ->
+                org.bukkit.Bukkit.getPluginManager().callEvent(
+                    new com.atomguard.api.event.PostVerificationEvent(
+                        eventUuid, true, "behavior")));
         }
     }
 
