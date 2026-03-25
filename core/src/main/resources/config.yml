@@ -124,7 +124,7 @@ verified-cache:
 # connection-throttle, honeypot, packet-exploit, packet-delay, token-bucket
 # ═══════════════════════════════════════
 network-protection:
-  enabled: false
+  enabled: true
 
 # ═══════════════════════════════════════
 # Anti-VPN & IP Reputation v2.4.0

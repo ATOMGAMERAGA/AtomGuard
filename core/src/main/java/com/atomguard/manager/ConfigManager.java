@@ -63,7 +63,7 @@ public class ConfigManager {
     }
 
     private void checkConfigVersion() {
-        String currentVersion = "2.0.11";
+        String currentVersion = "2.1.0";
         String configVersion = config.getString("config-version", "1.0.0");
 
         if (!configVersion.equals(currentVersion)) {

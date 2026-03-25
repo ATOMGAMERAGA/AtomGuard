@@ -3,6 +3,30 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.1.0] - 2026-03-25
+
+### ✨ New Features
+
+- **Velocity — BurstAllowance system**: New `BurstAllowance` class detects legitimate short-lived traffic spikes (server restarts, event starts) and temporarily multiplies all rate limits by a configurable `burst-multiplier` (default 3×). Activation requires CPS to exceed `burst-threshold` (default 30) **and** the verified-player ratio to be above `min-verified-ratio-percent` (default 30%). At most `max-bursts-per-hour` (default 10) activations are permitted per hour to prevent abuse. Configurable under `modules.ddos-protection.burst-allowance`.
+- **Velocity — DDoS protection dry-run mode**: New `modules.ddos-protection.dry-run: false` config key. When set to `true`, connections that would be blocked are only logged (`[DRY-RUN] Engellenecekti: <ip> | Sebep: <reason>`) and counted under the `ddos_dryrun_would_block` statistic, but are not actually rejected. Allows safe threshold tuning on live servers before fully enabling protection.
+- **Velocity — `network-protection.enabled` now defaults to `true`**: The master toggle for all Velocity network protections (DDoS, AntiBot, VPN, Firewall) is now enabled out of the box. False-positive root causes have been resolved (see Fixes below), making it safe to ship protection on by default.
+
+### 🔧 Improvements
+
+- **Velocity — Threshold recalibration (false-positive prevention)**: All DDoS protection thresholds raised to tolerate normal multi-player reconnect patterns. `attack-mode.threshold` 30 → **50** CPS, `attack-mode.min-unique-ips` 10 → **15**, `connection-limit.per-ip-per-minute` 5 → **10**, `smart-throttle.normal-limit` 10 → **15** / `cautious-limit` 5 → **8** / `lockdown-limit` 0 → **1**. `attack-levels.hysteresis-rise-seconds` 3 → **5** s, `hysteresis-fall-seconds` 15 → **30** s. `rate-limit.connections-per-second.per-ip-max` 3 → **5**, `global-max` 50 → **100**.
+- **Velocity — AttackLevelManager CPS multipliers raised**: Level transition thresholds increased so that small concurrent join bursts (6–7 players) no longer trigger ELEVATED mode. ELEVATED now requires 2× base CPS (was 1.5×), HIGH 3× (was 2×), CRITICAL 5× (was 3×), LOCKDOWN 8× (was 5×).
+- **Velocity — SmartThrottleEngine: sliding window replaces cumulative counter**: The per-IP throttle counter was a Caffeine `AtomicInteger` that only reset after a 5-minute TTL, allowing a player who reconnected 11 times within 5 minutes to be permanently throttled until the window expired. Replaced with `ConcurrentLinkedDeque<Long>` timestamps and a 60-second sliding window — only connections within the last 60 seconds count toward the limit.
+- **Velocity — ConnectionThrottler: verified-player bypass**: `tryConnect(ip, isVerified)` and `tryConnectAttackMode(ip, isVerified)` overloads added. Verified players (those who have previously logged in successfully) receive `max(limitPerMinute × 3, 15)` connections per minute in normal mode and `limitPerMinute` (instead of `limitPerMinute / 2`) in attack mode, eliminating throttle-caused reconnect loops for returning players.
+
+### 🐛 Bug Fixes
+
+- **Velocity — DDoSProtectionModule config completely disconnected from `config.yml`**: The module was registered under the name `"ddos-koruma"` but `config.yml` uses `modules.ddos-protection`. Additionally, all 43 config keys in `onEnable()` were Turkish (e.g. `saldiri-modu.esik`, `akilli-throttle.normal-limit`) while the YAML uses English keys. As a result, every config read fell through to the Java hardcoded default and `config.yml` edits had no effect on DDoS behaviour. The module name is now `"ddos-protection"` and all keys are aligned with `config.yml`.
+- **Velocity — VelocityAntiBotModule config keys mismatched**: `onEnable()` read Turkish keys (`analiz-penceresi`, `supheli-esik`, `yuksek-risk-esik`, `captcha.aktif`, etc.) while `config.yml` uses English (`analysis-window`, `suspicious-threshold`, `high-risk-threshold`, `captcha.enabled`). All 11 keys corrected. Additionally, the `bot-protection` YAML section was at the top level of the file while `VelocityModule.getConfigXxx()` prefixes with `modules.`; the section has been moved under `modules:` so reads now resolve correctly.
+- **Velocity — NicknameBlocker read from wrong YAML path**: `NicknameBlocker.reload()` read from `bot-protection.nick-engelleme.*` (top-level). After moving `bot-protection` under `modules:`, all paths updated to `modules.bot-protection.nick-engelleme.*`.
+- **Velocity — FirewallModule config keys mismatched**: `onEnable()` and `onConfigReload()` used Turkish keys (`oto-yasak-esik`, `oto-yasak-sure`, `kalici-yasak-esik`, `decay-dakika`); these now match the YAML (`auto-ban-threshold`, `auto-ban-duration`, `permanent-ban-threshold`, `decay-minutes`). `permanent-ban-threshold: 500` added to `config.yml`.
+- **Velocity — VPNDetectionModule `premium-vpn-politikasi` key never read**: The premium-bypass policy was hardcoded to `"izin-ver"` because the config key didn't exist in `config.yml`. Key renamed to `premium-vpn-policy: "allow"` and added to the `modules.vpn-proxy-block` section.
+- **Velocity — ProxyExploitModule config section missing**: The module was registered as `"exploit-koruma"` with no matching `modules.exploit-koruma` section in `config.yml`. Module renamed to `"exploit-protection"`, Turkish keys (`sohbet-limit`, `tekrar-mesaj-limit`, `komut-limit`, `sunucu-degistirme-limit`) corrected to English, and a full `modules.exploit-protection` block added to `config.yml`.
+
 ## [2.0.11] - 2026-03-24
 
 ### 🐛 Bug Fixes

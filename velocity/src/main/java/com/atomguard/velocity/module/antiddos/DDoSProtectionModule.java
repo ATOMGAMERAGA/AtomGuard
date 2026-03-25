@@ -5,6 +5,8 @@ import com.atomguard.velocity.module.VelocityModule;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Ana DDoS Koruma Modülü — tamamen yeniden yazılmış, tüm alt sistemler entegre.
@@ -37,6 +39,13 @@ public class DDoSProtectionModule extends VelocityModule {
     // Alt sistem referansları
     // ────────────────────────────────────────────────────────
 
+    private BurstAllowance            burstAllowance;
+
+    // Son 30 saniyedeki verified/total bağlantı sayacı (burst oranı hesabı için)
+    private final AtomicInteger recentTotal    = new AtomicInteger(0);
+    private final AtomicInteger recentVerified = new AtomicInteger(0);
+    private final AtomicLong    recentWindowStart = new AtomicLong(System.currentTimeMillis());
+
     private AttackLevelManager        levelManager;
     private SynFloodDetector          synFloodDetector;
     private TrafficAnomalyDetector    anomalyDetector;
@@ -55,7 +64,7 @@ public class DDoSProtectionModule extends VelocityModule {
     private GeoBlocker                geoBlocker;
 
     public DDoSProtectionModule(AtomGuardVelocity plugin) {
-        super(plugin, "ddos-koruma");
+        super(plugin, "ddos-protection");
     }
 
     @Override
@@ -68,68 +77,68 @@ public class DDoSProtectionModule extends VelocityModule {
     @Override
     public void onEnable() {
         // ── 1. Temel parametreler ──────────────────────────
-        int baseCpsThreshold   = getConfigInt("saldiri-modu.esik", 30);
-        int connPerMinute      = getConfigInt("baglanti-limiti.ip-basina-dakika", 5);
-        int maxPingPerSecond   = getConfigInt("ping-limit", 3);
+        int baseCpsThreshold   = getConfigInt("attack-mode.threshold", 50);
+        int connPerMinute      = getConfigInt("connection-limit.per-ip-per-minute", 10);
+        int maxPingPerSecond   = getConfigInt("ping-limit", 5);
 
         // ── 2. AttackLevelManager ──────────────────────────
-        long hysteresisUpMs   = getConfigLong("saldiri-seviyeleri.hysteresis-yukselme-sn", 3) * 1000L;
-        long hysteresisDownMs = getConfigLong("saldiri-seviyeleri.hysteresis-dusme-sn", 15) * 1000L;
-        boolean levelsEnabled = getConfigBoolean("saldiri-seviyeleri.aktif", true);
+        long hysteresisUpMs   = getConfigLong("attack-levels.hysteresis-rise-seconds", 5) * 1000L;
+        long hysteresisDownMs = getConfigLong("attack-levels.hysteresis-fall-seconds", 30) * 1000L;
+        boolean levelsEnabled = getConfigBoolean("attack-levels.enabled", true);
 
         levelManager = new AttackLevelManager(plugin, baseCpsThreshold,
                 hysteresisUpMs, hysteresisDownMs);
 
         // ── 3. Anomali dedektörü ───────────────────────────
-        boolean anomalyEnabled   = getConfigBoolean("anomali-tespiti.aktif", true);
-        double  zScoreThreshold  = getConfigDouble("anomali-tespiti.z-skoru-esigi", 3.0);
-        double  slowRampPct      = getConfigDouble("anomali-tespiti.yavas-rampa-esigi-yuzde", 10.0);
-        boolean pulseDetection   = getConfigBoolean("anomali-tespiti.pulse-tespit-aktif", true);
-        int     profileWindow    = getConfigInt("anomali-tespiti.profil-penceresi-saat", 1) * 3600;
+        boolean anomalyEnabled   = getConfigBoolean("anomaly-detection.enabled", true);
+        double  zScoreThreshold  = getConfigDouble("anomaly-detection.z-score-threshold", 3.0);
+        double  slowRampPct      = getConfigDouble("anomaly-detection.slow-ramp-threshold-percent", 10.0);
+        boolean pulseDetection   = getConfigBoolean("anomaly-detection.pulse-detection-enabled", true);
+        int     profileWindow    = getConfigInt("anomaly-detection.profile-window-hours", 1) * 3600;
 
         anomalyDetector = anomalyEnabled
                 ? new TrafficAnomalyDetector(profileWindow, zScoreThreshold, slowRampPct, pulseDetection)
                 : null;
 
         // ── 4. Subnet analizi ─────────────────────────────
-        int     subnetMultiplier   = getConfigInt("baglanti-limiti.subnet-basina-dakika", 20);
-        boolean subnetBanEnabled   = getConfigBoolean("baglanti-limiti.subnet-ban-aktif", false);
-        int     subnetBanThreshold = getConfigInt("baglanti-limiti.subnet-ban-esik", 10);
+        int     subnetMultiplier   = getConfigInt("connection-limit.per-subnet-per-minute", 30);
+        boolean subnetBanEnabled   = getConfigBoolean("connection-limit.subnet-ban-enabled", false);
+        int     subnetBanThreshold = getConfigInt("connection-limit.subnet-ban-threshold", 10);
 
         subnetAnalyzer = new SubnetAnalyzer(5, 10, subnetBanEnabled, subnetBanThreshold);
 
         // ── 5. Parmak izi sistemi ──────────────────────────
-        boolean fpEnabled      = getConfigBoolean("parmak-izi.aktif", true);
-        int     fpMassThreshold = getConfigInt("parmak-izi.kitle-esigi", 20);
-        List<String> botPatterns = getConfigStringList("parmak-izi.bilinen-botnet-patternler");
+        boolean fpEnabled      = getConfigBoolean("fingerprinting.enabled", true);
+        int     fpMassThreshold = getConfigInt("fingerprinting.mass-threshold", 20);
+        List<String> botPatterns = getConfigStringList("fingerprinting.known-botnet-patterns");
 
         fingerprinter = fpEnabled
                 ? new ConnectionFingerprinter(fpMassThreshold, botPatterns)
                 : null;
 
         // ── 6. Slowloris dedektörü ─────────────────────────
-        int    maxPendingPerIP   = getConfigInt("slowloris-gelismis.maks-pending-ip", 5);
-        long   connTimeoutMs     = getConfigLong("slowloris-gelismis.zaman-asimi-ms", 10_000L);
-        double pendingRatioAlarm = getConfigDouble("slowloris-gelismis.pending-oran-alarm", 0.30);
-        boolean keepAliveCheck   = getConfigBoolean("slowloris-gelismis.keep-alive-kontrol", true);
+        int    maxPendingPerIP   = getConfigInt("slowloris-advanced.max-pending-per-ip", 5);
+        long   connTimeoutMs     = getConfigLong("slowloris-advanced.timeout-ms", 10_000L);
+        double pendingRatioAlarm = getConfigDouble("slowloris-advanced.pending-rate-alarm", 0.30);
+        boolean keepAliveCheck   = getConfigBoolean("slowloris-advanced.keep-alive-check", true);
 
         slowlorisDetector = new EnhancedSlowlorisDetector(
                 maxPendingPerIP, connTimeoutMs, pendingRatioAlarm, keepAliveCheck);
 
         // ── 7. IP itibar takibi ────────────────────────────
-        boolean repEnabled = getConfigBoolean("ip-itibar.aktif", true);
+        boolean repEnabled = getConfigBoolean("ip-reputation.enabled", true);
         if (repEnabled) {
             reputationTracker = new IPReputationTracker(
-                    getConfigInt("ip-itibar.baslangic-skoru", 50),
-                    getConfigInt("ip-itibar.basarili-baglanti-bonus", 5),
-                    getConfigInt("ip-itibar.rate-limit-ceza", 10),
-                    getConfigInt("ip-itibar.gecersiz-handshake-ceza", 15),
-                    getConfigInt("ip-itibar.slowloris-ceza", 25),
-                    getConfigInt("ip-itibar.saldiri-baglanti-ceza", 20),
-                    getConfigInt("ip-itibar.otomatik-ban-esik-1saat", 20),
-                    getConfigInt("ip-itibar.otomatik-ban-esik-24saat", 5),
-                    getConfigInt("ip-itibar.decay-saat-puan", 3),
-                    getConfigInt("ip-itibar.dogrulanmis-minimum-skor", 30)
+                    getConfigInt("ip-reputation.initial-score", 50),
+                    getConfigInt("ip-reputation.successful-connection-bonus", 5),
+                    getConfigInt("ip-reputation.rate-limit-penalty", 10),
+                    getConfigInt("ip-reputation.invalid-handshake-penalty", 15),
+                    getConfigInt("ip-reputation.slowloris-penalty", 25),
+                    getConfigInt("ip-reputation.attack-connection-penalty", 20),
+                    getConfigInt("ip-reputation.auto-ban-threshold-1hour", 20),
+                    getConfigInt("ip-reputation.auto-ban-threshold-24hours", 5),
+                    getConfigInt("ip-reputation.decay-points-per-hour", 3),
+                    getConfigInt("ip-reputation.verified-minimum-score", 30)
             );
             // Firewall modülü bağlantısı (geç bağlanma — modüller birbirinden bağımsız yüklenir)
             if (plugin.getFirewallModule() != null) {
@@ -138,10 +147,10 @@ public class DDoSProtectionModule extends VelocityModule {
         }
 
         // ── 8. Saldırı oturum kaydedici ───────────────────
-        boolean sessionEnabled  = getConfigBoolean("saldiri-kayit.aktif", true);
-        boolean jsonSave        = getConfigBoolean("saldiri-kayit.json-kaydet", true);
-        int     maxHistory      = getConfigInt("saldiri-kayit.maks-gecmis", 50);
-        long    snapshotIntervalMs = getConfigLong("saldiri-kayit.snapshot-araligi-sn", 5) * 1000L;
+        boolean sessionEnabled  = getConfigBoolean("attack-recording.enabled", true);
+        boolean jsonSave        = getConfigBoolean("attack-recording.json-save", true);
+        int     maxHistory      = getConfigInt("attack-recording.max-history", 50);
+        long    snapshotIntervalMs = getConfigLong("attack-recording.snapshot-interval-seconds", 5) * 1000L;
 
         sessionRecorder = sessionEnabled
                 ? new AttackSessionRecorder(maxHistory, snapshotIntervalMs, jsonSave,
@@ -152,12 +161,12 @@ public class DDoSProtectionModule extends VelocityModule {
         classifier = new AttackClassifier();
 
         // ── 10. Doğrulanmış oyuncu kalkanı ─────────────────
-        int  guaranteedSlots = getConfigInt("saldiri-seviyeleri.dogrulanmis-ayrilmis-slot", 50);
+        int  guaranteedSlots = getConfigInt("attack-levels.verified-reserved-slots", 50);
         playerShield = new VerifiedPlayerShield(plugin, guaranteedSlots, 3_600_000L);
 
         // ── 11. Metrik toplayıcı ───────────────────────────
-        boolean metricsEnabled = getConfigBoolean("metrikler.aktif", true);
-        int     metricsHistMin = getConfigInt("metrikler.gecmis-dakika", 60);
+        boolean metricsEnabled = getConfigBoolean("metrics.enabled", true);
+        int     metricsHistMin = getConfigInt("metrics.history-minutes", 60);
         metricsCollector = metricsEnabled ? new DDoSMetricsCollector(metricsHistMin) : null;
 
         // ── 12. Throttle bileşenleri ───────────────────────
@@ -165,19 +174,19 @@ public class DDoSProtectionModule extends VelocityModule {
         pingFloodDetector = new PingFloodDetector(maxPingPerSecond);
         nullPingDetector  = new NullPingDetector();
 
-        int normalLimit     = getConfigInt("akilli-throttle.normal-limit", 10);
-        int carefulLimit    = getConfigInt("akilli-throttle.dikkatli-limit", 5);
-        int aggressiveLimit = getConfigInt("akilli-throttle.agresif-limit", 2);
-        int lockdownLimit   = getConfigInt("akilli-throttle.lockdown-limit", 0);
+        int normalLimit     = getConfigInt("smart-throttle.normal-limit", 15);
+        int carefulLimit    = getConfigInt("smart-throttle.cautious-limit", 8);
+        int aggressiveLimit = getConfigInt("smart-throttle.aggressive-limit", 3);
+        int lockdownLimit   = getConfigInt("smart-throttle.lockdown-limit", 1);
         throttleEngine = new SmartThrottleEngine(plugin, normalLimit, carefulLimit,
                 aggressiveLimit, lockdownLimit);
         if (levelsEnabled) throttleEngine.setLevelManager(levelManager);
 
         // ── 13. GeoBlocker ─────────────────────────────────
-        if (getConfigBoolean("geo-engelleme.aktif", false)) {
-            List<String> blocked = getConfigStringList("geo-engelleme.engelli-ulkeler");
-            List<String> allowed = getConfigStringList("geo-engelleme.izinli-ulkeler");
-            boolean wlMode       = getConfigBoolean("geo-engelleme.izinli-ulkeler-modu", false);
+        if (getConfigBoolean("geo-blocking.enabled", false)) {
+            List<String> blocked = getConfigStringList("geo-blocking.blocked-countries");
+            List<String> allowed = getConfigStringList("geo-blocking.allowed-countries");
+            boolean wlMode       = getConfigBoolean("geo-blocking.allowed-countries-mode", false);
             geoBlocker = new GeoBlocker(plugin.getDataDirectory(), blocked, allowed, wlMode, logger);
             try {
                 geoBlocker.initialize();
@@ -188,7 +197,7 @@ public class DDoSProtectionModule extends VelocityModule {
         }
 
         // ── 14. SynFloodDetector — tüm bileşenleri bağla ──
-        int minUniqueIps = getConfigInt("attack-mode.min-unique-ips", 10);
+        int minUniqueIps = getConfigInt("attack-mode.min-unique-ips", 15);
         synFloodDetector = new SynFloodDetector(plugin, baseCpsThreshold, minUniqueIps);
         if (levelsEnabled) synFloodDetector.setLevelManager(levelManager);
         if (anomalyDetector != null) synFloodDetector.setAnomalyDetector(anomalyDetector);
@@ -196,7 +205,18 @@ public class DDoSProtectionModule extends VelocityModule {
         if (sessionRecorder != null)  synFloodDetector.setSessionRecorder(sessionRecorder);
         synFloodDetector.setClassifier(classifier);
 
-        // ── 15. Periyodik görevler ─────────────────────────
+        // ── 15. Burst Allowance ────────────────────────────
+        if (getConfigBoolean("burst-allowance.enabled", true)) {
+            burstAllowance = new BurstAllowance(
+                    getConfigInt("burst-allowance.burst-threshold", 30),
+                    getConfigInt("burst-allowance.burst-window-seconds", 15),
+                    getConfigInt("burst-allowance.burst-multiplier", 3),
+                    getConfigInt("burst-allowance.max-bursts-per-hour", 10),
+                    getConfigInt("burst-allowance.min-verified-ratio-percent", 30)
+            );
+        }
+
+        // ── 16. Periyodik görevler ─────────────────────────
         plugin.getProxyServer().getScheduler()
                 .buildTask(plugin, this::periodicCleanup)
                 .repeat(1, TimeUnit.MINUTES)
@@ -243,6 +263,21 @@ public class DDoSProtectionModule extends VelocityModule {
         // CPS sayacını artır
         synFloodDetector.recordConnection(ip);
 
+        // Burst değerlendirmesi — son 30 saniyedeki verified oranını hesapla
+        if (burstAllowance != null) {
+            long now = System.currentTimeMillis();
+            if (now - recentWindowStart.get() > 30_000L) {
+                recentTotal.set(0);
+                recentVerified.set(0);
+                recentWindowStart.set(now);
+            }
+            recentTotal.incrementAndGet();
+            if (isVerified) recentVerified.incrementAndGet();
+            int total = recentTotal.get();
+            int verifiedRatio = total > 0 ? (recentVerified.get() * 100 / total) : 0;
+            burstAllowance.evaluateTraffic(synFloodDetector.getCurrentRate(), verifiedRatio);
+        }
+
         // ── 1. Slowloris kontrolü ──────────────────────────
         if (slowlorisDetector.isSlowlorisIP(ip)) {
             return deny(ip, "slowloris", "kick.ddos");
@@ -285,8 +320,8 @@ public class DDoSProtectionModule extends VelocityModule {
 
         // ── 6. Bağlantı throttle ──────────────────────────
         boolean throttled = plugin.isAttackMode()
-                ? !throttler.tryConnectAttackMode(ip)
-                : !throttler.tryConnect(ip);
+                ? !throttler.tryConnectAttackMode(ip, isVerified)
+                : !throttler.tryConnect(ip, isVerified);
 
         if (throttled) {
             if (reputationTracker != null) reputationTracker.recordRateLimitViolation(ip);
@@ -318,6 +353,12 @@ public class DDoSProtectionModule extends VelocityModule {
     }
 
     private ConnectionCheckResult deny(String ip, String reason, String kickKey) {
+        // Dry-run modu: engelle ama gerçekte reddetme
+        if (getConfigBoolean("dry-run", false)) {
+            logger.info("[DRY-RUN] Engellenecekti: {} | Sebep: {}", ip, reason);
+            plugin.getStatisticsManager().increment("ddos_dryrun_would_block");
+            return new ConnectionCheckResult(true, "dryrun-" + reason, null);
+        }
         incrementBlocked();
         plugin.getStatisticsManager().increment("ddos_blocked");
         if (metricsCollector != null) metricsCollector.recordBlocked(ip);

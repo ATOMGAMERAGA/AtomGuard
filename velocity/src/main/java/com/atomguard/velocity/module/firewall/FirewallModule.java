@@ -33,8 +33,8 @@ public class FirewallModule extends VelocityModule {
     @Override
     public void onConfigReload() {
         // Yeni değerleri configden çek ve engine'i güncelle
-        int autoBanThreshold = getConfigInt("oto-yasak-esik", 150);
-        int permanentBanThreshold = getConfigInt("kalici-yasak-esik", 500);
+        int autoBanThreshold = getConfigInt("auto-ban-threshold", 150);
+        int permanentBanThreshold = getConfigInt("permanent-ban-threshold", 500);
         
         if (reputationEngine != null) {
             reputationEngine.setThreshold(autoBanThreshold);
@@ -44,10 +44,10 @@ public class FirewallModule extends VelocityModule {
 
     @Override
     public void onEnable() {
-        int autoBanThreshold = getConfigInt("oto-yasak-esik", 150);
-        long autoBanDurationMs = getConfigLong("oto-yasak-sure", 3600) * 1000L;
-        int permanentBanThreshold = getConfigInt("kalici-yasak-esik", 500);
-        int decayMinutes = getConfigInt("decay-dakika", 5);
+        int autoBanThreshold = getConfigInt("auto-ban-threshold", 150);
+        long autoBanDurationMs = getConfigLong("auto-ban-duration", 3600) * 1000L;
+        int permanentBanThreshold = getConfigInt("permanent-ban-threshold", 500);
+        int decayMinutes = getConfigInt("decay-minutes", 5);
 
         reputationEngine = new IPReputationEngine(plugin, autoBanThreshold);
         tempBanManager = new TempBanManager(plugin.getDataDirectory(), logger);

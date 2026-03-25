@@ -31,52 +31,72 @@ discord-webhook:
   enabled: false
   webhook-url: ""
 
-# Bot and Behavior Control
-bot-protection:
-  analysis-window: 15
-  suspicious-threshold: 8
-  high-risk-threshold: 75
-  medium-risk-threshold: 45
-  trust-score-threshold: 10 # IPs below this threshold are rejected by TrustScoreCheck
-
 # Pipeline Modules (Processed in Priority Order)
 modules:
+  bot-protection:
+    enabled: true
+    analysis-window: 15
+    suspicious-threshold: 8
+    high-risk-threshold: 75
+    medium-risk-threshold: 45
+    trust-score-threshold: 10 # IPs below this threshold are rejected by TrustScoreCheck
+    protocol-validation: true
+    allow-unknown-brands: true
+    blocked-brands: []
+    allowed-brands: []
+    extra-protocols: []
+    captcha:
+      enabled: false
+      timeout: 60
+    nick-engelleme:
+      aktif: true
+      minimum-uzunluk: 3
+      maksimum-uzunluk: 16
+      sadece-sayi-engel: true
+      ozel-karakter-engel: true
+      buyuk-harf-esik: 10
+      tam-eslesme: []
+      prefix-listesi: []
+      suffix-listesi: []
+      regex-listesi: []
   firewall:
     enabled: true
     auto-ban-threshold: 150
     auto-ban-duration: 3600
+    permanent-ban-threshold: 500
     decay-minutes: 5
   rate-limit:
     enabled: true
     connections-per-second:
-      per-ip-max: 3
-      global-max: 50
+      per-ip-max: 5
+      global-max: 100
   ddos-protection:
     enabled: true
+    dry-run: false  # true yapılırsa engeller loglanır ama bağlantı reddedilmez
     connection-limit:
-      per-ip-per-minute: 5
-      global-per-second: 50
-      per-subnet-per-minute: 20
+      per-ip-per-minute: 10
+      global-per-second: 100
+      per-subnet-per-minute: 30
       subnet-ban-enabled: false
       subnet-ban-threshold: 10
-    ping-limit: 3
+    ping-limit: 5
     attack-mode:
-      threshold: 30
-      min-unique-ips: 10
+      threshold: 50
+      min-unique-ips: 15
     attack-levels:
       enabled: true
-      hysteresis-rise-seconds: 3
-      hysteresis-fall-seconds: 15
+      hysteresis-rise-seconds: 5
+      hysteresis-fall-seconds: 30
       verified-reserved-slots: 50
       captcha-levels:
         - "ELEVATED"
         - "HIGH"
     smart-throttle:
       enabled: true
-      normal-limit: 10
-      cautious-limit: 5
-      aggressive-limit: 2
-      lockdown-limit: 0
+      normal-limit: 15
+      cautious-limit: 8
+      aggressive-limit: 3
+      lockdown-limit: 1
     anomaly-detection:
       enabled: true
       z-score-threshold: 3.0
@@ -118,6 +138,13 @@ modules:
       timeout-ms: 10000
       pending-rate-alarm: 0.30
       keep-alive-check: true
+    burst-allowance:
+      enabled: true
+      burst-threshold: 30        # Bu CPS'de burst değerlendirmesi başlar
+      burst-window-seconds: 15   # Burst tolerans süresi
+      burst-multiplier: 3        # Burst sırasında limitler 3x
+      max-bursts-per-hour: 10    # Abuse önleme
+      min-verified-ratio-percent: 30  # Burst için minimum verified IP oranı
     geo-blocking:
       enabled: false
       blocked-countries: []
@@ -128,6 +155,21 @@ modules:
     consensus-threshold: 2
     trust-score-threshold: 60
     residential-bypass: true
+    premium-vpn-policy: "allow"
+  exploit-protection:
+    enabled: true
+    tab-complete-limit: 5
+    chat-limit: 3
+    repeat-message-limit: 5
+    command-limit: 10
+    server-switch-limit: 10
+    auth-exempt-commands:
+      - "login"
+      - "l"
+      - "register"
+      - "reg"
+      - "changepassword"
+      - "cp"
   account-firewall:
     enabled: true
 

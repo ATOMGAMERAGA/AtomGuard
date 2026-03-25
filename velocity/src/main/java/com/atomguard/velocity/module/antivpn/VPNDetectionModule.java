@@ -79,8 +79,8 @@ public class VPNDetectionModule extends VelocityModule {
         }
 
         // Premium bypass
-        String premiumPolicy = getConfigString("premium-vpn-politikasi", "izin-ver");
-        if (isPremium && "izin-ver".equalsIgnoreCase(premiumPolicy)) {
+        String premiumPolicy = getConfigString("premium-vpn-policy", "allow");
+        if (isPremium && "allow".equalsIgnoreCase(premiumPolicy)) {
             return CompletableFuture.completedFuture(
                     new DetectionResult(false, 0, "Premium Bypass", List.of(), "premium-bypass"));
         }

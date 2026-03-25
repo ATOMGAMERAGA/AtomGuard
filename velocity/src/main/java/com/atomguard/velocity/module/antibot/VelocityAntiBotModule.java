@@ -36,24 +36,24 @@ public class VelocityAntiBotModule extends VelocityModule {
 
     @Override
     public void onEnable() {
-        int windowSec = getConfigInt("analiz-penceresi", 15);
-        int suspiciousThreshold = getConfigInt("supheli-esik", 8);
-        int highRisk = getConfigInt("yuksek-risk-esik", 75);
-        int mediumRisk = getConfigInt("orta-risk-esik", 45);
-        boolean enforceProtocols = getConfigBoolean("protokol-dogrulama", true);
-        boolean allowUnknownBrands = getConfigBoolean("bilinmeyen-brand-izin", true);
-        List<String> blockedBrands = getConfigStringList("engelli-brandlar");
-        List<String> allowedBrands = getConfigStringList("izinli-brandlar");
+        int windowSec = getConfigInt("analysis-window", 15);
+        int suspiciousThreshold = getConfigInt("suspicious-threshold", 8);
+        int highRisk = getConfigInt("high-risk-threshold", 75);
+        int mediumRisk = getConfigInt("medium-risk-threshold", 45);
+        boolean enforceProtocols = getConfigBoolean("protocol-validation", true);
+        boolean allowUnknownBrands = getConfigBoolean("allow-unknown-brands", true);
+        List<String> blockedBrands = getConfigStringList("blocked-brands");
+        List<String> allowedBrands = getConfigStringList("allowed-brands");
 
         // Config'den ek protokol numaraları — yeni MC sürümleri için plugin güncellemesi gerektirmez
-        List<String> rawProtocols = getConfigStringList("ek-protokoller");
+        List<String> rawProtocols = getConfigStringList("extra-protocols");
         Set<Integer> extraProtocols = rawProtocols.stream()
             .map(s -> { try { return Integer.parseInt(s.trim()); } catch (NumberFormatException e) { return null; } })
             .filter(p -> p != null && p > 0)
             .collect(Collectors.toSet());
 
-        captchaEnabled = getConfigBoolean("captcha.aktif", false);
-        int captchaTimeout = getConfigInt("captcha.sure", 60);
+        captchaEnabled = getConfigBoolean("captcha.enabled", false);
+        int captchaTimeout = getConfigInt("captcha.timeout", 60);
 
         nicknameBlocker = new NicknameBlocker(plugin);
 

@@ -32,10 +32,10 @@ public class AttackLevelManager {
 
     public enum AttackLevel {
         NONE("Normal", 0, 1.0),
-        ELEVATED("Yükseltilmiş", 1, 1.5),
-        HIGH("Yüksek", 2, 2.0),
-        CRITICAL("Kritik", 3, 3.0),
-        LOCKDOWN("Kilitleme", 4, 5.0);
+        ELEVATED("Yükseltilmiş", 1, 2.0),
+        HIGH("Yüksek", 2, 3.0),
+        CRITICAL("Kritik", 3, 5.0),
+        LOCKDOWN("Kilitleme", 4, 8.0);
 
         private final String displayName;
         private final int ordinal;
@@ -123,10 +123,10 @@ public class AttackLevelManager {
     }
 
     private AttackLevel calculateTargetLevel(int cps) {
-        if (cps >= baseCpsThreshold * 5)   return AttackLevel.LOCKDOWN;
-        if (cps >= baseCpsThreshold * 3)   return AttackLevel.CRITICAL;
-        if (cps >= baseCpsThreshold * 2)   return AttackLevel.HIGH;
-        if (cps >= baseCpsThreshold * 1.5) return AttackLevel.ELEVATED;
+        if (cps >= baseCpsThreshold * 8)   return AttackLevel.LOCKDOWN;
+        if (cps >= baseCpsThreshold * 5)   return AttackLevel.CRITICAL;
+        if (cps >= baseCpsThreshold * 3)   return AttackLevel.HIGH;
+        if (cps >= baseCpsThreshold * 2)   return AttackLevel.ELEVATED;
         return AttackLevel.NONE;
     }
 

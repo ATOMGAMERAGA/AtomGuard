@@ -4,8 +4,8 @@ import com.atomguard.velocity.AtomGuardVelocity;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Adaptif throttling motoru.
@@ -27,9 +27,12 @@ public class SmartThrottleEngine {
     private final int aggressiveLimit;
     private final int lockdownLimit;
 
-    /** IP → bağlantı sayısı (5 dakika TTL, otomatik temizlenir) */
-    private final Cache<String, AtomicInteger> connectionCounts = Caffeine.newBuilder()
-            .expireAfterWrite(5, TimeUnit.MINUTES)
+    /** Sliding window süresi: 60 saniye */
+    private static final long WINDOW_MS = 60_000L;
+
+    /** IP → bağlantı zaman damgaları (sliding window, 5 dakika erişim-sonrası TTL) */
+    private final Cache<String, ConcurrentLinkedDeque<Long>> connectionWindows = Caffeine.newBuilder()
+            .expireAfterAccess(5, TimeUnit.MINUTES)
             .maximumSize(500_000)
             .build();
 
@@ -61,26 +64,33 @@ public class SmartThrottleEngine {
      * @return true ise bağlantıya izin ver
      */
     public boolean shouldAllow(String ip, boolean isVerified) {
-        // AttackLevelManager varsa kullan
+        int limit;
         if (levelManager != null) {
-            AttackLevelManager.AttackLevel level = levelManager.getCurrentLevel();
-            int limit = getLimitForLevel(level, isVerified);
-            AtomicInteger count = connectionCounts.get(ip, k -> new AtomicInteger(0));
-            if (limit <= 0) return isVerified;
-            return count.incrementAndGet() <= limit;
+            limit = getLimitForLevel(levelManager.getCurrentLevel(), isVerified);
+        } else {
+            ThrottleMode mode = getCurrentThrottleMode();
+            limit = switch (mode) {
+                case NORMAL     -> normalLimit;
+                case CAREFUL    -> carefulLimit;
+                case AGGRESSIVE -> isVerified ? aggressiveLimit : aggressiveLimit / 2;
+                case LOCKDOWN   -> isVerified ? lockdownLimit : 0;
+            };
         }
-
-        // Eski mod (ThrottleMode tabanlı)
-        ThrottleMode mode = getCurrentThrottleMode();
-        int limit = switch (mode) {
-            case NORMAL     -> normalLimit;
-            case CAREFUL    -> carefulLimit;
-            case AGGRESSIVE -> isVerified ? aggressiveLimit : aggressiveLimit / 2;
-            case LOCKDOWN   -> isVerified ? lockdownLimit : 0;
-        };
         if (limit <= 0) return isVerified;
-        AtomicInteger count = connectionCounts.get(ip, k -> new AtomicInteger(0));
-        return count.incrementAndGet() <= limit;
+
+        long now = System.currentTimeMillis();
+        ConcurrentLinkedDeque<Long> window =
+                connectionWindows.get(ip, k -> new ConcurrentLinkedDeque<>());
+
+        // Pencere dışındaki eski zaman damgalarını temizle, ardından kontrol et
+        synchronized (window) {
+            while (!window.isEmpty() && (now - window.peekFirst()) > WINDOW_MS) {
+                window.pollFirst();
+            }
+            if (window.size() >= limit) return false;
+            window.addLast(now);
+        }
+        return true;
     }
 
     /**
@@ -127,7 +137,7 @@ public class SmartThrottleEngine {
      * Periyodik temizlik (Caffeine otomatik temizler; compatibility için).
      */
     public void cleanup() {
-        connectionCounts.cleanUp();
+        connectionWindows.cleanUp();
     }
 
     public String getModeDisplayName() {
