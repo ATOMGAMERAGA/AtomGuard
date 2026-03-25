@@ -68,9 +68,24 @@ public class AtomGuardPlaceholderExpansion extends PlaceholderExpansion {
 
         if (player != null) {
             if (params.equalsIgnoreCase("player_reputation")) {
-                // Placeholder for future reputation score if available
+                com.atomguard.trust.TrustScoreManager tsm = plugin.getTrustScoreManager();
+                if (tsm != null) {
+                    return String.valueOf(tsm.getScore(player.getUniqueId()));
+                }
                 return "100";
             }
+
+            if (params.equalsIgnoreCase("trust_tier")) {
+                com.atomguard.trust.TrustScoreManager tsm = plugin.getTrustScoreManager();
+                if (tsm != null) {
+                    return tsm.getTier(player.getUniqueId()).name();
+                }
+                return "UNKNOWN";
+            }
+        }
+
+        if (params.equalsIgnoreCase("attack_mode_status")) {
+            return plugin.getAttackModeManager().isAttackMode() ? "true" : "false";
         }
 
         return null;

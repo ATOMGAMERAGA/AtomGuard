@@ -34,6 +34,9 @@ public class RateLimitMiddleware {
      * @return Limit asilmamissa true
      */
     public boolean checkRateLimit(HttpExchange exchange) {
+        if (exchange.getRemoteAddress() == null || exchange.getRemoteAddress().getAddress() == null) {
+            return true; // Adres alınamıyorsa isteğe izin ver
+        }
         String ip = exchange.getRemoteAddress().getAddress().getHostAddress();
         RateLimitTracker tracker = rateLimits.get(ip, k -> new RateLimitTracker());
         return tracker.tryAcquire(maxRequestsPerSecond);

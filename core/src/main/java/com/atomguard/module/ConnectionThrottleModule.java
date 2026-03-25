@@ -1,6 +1,7 @@
 package com.atomguard.module;
 
 import com.atomguard.AtomGuard;
+import net.kyori.adventure.text.Component;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -72,9 +73,8 @@ public class ConnectionThrottleModule extends AbstractModule implements Listener
             incrementBlockedCount();
             logExploit(event.getName(), "Baglanti siniri asildi (IP: " + ip + ", " + times.size() + "/" + limit + "/dk)");
 
-            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
-                    net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand()
-                            .deserialize("&cCok fazla baglanti denemesi! Lutfen bir dakika bekleyin."));
+            Component kickMsg = plugin.getMessageManager().getMessage("engelleme.baglanti-siniri");
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, kickMsg);
             return;
         }
 

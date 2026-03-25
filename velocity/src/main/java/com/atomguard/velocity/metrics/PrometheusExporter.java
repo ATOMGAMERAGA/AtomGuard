@@ -9,12 +9,15 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class PrometheusExporter {
 
     private final AtomGuardVelocity plugin;
     private HttpServer httpServer;
+    private ExecutorService httpExecutor;
 
     public PrometheusExporter(AtomGuardVelocity plugin) {
         this.plugin = plugin;
@@ -31,7 +34,12 @@ public class PrometheusExporter {
                 os.write(response);
             }
         });
-        httpServer.setExecutor(Executors.newSingleThreadExecutor());
+        httpExecutor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "AtomGuard-Prometheus");
+            t.setDaemon(true);
+            return t;
+        });
+        httpServer.setExecutor(httpExecutor);
         httpServer.start();
         plugin.getSlf4jLogger().info("Prometheus metrik sunucusu {} portunda başlatıldı.", port);
     }
@@ -108,6 +116,14 @@ public class PrometheusExporter {
     public void stop() {
         if (httpServer != null) {
             httpServer.stop(0);
+        }
+        if (httpExecutor != null) {
+            httpExecutor.shutdownNow();
+            try {
+                httpExecutor.awaitTermination(3, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 }

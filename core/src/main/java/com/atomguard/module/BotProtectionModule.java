@@ -12,7 +12,6 @@ import com.github.retrooper.packetevents.wrapper.handshaking.client.WrapperHands
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerRotation;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerPositionAndRotation;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -111,9 +110,10 @@ public class BotProtectionModule extends AbstractModule implements Listener {
         if (requestTime != null) {
             long delta = System.currentTimeMillis() - requestTime;
             // RSA/AES işlemleri ve ağ gecikmesi dahil 5ms'den kısa sürmesi imkansızdır (insan/gerçek client için)
-            if (delta < 5) { 
+            if (delta < 5) {
                 event.setCancelled(true);
                 user.closeConnection();
+                if (user.getAddress() == null || user.getAddress().getAddress() == null) return;
                 String ip = user.getAddress().getAddress().getHostAddress();
                 plugin.getLogManager().logBot("IP-" + ip, ip,
                         "AtomShield: Şüpheli Şifreleme Yanıtı (Çok Hızlı). Delta: " + delta + "ms");
@@ -133,6 +133,7 @@ public class BotProtectionModule extends AbstractModule implements Listener {
         WrapperHandshakingClientHandshake handshake = new WrapperHandshakingClientHandshake(event);
         String serverAddress = handshake.getServerAddress();
         int serverPort = handshake.getServerPort();
+        if (user.getAddress() == null || user.getAddress().getAddress() == null) return;
         String ip = user.getAddress().getAddress().getHostAddress();
 
         // Katman 1: Hostname Kontrolü
@@ -170,6 +171,7 @@ public class BotProtectionModule extends AbstractModule implements Listener {
             if (delta < minDelta) {
                 event.setCancelled(true);
                 user.closeConnection();
+                if (user.getAddress() == null || user.getAddress().getAddress() == null) return;
                 String ip = user.getAddress().getAddress().getHostAddress();
                 plugin.getLogManager().logBot("IP-" + ip, ip,
                         "AtomShield: Hızlı Login tespiti (Instant-Join). Gecikme: " + delta + "ms");
@@ -218,8 +220,9 @@ public class BotProtectionModule extends AbstractModule implements Listener {
             if (gcd < 131072) { // Çok düşük GCD = insan dışı hassasiyet veya bot
                 data.gcdViolations++;
                 if (data.gcdViolations > 20) {
-                    plugin.getLogManager().logBot(player.getName(), 
-                            player.getAddress().getAddress().getHostAddress(), 
+                    if (player.getAddress() == null || player.getAddress().getAddress() == null) return;
+                    plugin.getLogManager().logBot(player.getName(),
+                            player.getAddress().getAddress().getHostAddress(),
                             "AtomShield: Anormal Fare Hareketi (GCD Analizi)");
                     data.gcdViolations = 0;
                 }
@@ -289,8 +292,8 @@ public class BotProtectionModule extends AbstractModule implements Listener {
 
         // Add current player to count (checking against others)
         if (similarPlayers.size() >= maxSimilar - 1) {
-             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, 
-                ChatColor.RED + "Bot saldırısı şüphesi (Benzer isim kalıbı).");
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
+                plugin.getMessageManager().getMessage("antibot.kick-mesaji"));
             
             incrementBlockedCount();
             plugin.getLogManager().logBot(name, event.getAddress().getHostAddress(), 
@@ -303,8 +306,9 @@ public class BotProtectionModule extends AbstractModule implements Listener {
                     for (String similarName : similarPlayers) {
                          Player target = Bukkit.getPlayerExact(similarName);
                          if (target != null) {
+                             if (target.getAddress() == null || target.getAddress().getAddress() == null) continue;
                              performBan(target.getName(), target.getAddress().getAddress().getHostAddress());
-                             target.kickPlayer(ChatColor.RED + "Bot saldırısı şüphesi (Toplu işlem).");
+                             target.kick(plugin.getMessageManager().getMessage("antibot.kick-mesaji"));
                          }
                     }
                 }
@@ -334,8 +338,7 @@ public class BotProtectionModule extends AbstractModule implements Listener {
                 debug("Yerçekimi testi başlatıldı: " + player.getName());
             }
 
-            player.sendMessage(ChatColor.translateAlternateColorCodes('&', 
-                getConfigString("dogrulama.dogrulama-mesaji", "&cLütfen doğrulamak için hareket edin!")));
+            player.sendMessage(plugin.getMessageManager().getMessage("antibot.dogrulama-mesaji"));
 
             // Timeout scheduler
             int timeout = getConfigInt("dogrulama.sure", 30); // 15'ten 30'a çıkarıldı
@@ -343,12 +346,13 @@ public class BotProtectionModule extends AbstractModule implements Listener {
                 @Override
                 public void run() {
                     if (player.isOnline() && pendingVerification.contains(player.getUniqueId())) {
+                        if (player.getAddress() == null || player.getAddress().getAddress() == null) return;
                         handleOffense(player.getName(), player.getAddress().getAddress().getHostAddress());
-                        
+
                         // FP-10: 3-strike sistemi (handleOffense zaten banlıyor 2. veya 3. ihlalde)
                         int offenses = ipOffenseCount.getOrDefault(player.getAddress().getAddress().getHostAddress(), 0);
                         if (offenses < 3) {
-                            player.kickPlayer(ChatColor.RED + "Doğrulama zaman aşımı. (" + offenses + "/3)");
+                            player.kick(plugin.getMessageManager().getMessage("antibot.kick-mesaji"));
                         }
                     }
                 }
@@ -379,10 +383,10 @@ public class BotProtectionModule extends AbstractModule implements Listener {
                 // Verified!
                 pendingVerification.remove(player.getUniqueId());
                 // Reset offenses on successful verification
+                if (player.getAddress() == null || player.getAddress().getAddress() == null) return;
                 ipOffenseCount.remove(player.getAddress().getAddress().getHostAddress());
                 
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', 
-                    getConfigString("dogrulama.dogrulandi-mesaji", "&aDoğrulama başarılı!")));
+                player.sendMessage(plugin.getMessageManager().getMessage("antibot.dogrulandi-mesaji"));
             }
         }
     }
@@ -392,9 +396,9 @@ public class BotProtectionModule extends AbstractModule implements Listener {
         if (!isEnabled()) return;
         Player player = event.getPlayer();
         if (pendingVerification.remove(player.getUniqueId())) {
+            if (player.getAddress() == null || player.getAddress().getAddress() == null) return;
             ipOffenseCount.remove(player.getAddress().getAddress().getHostAddress());
-            player.sendMessage(ChatColor.translateAlternateColorCodes('&',
-                getConfigString("dogrulama.dogrulandi-mesaji", "&aDoğrulama başarılı!")));
+            player.sendMessage(plugin.getMessageManager().getMessage("antibot.dogrulandi-mesaji"));
         }
     }
 

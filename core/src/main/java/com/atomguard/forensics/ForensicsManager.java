@@ -121,7 +121,9 @@ public class ForensicsManager implements IForensicsService {
             snap.setAvgTps(plugin.getServer().getTPS()[0]);
             Runtime rt = Runtime.getRuntime();
             snap.setAvgMemoryUsageMb((rt.totalMemory() - rt.freeMemory()) / (1024 * 1024));
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            plugin.getLogger().warning("[Forensics] Başlangıç metrikleri alınamadı: " + e.getMessage());
+        }
 
         activeTimeline.clear();
         activeIpCounts.clear();
@@ -271,7 +273,9 @@ public class ForensicsManager implements IForensicsService {
 
             addTimelineEvent(new TimelineEvent(System.currentTimeMillis(), "METRIC_SNAPSHOT",
                 String.format("Bağlantı: %d | Engellenen: %d | TPS: %.1f", conns, blocked, tps)));
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            plugin.getLogger().warning("[Forensics] Metrik kaydı başarısız: " + e.getMessage());
+        }
     }
 
     private AttackClassification classifyAttack(AttackSnapshot s) {
@@ -320,7 +324,9 @@ public class ForensicsManager implements IForensicsService {
                     recentSnapshots.addLast(snap);
                     loaded++;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                plugin.getLogger().warning("[Forensics] Snapshot yüklenemedi (" + f.getName() + "): " + e.getMessage());
+            }
         }
         if (loaded > 0) plugin.getLogger().info("[Forensics] " + loaded + " snapshot yüklendi.");
     }
@@ -354,7 +360,9 @@ public class ForensicsManager implements IForensicsService {
             try {
                 String json = new String(Files.readAllBytes(files[0].toPath()), StandardCharsets.UTF_8);
                 return gson.fromJson(json, AttackSnapshot.class);
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                plugin.getLogger().warning("[Forensics] Disk snapshot okunamadı: " + e.getMessage());
+            }
         }
         return null;
     }

@@ -4,6 +4,8 @@ import com.atomguard.AtomGuard;
 import com.atomguard.api.module.IModule;
 import com.atomguard.api.module.IModuleManager;
 import com.atomguard.module.AbstractModule;
+import com.atomguard.module.BotProtectionModule;
+import com.atomguard.module.antibot.AntiBotModule;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -124,6 +126,20 @@ public class ModuleManager implements IModuleManager {
         }
 
         plugin.getLogger().info(enabledCount + " modül etkinleştirildi.");
+
+        // BotProtectionModule (deprecated) ile AntiBotModule çakışma kontrolü
+        BotProtectionModule legacy = getModule(BotProtectionModule.class);
+        AntiBotModule modern = getModule(AntiBotModule.class);
+        if (legacy != null && legacy.isEnabled() && modern != null && modern.isEnabled()) {
+            plugin.getLogger().warning(
+                "[ModuleManager] BotProtectionModule (legacy) devre dışı bırakıldı — AntiBotModule zaten aktif. " +
+                "İkisi aynı anda çalışırsa çift-kick/ban riski oluşur.");
+            try {
+                legacy.onDisable();
+            } catch (Exception e) {
+                plugin.getLogger().warning("[ModuleManager] BotProtectionModule deaktif edilirken hata: " + e.getMessage());
+            }
+        }
     }
 
     /**

@@ -222,7 +222,9 @@ public class IPReputationManager implements IReputationService {
             for (CidrRange range : blockedCidrRanges) {
                 if (range.contains(addr)) return true;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            plugin.getLogger().warning("[Anti-VPN] CIDR kontrol hatası (" + ip + "): " + e.getMessage());
+        }
         return false;
     }
 

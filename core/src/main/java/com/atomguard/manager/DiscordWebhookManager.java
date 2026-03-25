@@ -88,7 +88,9 @@ public class DiscordWebhookManager {
                                     tps, plugin.getServer().getOnlinePlayers().size()),
                             0xFFA500); // Orange
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                plugin.getLogManager().warning("Discord TPS izleme hatası: " + e.getMessage());
+            }
         }, 30, 30, TimeUnit.SECONDS);
 
         plugin.getLogger().info("Discord Webhook Manager baslatildi.");

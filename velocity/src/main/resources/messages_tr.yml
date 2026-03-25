@@ -7,31 +7,31 @@ prefix: "<gradient:#00d4ff:#00ff88>AtomGuard</gradient> <dark_gray>»</dark_gray
 
 kick:
   ddos: "<red>Sunucumuz şu anda saldırı altında. Lütfen daha sonra tekrar deneyin.</red>"
-  ddos-seviye: "<red>Sunucu <bold>{seviye}</bold> saldırı seviyesinde. Lütfen daha sonra tekrar deneyin.</red>"
+  ddos-seviye: "<red>Sunucu <bold><seviye></bold> saldırı seviyesinde. Lütfen daha sonra tekrar deneyin.</red>"
   ddos-subnet: "<red>Ağınızdan çok sayıda şüpheli bağlantı tespit edildi.</red>"
   ddos-parmak-izi: "<red>Bağlantı profili bot aktivitesiyle eşleşti.</red>"
   ddos-itibar: "<red>IP adresinizin güven puanı yetersiz. Lütfen daha sonra tekrar deneyin.</red>"
   ddos-slot: "<red>Saldırı modu aktif. Yalnızca doğrulanmış oyuncular bağlanabilir.</red>"
   bot: "<red>Bot olarak algılandınız. Lütfen daha sonra tekrar deneyin.</red>"
   vpn: "<red>VPN veya Proxy kullanımı bu sunucuda yasaktır.<br><gray>Hata ise yöneticiye başvurun.</gray>"
-  rate-limit: "<red>Çok fazla bağlantı isteği! <gray>Lütfen {sure} saniye sonra tekrar deneyin.</gray>"
-  trust-score: "<red>Bağlantı düşük güven skoru ({score}/{threshold}) nedeniyle reddedildi."
-  yasakli: "<red>IP adresiniz kara listede.<br><gray>Sebep: <white>{sebep}</white></gray>"
-  tempban: "<red>Geçici olarak engellendiniz.<br><gray>Kalan süre: <white>{sure}</white></gray>"
-  protocol: "<red>Desteklenmeyen oyun sürümü.<br><gray>İzin verilen: <white>{min} - {max}</white></gray>"
+  rate-limit: "<red>Çok fazla bağlantı isteği! <gray>Lütfen <sure> saniye sonra tekrar deneyin.</gray>"
+  trust-score: "<red>Bağlantı düşük güven skoru (<score>/<threshold>) nedeniyle reddedildi."
+  yasakli: "<red>IP adresiniz kara listede.<br><gray>Sebep: <white><sebep></white></gray>"
+  tempban: "<red>Geçici olarak engellendiniz.<br><gray>Kalan süre: <white><sure></white></gray>"
+  protocol: "<red>Desteklenmeyen oyun sürümü.<br><gray>İzin verilen: <white><min> - <max></white></gray>"
   genel: "<red>Bağlantı reddedildi. Lütfen daha sonra tekrar deneyin.</red>"
 
 # IPTables Entegrasyonu
 iptables:
-  ban-eklendi: "IPTables: {ip} adresi {sure} saniye için engellendi."
-  ban-kaldirildi: "IPTables: {ip} engeli kaldırıldı."
+  ban-eklendi: "IPTables: <ip> adresi <sure> saniye için engellendi."
+  ban-kaldirildi: "IPTables: <ip> engeli kaldırıldı."
   kullanilemiyor: "IPTables entegrasyonu kullanılamıyor (root yetkisi gerekli)."
-  hata: "IPTables komutu başarısız: {hata}"
+  hata: "IPTables komutu başarısız: <hata>"
 
 # Hesap Güvenlik Duvarı
 hesap-guvenlik-duvari:
-  hesap-yasakli: "Hesabınız yasaklandı. Sebep: {sebep}"
-  hesap-cok-yeni: "Hesabınız çok yeni. Minimum {gun} günlük hesap gerekli."
+  hesap-yasakli: "Hesabınız yasaklandı. Sebep: <sebep>"
+  hesap-cok-yeni: "Hesabınız çok yeni. Minimum <gun> günlük hesap gerekli."
   cracked-engel: "Bu sunucu yalnızca lisanslı hesaplara açıktır."
 
 # Hızlı Sohbet
@@ -44,7 +44,7 @@ hizli-sohbet:
 
 # Yeniden Bağlantı
 yeniden-baglanti:
-  delay: "<gray>Bağlantı kurulmadan önce {sure} saniye bekleniyor..."
+  delay: "<gray>Bağlantı kurulmadan önce <sure> saniye bekleniyor..."
   kick: "<red>Çok fazla bağlantı denemesi. Lütfen bekleyin."
   kisa-oturum: "<red>Çok sık giriş-çıkış yapıyorsunuz."
 
