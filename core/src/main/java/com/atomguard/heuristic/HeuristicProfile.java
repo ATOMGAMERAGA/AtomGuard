@@ -25,7 +25,7 @@ public class HeuristicProfile {
     // Suspicion System
     private double suspicionLevel; // 0.0 to 200.0
     private long lastSuspicionUpdate;
-    private static final double DECAY_RATE_PER_SECOND = 2.0;
+    private static final double DECAY_RATE_PER_SECOND = 5.0;
     private final AtomicInteger violationCount;
     private int rotationSpikes = 0;
     /** Ardışık spike aralık kontrolü için son spike zaman damgası */

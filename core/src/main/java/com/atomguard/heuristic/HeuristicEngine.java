@@ -89,7 +89,7 @@ public class HeuristicEngine {
             }
             if (profile.getRotationSpikes() >= maxSpikes) {
                 double oldScore = profile.getSuspicionLevel();
-                profile.addSuspicion(3.0);
+                profile.addSuspicion(1.5);
                 double newScore = profile.getSuspicionLevel();
                 
                 // Trigger Event (async-only event)
@@ -146,7 +146,7 @@ public class HeuristicEngine {
             // If variance is extremely low (e.g. < 5.0), it's likely a macro
             if (variance < minVariance && getAverage(samples) < maxAvgInterval) { // Fast clicking with no variance
                 double oldScore = profile.getSuspicionLevel();
-                profile.addSuspicion(8.0);
+                profile.addSuspicion(4.0);
                 double newScore = profile.getSuspicionLevel();
                 
                 // Trigger Event (async-only event)
@@ -162,7 +162,7 @@ public class HeuristicEngine {
     private void checkSuspicionLevel(Player player, HeuristicProfile profile) {
         double level = profile.getSuspicionLevel();
 
-        double kickThreshold = plugin.getConfig().getDouble("heuristic.kick-threshold", 150.0);
+        double kickThreshold = plugin.getConfig().getDouble("heuristic.kick-threshold", 300.0);
 
         if (level >= kickThreshold) {
             // Seviye 3: Kick

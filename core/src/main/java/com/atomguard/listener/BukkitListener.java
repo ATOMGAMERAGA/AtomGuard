@@ -125,6 +125,11 @@ public class BukkitListener implements Listener {
             plugin.getLogManager().debug("Oyuncu katıldı: " + player.getName());
         }
 
+        // Heuristic profili sıfırla — eski oturum puanları taşınmasın
+        if (plugin.getHeuristicEngine() != null) {
+            plugin.getHeuristicEngine().removeProfile(player.getUniqueId());
+        }
+
         // Record verified IP (player successfully joined)
         if (player.getAddress() != null && player.getAddress().getAddress() != null) {
             String ip = player.getAddress().getAddress().getHostAddress();

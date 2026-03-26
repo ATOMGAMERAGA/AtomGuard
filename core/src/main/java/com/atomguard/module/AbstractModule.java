@@ -144,10 +144,10 @@ public abstract class AbstractModule implements IModule {
                     case "redstone-limiter":
                     case "falling-block-limiter":
                     case "explosion-limiter":
-                        heuristicWeight = 0.1;
+                        heuristicWeight = 0.02;
                         break;
                     default:
-                        heuristicWeight = 0.5;
+                        heuristicWeight = 0.1;
                 }
                 plugin.getHeuristicEngine().getProfile(uuid).addSuspicion(heuristicWeight);
             }

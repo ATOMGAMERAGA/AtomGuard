@@ -3,6 +3,18 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.1.4] - 2026-03-26
+
+### 🐛 Bug Fixes
+
+- **Core — HeuristicEngine: false positive kicks ("Şüpheli davranış tespit edildi")**: Normal gameplay (PvP, building, mining) was triggering heuristic kicks due to multiple compounding issues:
+  - **Module violation weight too high**: Every `blockExploit()` call added 0.5 suspicion points per module block. With a 150.0 kick threshold, only 300 legitimate module blocks were needed to trigger a kick. Reduced default weight from 0.5 → 0.1 (limiters: 0.1 → 0.02).
+  - **Kick threshold too low**: Default 150.0 was easily reachable during normal play. Raised to 300.0.
+  - **Slow score decay**: Decay rate of 2.0 points/second meant 75 seconds of inactivity to clear a moderate score. Increased to 5.0 points/second (30 seconds to clear).
+  - **Rotation spike penalty too harsh**: +3.0 points per 8 consecutive rotation spikes. Reduced to 1.5.
+  - **Click variance penalty too harsh**: +8.0 points for low click variance. Reduced to 4.0.
+  - **Session score persistence**: Heuristic profile was not reset on player join, so scores from a previous session (or a kick-reconnect cycle) carried over. Added `removeProfile()` call on `PlayerJoinEvent` to ensure a fresh profile each session.
+
 ## [2.1.3] - 2026-03-26
 
 ### 🐛 Bug Fixes

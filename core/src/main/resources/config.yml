@@ -912,7 +912,7 @@ packet-forensics:
 # ═══════════════════════════════════════
 heuristic:
   action: "KICK"
-  kick-threshold: 150.0
+  kick-threshold: 300.0
   max-rotation-speed: 12.0
   max-rotation-spikes: 8
   min-spike-interval-ms: 150
