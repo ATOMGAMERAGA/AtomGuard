@@ -5,17 +5,9 @@ Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
 ## [2.1.2] - 2026-03-26
 
-### ✨ Yeni Özellikler
+### 🐛 Bug Fixes
 
-- 
-
-### 🔧 İyileştirmeler
-
-- 
-
-### 🐛 Hata Düzeltmeleri
-
-- 
+- **Core — TokenBucketModule: players kicked when breaking blocks**: Block interaction packets (`PLAYER_DIGGING`, `PLAYER_BLOCK_PLACEMENT`, `USE_ITEM`, `ANIMATION`, `INTERACT_ENTITY`) were classified into the catch-all "DIGER" (other) bucket with only 150 capacity / 60 tokens/sec refill. During Attack Mode (which auto-enables TokenBucketModule), normal block breaking quickly exhausted the shared bucket and triggered a kick at the −200 token threshold. Added a new `ETKILESIM` (interaction) bucket type with 300 capacity / 120 tokens/sec refill, separating legitimate gameplay interactions from the catch-all bucket while preserving flood protection for unknown packet types.
 
 ## [2.1.1] - 2026-03-25
 
