@@ -12,7 +12,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Entity Etkileşim Crash Koruması.
@@ -25,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class EntityInteractCrashModule extends AbstractModule {
 
-    private final Map<UUID, AtomicInteger> interactCounts = new ConcurrentHashMap<>();
+    private final Map<UUID, long[]> interactData = new ConcurrentHashMap<>();
     private double maxDistance;
     private int maxInteractPerSec;
 
@@ -47,8 +46,20 @@ public class EntityInteractCrashModule extends AbstractModule {
         if (!(event.getPlayer() instanceof Player player)) return;
         
         UUID uuid = player.getUniqueId();
-        int count = interactCounts.computeIfAbsent(uuid, k -> new AtomicInteger(0)).incrementAndGet();
-        
+        long now = System.currentTimeMillis();
+        long[] data = interactData.computeIfAbsent(uuid, k -> new long[]{0, now});
+
+        int count;
+        synchronized (data) {
+            if (now - data[1] > 1000) {
+                data[0] = 1;
+                data[1] = now;
+            } else {
+                data[0]++;
+            }
+            count = (int) data[0];
+        }
+
         if (count > maxInteractPerSec) {
             event.setCancelled(true);
             incrementBlockedCount();
@@ -66,12 +77,12 @@ public class EntityInteractCrashModule extends AbstractModule {
 
     @Override
     public void cleanup() {
-        interactCounts.clear();
+        interactData.clear();
     }
 
     @Override
     public void onDisable() {
         super.onDisable();
-        interactCounts.clear();
+        interactData.clear();
     }
 }

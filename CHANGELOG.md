@@ -3,6 +3,13 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.1.3] - 2026-03-26
+
+### 🐛 Bug Fixes
+
+- **Core — EntityInteractCrashModule: intermittent hit registration failure in PvP**: The per-player `INTERACT_ENTITY` packet counter was never reset per second — it accumulated indefinitely and only cleared every 5 minutes via the periodic `cleanup()` task. After just 20 total interactions (not per second as the `max-interactions-per-second` config implied), all subsequent attack packets were silently dropped, making PvP combat appear to randomly stop working. Replaced the unbounded `AtomicInteger` counter with a proper 1-second sliding window (`long[]` with count + timestamp), so the limit now correctly applies per second as intended.
+- **Core — TokenBucketModule: intermittent "Timed Out" kicks**: `KEEP_ALIVE` and `PONG` packets were not exempted from token bucket rate limiting, unlike the other three packet-filtering modules (`PacketExploitModule`, `PacketDelayModule`, `OfflinePacketModule`) which all had explicit exemptions. These critical connection-keepalive packets were classified into the "DIGER" (other) bucket (150 capacity / 60 tokens/sec). During high traffic, the bucket would deplete and silently drop keepalive responses, causing the server to kick the player after 30 seconds with "Timed Out". Added an early return for `KEEP_ALIVE` and `PONG` packets before any bucket processing.
+
 ## [2.1.2] - 2026-03-26
 
 ### 🐛 Bug Fixes

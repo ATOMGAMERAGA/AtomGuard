@@ -165,6 +165,12 @@ public class TokenBucketModule extends AbstractModule {
             return;
         }
 
+        // KEEP_ALIVE ve PONG paketleri asla rate limit'lenmez — timeout önleme
+        if (clientPacket == PacketType.Play.Client.KEEP_ALIVE
+                || clientPacket == PacketType.Play.Client.PONG) {
+            return;
+        }
+
         // CHAT_COMMAND paketleri için auth komut muafiyeti
         if (clientPacket == PacketType.Play.Client.CHAT_COMMAND) {
             try {
