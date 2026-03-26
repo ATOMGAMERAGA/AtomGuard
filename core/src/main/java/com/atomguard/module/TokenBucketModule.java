@@ -16,11 +16,12 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Token Bucket Rate Limiter Modülü
  *
- * Her oyuncu için 5 ayrı kova ile paket rate limiting uygular:
+ * Her oyuncu için 6 ayrı kova ile paket rate limiting uygular:
  * - HAREKET: Position, PositionRotation, Rotation paketleri
  * - SOHBET: Chat mesaj paketleri (komutlar HARİÇ)
  * - KOMUT: ChatCommand paketleri — auth komutları tamamen muaf
  * - ENVANTER: WindowClick, CreativeSlot, CloseWindow paketleri
+ * - ETKILESIM: PlayerDigging, BlockPlacement, UseItem, Animation, InteractEntity
  * - DIGER: Geri kalan tüm client→server paketleri
  *
  * Token ≤ 0 → paketi sessizce düşür (bilgi sızıntısı önleme)
@@ -33,7 +34,7 @@ public class TokenBucketModule extends AbstractModule {
 
     /** Kova türleri */
     private enum BucketType {
-        HAREKET, SOHBET, KOMUT, ENVANTER, DIGER
+        HAREKET, SOHBET, KOMUT, ENVANTER, ETKILESIM, DIGER
     }
 
     /** Hareket paketleri — PLAYER_FLYING dahil (client her tick gönderir) */
@@ -61,6 +62,15 @@ public class TokenBucketModule extends AbstractModule {
             PacketType.Play.Client.CLOSE_WINDOW
     );
 
+    /** Etkileşim paketleri — blok kırma, yerleştirme, entity etkileşimi */
+    private static final Set<PacketType.Play.Client> INTERACTION_PACKETS = Set.of(
+            PacketType.Play.Client.PLAYER_DIGGING,
+            PacketType.Play.Client.PLAYER_BLOCK_PLACEMENT,
+            PacketType.Play.Client.USE_ITEM,
+            PacketType.Play.Client.ANIMATION,
+            PacketType.Play.Client.INTERACT_ENTITY
+    );
+
     /** Oyuncu başına 5 kova — ConcurrentHashMap[UUID → BucketType → TokenBucket] */
     private final Map<UUID, Map<BucketType, TokenBucket>> playerBuckets = new ConcurrentHashMap<>();
 
@@ -73,6 +83,8 @@ public class TokenBucketModule extends AbstractModule {
     private long komutDolum;
     private long envanterKapasite;
     private long envanterDolum;
+    private long etkilesimKapasite;
+    private long etkilesimDolum;
     private long digerKapasite;
     private long digerDolum;
     private long floodKickThreshold;
@@ -120,6 +132,8 @@ public class TokenBucketModule extends AbstractModule {
         this.komutDolum = getConfigLong("buckets.command.dolum-saniye", 20L);
         this.envanterKapasite = getConfigLong("buckets.inventory.kapasite", 100L);
         this.envanterDolum = getConfigLong("buckets.inventory.dolum-saniye", 50L);
+        this.etkilesimKapasite = getConfigLong("buckets.interaction.kapasite", 300L);
+        this.etkilesimDolum = getConfigLong("buckets.interaction.dolum-saniye", 120L);
         this.digerKapasite = getConfigLong("buckets.other.kapasite", 150L);
         this.digerDolum = getConfigLong("buckets.other.dolum-saniye", 60L);
         this.floodKickThreshold = getConfigLong("flood-kick-threshold", -200L);
@@ -205,6 +219,7 @@ public class TokenBucketModule extends AbstractModule {
         if (CHAT_PACKETS.contains(packetType)) return BucketType.SOHBET;
         if (COMMAND_PACKETS.contains(packetType)) return BucketType.KOMUT;
         if (INVENTORY_PACKETS.contains(packetType)) return BucketType.ENVANTER;
+        if (INTERACTION_PACKETS.contains(packetType)) return BucketType.ETKILESIM;
         return BucketType.DIGER;
     }
 
@@ -228,6 +243,7 @@ public class TokenBucketModule extends AbstractModule {
             case SOHBET -> new TokenBucket(sohbetKapasite, sohbetDolum);
             case KOMUT -> new TokenBucket(komutKapasite, komutDolum);
             case ENVANTER -> new TokenBucket(envanterKapasite, envanterDolum);
+            case ETKILESIM -> new TokenBucket(etkilesimKapasite, etkilesimDolum);
             case DIGER -> new TokenBucket(digerKapasite, digerDolum);
         };
     }

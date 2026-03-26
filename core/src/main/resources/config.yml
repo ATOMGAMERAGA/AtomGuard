@@ -309,6 +309,9 @@ modules:
       inventory:
         kapasite: 100
         dolum-saniye: 50
+      interaction:
+        kapasite: 300
+        dolum-saniye: 120
       other:
         kapasite: 150
         dolum-saniye: 60

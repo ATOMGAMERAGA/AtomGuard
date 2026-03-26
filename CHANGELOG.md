@@ -3,6 +3,20 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.1.2] - 2026-03-26
+
+### ✨ Yeni Özellikler
+
+- 
+
+### 🔧 İyileştirmeler
+
+- 
+
+### 🐛 Hata Düzeltmeleri
+
+- 
+
 ## [2.1.1] - 2026-03-25
 
 ### 🐛 Bug Fixes
