@@ -158,7 +158,7 @@ pipeline {
                         echo "✅ Artifact'lar doğrulandı:"
                         echo "   Core     : ${env.CORE_JAR} (\$(du -h ${env.CORE_JAR} | cut -f1))"
                         echo "   Velocity : ${env.VELOCITY_JAR} (\$(du -h ${env.VELOCITY_JAR} | cut -f1)) ← Embedded Limbo"
-                        echo "   API      : ${env.API_JAR:-Bulunamadı} \$([ -n '${env.API_JAR}' ] && du -h ${env.API_JAR} | cut -f1 || echo '')"
+                        echo "   API      : ${env.API_JAR ?: 'Bulunamadı'} \$([ -n '${env.API_JAR ?: ''}' ] && du -h '${env.API_JAR ?: ''}' | cut -f1 || echo '')"
                         echo ""
                         echo "ℹ️  NOT: Velocity JAR içinde embedded Limbo bulunur. Ayrı limbo JAR BEKLENMEZ."
                     """
