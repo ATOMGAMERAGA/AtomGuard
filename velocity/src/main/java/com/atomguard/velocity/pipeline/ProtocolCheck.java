@@ -30,9 +30,11 @@ public class ProtocolCheck implements ConnectionCheck {
         ProtocolValidationModule.ValidationResult result = module.validateHandshake(ctx.ip(), ctx.hostname(), ctx.port(), ctx.protocol());
         
         if (!result.valid()) {
+            // Protokol numarasını kick mesajına ekle — debug ve admin için yararlı
             return CheckResult.softDeny(
                 plugin.getMessageManager().buildKickMessage("kick.protocol",
-                    Map.of("min", "1.21.4", "max", "1.21.4")),
+                    Map.of("sebep", result.reason(),
+                           "protokol", String.valueOf(ctx.protocol()))),
                 name(),
                 result.reason()
             );

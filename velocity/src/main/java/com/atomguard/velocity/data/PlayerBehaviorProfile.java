@@ -1,7 +1,7 @@
 package com.atomguard.velocity.data;
 
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerBehaviorProfile {
     private final String ip;
@@ -10,7 +10,9 @@ public class PlayerBehaviorProfile {
     private int failedChecks = 0;
     private long firstSeen;
     private long lastSeen;
-    private final Set<String> usedUsernames = new HashSet<>();
+    // ConcurrentHashMap.newKeySet(): thread-safe Set — recordSession() birden fazla
+    // Netty thread'inden çağrılabilir; HashSet race condition / CME riskini önler.
+    private final Set<String> usedUsernames = ConcurrentHashMap.newKeySet();
     private String lastCountry;
     /**
      * Offline-mode sunucularda farklı kullanıcı adı penaltısını devre dışı bırakır.
@@ -39,7 +41,14 @@ public class PlayerBehaviorProfile {
     // Trust Score: 0-100 (davranışa dayalı güven)
     public int calculateTrustScore() {
         int score = 50; // Başlangıç (nötr)
-        
+
+        // İlk giriş bonusu: tamamen yeni bir oyuncuya 5 puan ek güven ver.
+        // trust-score-threshold yanlışlıkla yüksek (ör. 55) ayarlanmış olsa bile
+        // yeni oyuncuların kicklenmemesini garanti eder.
+        if (totalSessions == 0 && successfulLogins == 0 && failedChecks == 0) {
+            score += 5; // → 55: varsayılan eşik (5) içinde güvenle geçer
+        }
+
         score += Math.min(25, successfulLogins * 3);  // Başarılı girişler güveni artırır
         // Violation cezası yumuşatıldı: 8→5, max 40→30
         // Rate limit ve throttle gibi geçici olaylar da violation olarak kaydediliyordu;
@@ -47,9 +56,11 @@ public class PlayerBehaviorProfile {
         score -= Math.min(30, failedChecks * 5);
 
         if (totalSessions > 20) score += 15;           // Sadık kullanıcı bonusu
-        // Offline-mode'da aynı IP'den farklı isimle giriş normaldir (aile, cracked launcher)
+        // Offline-mode'da aynı IP'den farklı isimle giriş normaldir (aile, cracked launcher).
+        // offlineModeLenient flag'i TrustScoreCheck'ten önce set edilmemiş olabilir;
+        // bu durumda penaltı uygulanmamalı (false olduğunda sadece gerçekten online-mode demektir).
         if (!offlineModeLenient && usedUsernames.size() > 6) score -= 10; // eşik: 3→6, ceza: 20→10
-        
+
         long ageDays = (System.currentTimeMillis() - firstSeen) / 86_400_000L;
         score += (int) Math.min(10, ageDays);          // Hesap yaşı bonusu
 

@@ -181,7 +181,9 @@ public class AttackLevelManager {
             case NONE, ELEVATED -> true;
             case HIGH      -> isVerified || deterministicAllow(ip, 40);
             case CRITICAL  -> isVerified;
-            case LOCKDOWN  -> false; // VerifiedPlayerShield ayrı slot yönetir
+            // LOCKDOWN: verified oyuncular geçer, VerifiedPlayerShield AYRICA slot kontrolü yapar.
+            // Eski: false — bu verified dahil HERKESi engelliyordu; Shield'ın slot mantığı boşa gidiyordu.
+            case LOCKDOWN  -> isVerified;
         };
     }
 

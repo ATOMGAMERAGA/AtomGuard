@@ -79,7 +79,7 @@ public class SmartLagModule extends AbstractModule implements Listener {
             plugin.getServer().getScheduler().cancelTask(watchdogTaskId);
             watchdogTaskId = -1;
         }
-        HandlerList.unregisterAll(this);
+        // HandlerList.unregisterAll(this) — super.onDisable() zaten çağırıyor, gereksiz tekrar kaldırıldı
         frozenChunks.clear();
     }
 

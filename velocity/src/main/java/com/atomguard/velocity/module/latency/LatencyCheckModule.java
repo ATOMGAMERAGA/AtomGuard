@@ -44,6 +44,13 @@ public class LatencyCheckModule extends VelocityModule {
     public void onLogin(LoginEvent event) {
         if (!isEnabled()) return;
         String ip = event.getPlayer().getRemoteAddress().getAddress().getHostAddress();
+
+        // Verified oyuncuları latency kontrolünden muaf tut.
+        // Pipeline izin verdiği oyuncu bu modül tarafından kicklenmemeli.
+        if (plugin.getVerificationModule() != null && plugin.getVerificationModule().isEnabled()
+                && plugin.getVerificationModule().isVerified(ip)) return;
+        if (plugin.getAntiBotModule() != null && plugin.getAntiBotModule().isVerified(ip)) return;
+
         long duration = tracker.recordLogin(ip);
 
         if (duration != -1) {

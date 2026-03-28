@@ -95,15 +95,19 @@ public class JoinPatternDetector {
 
     /**
      * Join pattern skoru — yumuşatılmış değerler.
-     * rapid=30 (önceden 40), quitter=15 (önceden 20), ikisi birden=50.
+     * rapid=30, quitter=15, ikisi birden=50.
+     * Max 60 ile sınırlandırılmıştır: tek başına bu skor flagCount=1 ile
+     * orta/yüksek risk tetikleyememeli.
      */
     public int getJoinScore(String ip) {
         boolean rapid = isRapidJoiner(ip);
         boolean quitter = isFrequentQuitter(ip);
-        if (rapid && quitter) return 50;
-        if (rapid) return 30;
-        if (quitter) return 15;
-        return 0;
+        int raw;
+        if (rapid && quitter) raw = 50;
+        else if (rapid) raw = 30;
+        else if (quitter) raw = 15;
+        else raw = 0;
+        return Math.min(60, raw); // Tek skor ile false positive önleme
     }
 
     private void pruneOld(Deque<Long> times, long now) {

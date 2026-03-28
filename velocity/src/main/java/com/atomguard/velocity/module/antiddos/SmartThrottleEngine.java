@@ -102,7 +102,9 @@ public class SmartThrottleEngine {
             case ELEVATED -> carefulLimit;
             case HIGH     -> isVerified ? carefulLimit : aggressiveLimit;
             case CRITICAL -> isVerified ? aggressiveLimit : Math.max(1, aggressiveLimit / 2);
-            case LOCKDOWN -> isVerified ? lockdownLimit : 0;
+            // LOCKDOWN: verified oyuncular için minimum 5 garantisi.
+            // lockdownLimit=0 veya çok düşük ayarlanmışsa bile verified bağlanabilmeli.
+            case LOCKDOWN -> isVerified ? Math.max(5, lockdownLimit) : 0;
         };
     }
 

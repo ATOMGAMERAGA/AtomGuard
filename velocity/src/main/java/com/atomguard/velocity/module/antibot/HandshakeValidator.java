@@ -81,9 +81,15 @@ public class HandshakeValidator {
                 && !extraProtocols.contains(protocolVersion))
             return new ValidationResult(false, "Bilinmeyen protokol: " + protocolVersion);
         if (username != null) {
-            if (username.length() < 3 || username.length() > 16)
+            // Bedrock/Floodgate prefix temizle (ör: ".BedrockPlayer" → "BedrockPlayer")
+            // "." veya "*" ile başlayan isimler Floodgate'in standart prefix'leridir.
+            String checkName = username;
+            if (checkName.startsWith(".") || checkName.startsWith("*")) {
+                checkName = checkName.substring(1);
+            }
+            if (checkName.length() < 3 || checkName.length() > 16)
                 return new ValidationResult(false, "Geçersiz kullanıcı adı uzunluğu");
-            if (!username.matches("[a-zA-Z0-9_]+"))
+            if (!checkName.matches("[a-zA-Z0-9_]+"))
                 return new ValidationResult(false, "Geçersiz kullanıcı adı karakterleri");
         }
         return new ValidationResult(true, "ok");

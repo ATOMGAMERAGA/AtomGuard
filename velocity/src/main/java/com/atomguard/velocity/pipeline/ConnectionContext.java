@@ -1,6 +1,7 @@
 package com.atomguard.velocity.pipeline;
 
 import java.util.UUID;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Gelen bağlantının bağlam bilgileri.
@@ -17,8 +18,6 @@ public record ConnectionContext(
     int protocol,
     boolean verified
 ) {
-    public @interface Nullable {}
-
     /** Geriye uyumluluk: verified=false ile oluşturur. */
     public ConnectionContext(String ip, String username, UUID uuid, String hostname, int port, int protocol) {
         this(ip, username, uuid, hostname, port, protocol, false);

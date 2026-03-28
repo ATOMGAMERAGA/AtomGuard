@@ -132,11 +132,20 @@ public class VerifiedPlayerShield {
 
     /**
      * IP daha önce başarıyla giriş yapmış mı?
-     * AntiBot modülünün verified cache'ini kullanır.
+     * VerificationModule (limbo) önce kontrol edilir, yoksa AntiBot fallback.
      */
     private boolean isVerified(String ip) {
-        if (plugin.getAntiBotModule() == null) return false;
-        return plugin.getAntiBotModule().isVerified(ip);
+        // 1. VerificationModule (limbo sistemi) — aktifse öncelik buradadır
+        if (plugin.getVerificationModule() != null
+                && plugin.getVerificationModule().isEnabled()
+                && plugin.getVerificationModule().isVerified(ip)) {
+            return true;
+        }
+        // 2. Fallback: AntiBot modülü verified cache
+        if (plugin.getAntiBotModule() != null) {
+            return plugin.getAntiBotModule().isVerified(ip);
+        }
+        return false;
     }
 
     // ────────────────────────────────────────────────────────

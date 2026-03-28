@@ -28,7 +28,14 @@ public class BehaviorManager {
     }
 
     public PlayerBehaviorProfile getProfile(String ip) {
-        return profiles.computeIfAbsent(ip, PlayerBehaviorProfile::new);
+        return profiles.computeIfAbsent(ip, k -> {
+            PlayerBehaviorProfile p = new PlayerBehaviorProfile(k);
+            // Profil oluşturulurken offline-mode flag'ini hemen set et.
+            // recordLogin()'i beklemeden TrustScoreCheck'e doğru flag iletilir.
+            boolean offlineMode = plugin.getConfigManager().getBoolean("general.offline-mode", false);
+            p.setOfflineModeLenient(offlineMode);
+            return p;
+        });
     }
 
     public java.util.Collection<PlayerBehaviorProfile> getAllProfiles() {

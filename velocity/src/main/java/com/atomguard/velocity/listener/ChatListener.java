@@ -20,6 +20,10 @@ public class ChatListener {
 
     @Subscribe(order = PostOrder.EARLY)
     public void onChat(PlayerChatEvent event) {
+        // FastChatModule aktifse sohbet kontrolünü ona bırak — çift kontrol önleme.
+        // İki ayrı rate limiter aynı anda çalışırsa tutarsız davranış oluşur.
+        if (plugin.getFastChatModule() != null && plugin.getFastChatModule().isEnabled()) return;
+
         ProxyExploitModule exploit = plugin.getExploitModule();
         if (exploit == null) return;
 

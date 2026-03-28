@@ -56,8 +56,7 @@ public class ShulkerByteModule extends AbstractModule implements Listener {
     @Override
 
     public void onDisable() {
-        super.onDisable();
-        HandlerList.unregisterAll(this);
+        super.onDisable(); // HandlerList.unregisterAll(this) zaten super içinde
         debug("Shulker byte modülü durduruldu.");
     }
 

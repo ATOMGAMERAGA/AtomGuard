@@ -69,8 +69,7 @@ public class RedstoneLimiterModule extends AbstractModule implements Listener {
     @Override
 
     public void onDisable() {
-        super.onDisable();
-        HandlerList.unregisterAll(this);
+        super.onDisable(); // HandlerList.unregisterAll(this) zaten super içinde
 
         if (resetTaskId != -1) {
             plugin.getServer().getScheduler().cancelTask(resetTaskId);

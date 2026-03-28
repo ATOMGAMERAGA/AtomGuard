@@ -34,10 +34,9 @@ public class AntiBotCheck implements ConnectionCheck {
     public @NotNull CheckResult check(@NotNull ConnectionContext ctx) {
         VelocityAntiBotModule antiBot = plugin.getAntiBotModule();
 
-        // Verified player bypass (pipeline seviyesinde de korunuyor, ama ikinci savunma hattı)
-        if (antiBot.isVerified(ctx.ip())) {
-            return CheckResult.allowed();
-        }
+        // Verified bypass: skipForVerified()=true ile pipeline seviyesinde ve
+        // VerifiedBypassCheck (priority=11) tarafından zaten yönetiliyor.
+        // Burada ikinci kez kontrol etmeye gerek yok — log kirliliği azaltır.
 
         // Nickname kontrolü — ephemeral ThreatScore yerine direkt deny
         if (antiBot.isNicknameBlocked(ctx.username())) {

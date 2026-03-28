@@ -119,13 +119,16 @@ public class ThreatScore {
     public int getAnalysisCount() { return analysisCount; }
     public long getLastUpdateTime() { return lastUpdateTime; }
 
-    public void setConnectionRateScore(int score) { this.connectionRateScore = Math.min(100, Math.max(0, score)); }
-    public void setHandshakeScore(int score) { this.handshakeScore = Math.min(100, Math.max(0, score)); }
-    public void setBrandScore(int score) { this.brandScore = Math.min(100, Math.max(0, score)); }
-    public void setJoinPatternScore(int score) { this.joinPatternScore = Math.min(100, Math.max(0, score)); }
-    public void setUsernameScore(int score) { this.usernameScore = Math.min(100, Math.max(0, score)); }
-    public void setGeoScore(int score) { this.geoScore = Math.min(100, Math.max(0, score)); }
-    public void setProtocolScore(int score) { this.protocolScore = Math.min(100, Math.max(0, score)); }
+    // synchronized: setter → calculate() arası race condition.
+    // Thread A setConnectionRateScore() → Thread B resetForNewAnalysis() → Thread A calculate() → yanlış skor.
+    // resetForNewAnalysis() ve calculate() zaten synchronized; setter'lar da olmalı.
+    public synchronized void setConnectionRateScore(int score) { this.connectionRateScore = Math.min(100, Math.max(0, score)); }
+    public synchronized void setHandshakeScore(int score) { this.handshakeScore = Math.min(100, Math.max(0, score)); }
+    public synchronized void setBrandScore(int score) { this.brandScore = Math.min(100, Math.max(0, score)); }
+    public synchronized void setJoinPatternScore(int score) { this.joinPatternScore = Math.min(100, Math.max(0, score)); }
+    public synchronized void setUsernameScore(int score) { this.usernameScore = Math.min(100, Math.max(0, score)); }
+    public synchronized void setGeoScore(int score) { this.geoScore = Math.min(100, Math.max(0, score)); }
+    public synchronized void setProtocolScore(int score) { this.protocolScore = Math.min(100, Math.max(0, score)); }
 
     /**
      * Yüksek risk: hem skor >= 75 hem en az 3 farklı kategoride şüpheli davranış.

@@ -169,8 +169,14 @@ public class ConnectionListener {
         if (plugin.getExploitModule() != null) plugin.getExploitModule().onPlayerLeave(uuid);
         if (plugin.getAntiBotModule() != null && plugin.getAntiBotModule().isCaptchaEnabled())
             plugin.getAntiBotModule().getCaptcha().onPlayerLeave(uuid);
-        
+
         if (plugin.getConnectionHistory() != null) plugin.getConnectionHistory().recordLogout(uuid);
+
+        // VerifiedPlayerShield slot serbest bırakma:
+        // onConnectionClosed çağrılmazsa slotsInUse sürekli artar → saatler sonra verified da giremez.
+        if (plugin.getDdosModule() != null) {
+            plugin.getDdosModule().onConnectionClosed(ip, "player-disconnect");
+        }
     }
 
     @Subscribe

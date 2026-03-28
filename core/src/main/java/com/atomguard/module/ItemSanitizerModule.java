@@ -66,8 +66,7 @@ public class ItemSanitizerModule extends AbstractModule implements Listener {
     @Override
 
     public void onDisable() {
-        super.onDisable();
-        HandlerList.unregisterAll(this);
+        super.onDisable(); // HandlerList.unregisterAll(this) zaten super içinde
         debug("Item sanitizer durduruldu.");
     }
 

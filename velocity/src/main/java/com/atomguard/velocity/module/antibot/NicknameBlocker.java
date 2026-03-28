@@ -58,6 +58,18 @@ public class NicknameBlocker {
             return NicknameCheckResult.allowed();
         }
 
+        // Bedrock/Floodgate prefix muafiyeti: ".BedrockPlayer" gibi isimler geçerli.
+        // ozel-karakter-engel=true regex kontrolü bu isimleri yanlışlıkla engellerdi.
+        String bedrockPrefix = plugin.getConfigManager().getString(
+                "modules.bot-protection.nick-engelleme.bedrock-prefix", ".");
+        if (bedrockPrefix != null && !bedrockPrefix.isEmpty() && username.startsWith(bedrockPrefix)) {
+            String javaName = username.substring(bedrockPrefix.length());
+            if (javaName.length() >= minLength && javaName.length() <= maxLength
+                    && javaName.matches("[a-zA-Z0-9_]+")) {
+                return NicknameCheckResult.allowed(); // Geçerli Bedrock ismi
+            }
+        }
+
         if (username.length() < minLength) return NicknameCheckResult.blocked("Çok kısa");
         if (username.length() > maxLength) return NicknameCheckResult.blocked("Çok uzun");
 

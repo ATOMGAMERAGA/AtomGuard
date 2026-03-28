@@ -40,10 +40,8 @@ public class DuplicationFixModule extends AbstractModule implements Listener {
     }
 
     @Override
-
     public void onDisable() {
-        super.onDisable();
-        HandlerList.unregisterAll(this);
+        super.onDisable(); // HandlerList.unregisterAll(this) zaten super içinde
     }
 
     // --- Portal / Teleport Dupe Fixes ---
@@ -70,7 +68,11 @@ public class DuplicationFixModule extends AbstractModule implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!isEnabled()) return;
-        
+
+        // Geçersiz slot kontrolü: dış tıklama (slot=-1), cursor slot vb.
+        // Aksi hâlde ArrayIndexOutOfBoundsException riski var.
+        if (event.getRawSlot() < 0 || event.getSlot() < 0) return;
+
         // Sadece Shulker Box envanterinde işlem yapılırken
         if (event.getInventory().getType() != InventoryType.SHULKER_BOX) return;
 

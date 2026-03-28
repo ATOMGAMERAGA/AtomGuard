@@ -65,6 +65,7 @@ modules:
       sadece-sayi-engel: true
       ozel-karakter-engel: true
       buyuk-harf-esik: 10
+      bedrock-prefix: "."   # Floodgate/Bedrock oyuncu prefix'i — bu ile başlayanlar özel karakter kontrolünden muaf
       tam-eslesme: []
       prefix-listesi: []
       suffix-listesi: []
@@ -185,6 +186,62 @@ modules:
       - "cp"
   account-firewall:
     enabled: true
+
+  # ══════════════════════════════════════════════════════════════
+  # Opsiyonel Modüller — VARSAYILAN KAPALI
+  # Bu modüller config'de tanımlı değilse VelocityModule.isConfigActive()
+  # varsayılan=true döndürür ve sessizce aktif olur. Aşağıdaki tanımlar
+  # bunları varsayılan kapalı yapar. Manuel olarak enable: true yapın.
+  # ══════════════════════════════════════════════════════════════
+
+  yeniden-baglanti-kontrol:
+    enabled: false   # Manuel olarak aktifleştirin
+    hizli-yeniden-baglanti:
+      aktif: true
+      cooldown-saniye: 5       # 10 → 5: daha toleranslı (sunucu geçişlerinde UX)
+    crash-dongu-tespit:
+      aktif: true
+      esik-sayisi: 5           # 3 → 5: sunucu restart'larında false positive önleme
+      pencere-saniye: 60       # 30 → 60: daha geniş pencere
+      aksiyon: "flag"          # "kick" → "flag": varsayılan güvenli
+    kisa-oturum-tespit:
+      aktif: true
+      min-oturum-saniye: 3
+    aksiyon-mesaji:
+      delay: "<gray>Bağlantı kurulmadan önce {sure} saniye bekleniyor..."
+      kick: "<red>Çok fazla yeniden bağlantı girişimi."
+
+  gecikme-kontrol:
+    enabled: false   # Manuel olarak aktifleştirin
+    handshake-login-suresi:
+      minimum-ms: 0            # 5 → 0: lokal proxy/veri merkezi false positive önleme
+      maksimum-ms: 30000
+      aksiyon-hizli: "flag"    # "kick" → "flag": varsayılan güvenli
+      aksiyon-yavas: "flag"    # "kick" → "flag": varsayılan güvenli
+
+  hizli-sohbet-kontrol:
+    enabled: false   # Manuel olarak aktifleştirin
+    mesaj-hizi:
+      saniyede-max: 3.0
+      burst-izin: 5.0
+    tekrar-mesaj:
+      aktif: true
+      hatirlama-sayisi: 5
+    pattern-analiz:
+      aktif: true
+      buyuk-harf-yuzde: 80
+      minimum-uzunluk: 5
+      tekrar-karakter-esik: 5
+      link-engel: false
+    mesajlar:
+      rate-limit: "<red>Çok hızlı mesaj gönderiyorsunuz!"
+      tekrar-mesaj: "<red>Aynı mesajı tekrar gönderemezsiniz!"
+
+  password-check:
+    enabled: false   # Manuel olarak aktifleştirin
+
+  ulke-filtreleme:
+    enabled: false   # Manuel olarak aktifleştirin (GeoIP DB gerektirir)
 
   # ══════════════════════════════════════════════════════════════
   # Sonar-Tarzı Limbo Doğrulama (v2.2.0+)

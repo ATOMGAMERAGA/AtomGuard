@@ -58,7 +58,17 @@ public class ReconnectControlModule extends VelocityModule {
         if (!isEnabled()) return;
 
         String ip = event.getConnection().getRemoteAddress().getAddress().getHostAddress();
-        
+
+        // Verified oyuncular cooldown/crash-loop kontrolünden muaf.
+        // Sunucu restart sonrası verified oyuncuların cooldown'a takılmaması için.
+        boolean isVerified = false;
+        if (plugin.getVerificationModule() != null && plugin.getVerificationModule().isEnabled()) {
+            isVerified = plugin.getVerificationModule().isVerified(ip);
+        } else if (plugin.getAntiBotModule() != null) {
+            isVerified = plugin.getAntiBotModule().isVerified(ip);
+        }
+        if (isVerified) return;
+
         // 1. Cooldown Check
         if (getConfigBoolean("hizli-yeniden-baglanti.aktif", true)) {
             long cooldown = getConfigLong("hizli-yeniden-baglanti.cooldown-saniye", 10) * 1000;

@@ -11,9 +11,11 @@ public class ConnectionPipeline {
 
     private final CopyOnWriteArrayList<ConnectionCheck> checks = new CopyOnWriteArrayList<>();
 
-    public void addCheck(@NotNull ConnectionCheck check) {
-        checks.add(check);
+    public synchronized void addCheck(@NotNull ConnectionCheck check) {
+        // synchronized: checks.clear() ile checks.addAll() arasında process() çağrılırsa
+        // boş listeyle karşılaşır — hiçbir check çalışmaz. Atomik güncelleme zorunlu.
         List<ConnectionCheck> sorted = new ArrayList<>(checks);
+        sorted.add(check);
         sorted.sort(Comparator.comparingInt(ConnectionCheck::priority));
         checks.clear();
         checks.addAll(sorted);

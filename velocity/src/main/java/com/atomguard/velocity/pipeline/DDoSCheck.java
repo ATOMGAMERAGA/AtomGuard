@@ -2,7 +2,6 @@ package com.atomguard.velocity.pipeline;
 
 import com.atomguard.velocity.AtomGuardVelocity;
 import com.atomguard.velocity.module.antiddos.DDoSProtectionModule;
-import com.atomguard.velocity.module.antibot.VelocityAntiBotModule;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
@@ -43,17 +42,10 @@ public class DDoSCheck implements ConnectionCheck {
         DDoSProtectionModule ddos = plugin.getDdosModule();
         if (ddos == null) return CheckResult.allowed();
 
-        // ── isVerified bug düzeltmesi ───────────────────────────────────
-        // Eski: ddos.checkConnection(ctx.ip(), false)  ← HER ZAMAN false!
-        // Yeni: AntiBot modülünden doğru verified durumu al
-        boolean isVerified = false;
-        VelocityAntiBotModule antiBot = plugin.getAntiBotModule();
-        if (antiBot != null) {
-            isVerified = antiBot.isVerified(ctx.ip());
-        }
-
+        // ctx.verified() ConnectionListener.onPreLogin() içinde VerificationModule+AntiBot'tan
+        // doğru şekilde set ediliyor — burada tekrar kontrol etmeye gerek yok.
         DDoSProtectionModule.ConnectionCheckResult result =
-                ddos.checkConnection(ctx.ip(), isVerified);
+                ddos.checkConnection(ctx.ip(), ctx.verified());
 
         if (!result.allowed()) {
             // Geo engelleme için özel audit log

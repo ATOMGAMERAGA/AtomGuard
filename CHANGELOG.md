@@ -3,6 +3,60 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.2.1] - 2026-03-28
+
+### 🔧 Improvements
+
+- **Velocity — `PlayerBehaviorProfile`: `usedUsernames` set is now thread-safe**: The field was backed by a plain `HashSet`. `recordSession()` can be called from multiple Netty I/O threads simultaneously (each pre-login event arrives on a different thread), creating a risk of `ConcurrentModificationException` or silent data corruption. Replaced with `ConcurrentHashMap.newKeySet()`, which provides the same `Set` contract with full thread safety at zero contention cost.
+
+- **Velocity — `PlayerBehaviorProfile.calculateTrustScore()`: new-player first-login bonus**: Brand-new players (no sessions, no logins, no violations) start with score 50. If `trust-score-threshold` is ever misconfigured above 50, every new player is denied before they can build any history. Added a +5 bonus applied only to completely fresh profiles, raising the guaranteed floor to 55 and providing a safe buffer against accidental misconfiguration.
+
+- **Velocity — `BehaviorManager.getProfile()`: `offlineModeLenient` set at profile creation time**: Previously the flag was set only inside `recordLogin()`, which is called *after* `TrustScoreCheck` already ran. A fresh profile therefore always had `offlineModeLenient = false`, making the multi-account username penalty fire on offline-mode servers even when it should have been suppressed. Now the config is read once at profile instantiation so the flag is correct before any pipeline check consults the score.
+
+- **Velocity — `ThreatScore` setters are now `synchronized`**: `resetForNewAnalysis()` and `calculate()` were already `synchronized`, but individual setters (e.g. `setConnectionRateScore()`) were not. Under concurrent analysis of the same IP: Thread A sets a score → Thread B resets → Thread A calls `calculate()` — resulting in a corrupted total that could trigger a false-positive block or silently suppress a real threat. All seven setters are now `synchronized` on the same monitor as `calculate()`.
+
+- **Velocity — `AttackLevelManager.shouldAllowConnection()`: LOCKDOWN no longer blocks verified players**: The `LOCKDOWN` case previously returned `false` unconditionally, with a comment claiming `VerifiedPlayerShield` handles verified players separately. In practice the call order in `DDoSProtectionModule.checkConnection()` is Shield first, then `shouldAllowConnection()`. The level manager's blanket `false` overrode the Shield's approval, meaning verified players were rejected during LOCKDOWN regardless of slot availability. Changed to `isVerified` — matching the `CRITICAL` case.
+
+- **Velocity — `SmartThrottleEngine`: LOCKDOWN verified-player limit has a hard minimum of 5**: `getLimitForLevel()` returned `lockdownLimit` for verified players under LOCKDOWN. If `lockdownLimit` was set to 0 or 1 in config, verified players could still be throttled out. The value is now `Math.max(5, lockdownLimit)`, guaranteeing that at least 5 reconnect attempts per 60-second window are allowed even during the strictest attack mode.
+
+- **Velocity — `VerifiedPlayerShield.isVerified()`: consults `VerificationModule` first**: Previously only checked `VelocityAntiBotModule.isVerified()`. Players verified via the Limbo system (`VerificationModule`) were not recognized by the Shield during CRITICAL/LOCKDOWN, causing them to be denied slots despite having completed the physics challenge. Now checks VerificationModule when enabled, with AntiBot as fallback.
+
+- **Velocity — `DDoSProtectionModule.checkConnection()`: CPS counter excludes verified connections**: `synFloodDetector.recordConnection(ip)` was called for every incoming connection, including verified players. Fifty verified players reconnecting simultaneously after a server restart could push the CPS counter above the attack threshold, escalating the attack level artificially and triggering unnecessary lockdown for unrelated new players. Verified connections are now excluded from the CPS count.
+
+- **Velocity — `DDoSProtectionModule`: verified players do not receive attack-mode reputation penalties**: `reputationTracker.recordAttackConnection(ip)` was called for all connections during attack mode. Verified players reconnecting during an attack were penalized, eventually getting close to the auto-ban threshold despite being legitimate users. Penalty is now skipped when `isVerified` is true.
+
+- **Velocity — `ConnectionListener.onDisconnect()`: `VerifiedPlayerShield` slot released on player quit**: `VerifiedPlayerShield.onConnectionClosed()` decrements `slotsInUse` but was never called from the disconnect listener. Slots only grew, never shrank. After enough players logged out and back in during a CRITICAL/LOCKDOWN event, `slotsInUse` would reach `guaranteedSlots` and all subsequent verified connections would be denied with "slot full". `plugin.getDdosModule().onConnectionClosed(ip, "player-disconnect")` is now called on every `DisconnectEvent`.
+
+- **Velocity — Five modules default to `enabled: false` in `config.yml`**: `ReconnectControlModule`, `LatencyCheckModule`, `FastChatModule`, `PasswordCheckModule`, and `CountryFilterModule` had no `modules.<name>.enabled` key in `config.yml`. `VelocityModule.isConfigActive()` defaults to `true` when the key is absent, so all five were silently active on every fresh install — imposing reconnect cooldowns, latency-based kicks, and chat rate limits without the admin's knowledge. Explicit `enabled: false` sections have been added for each.
+
+- **Velocity — `ReconnectControlModule`: verified players bypass cooldown and crash-loop detection**: Pre-login listener had no verified-player check. Verified players reconnecting after a server restart hit the 10-second reconnect cooldown or were flagged as crash-loop clients. Added verified bypass via VerificationModule and AntiBot before any cooldown/crash-loop logic runs. Crash-loop threshold raised from 3 to 5 reconnects, window extended from 30 s to 60 s, and default action changed from `kick` to `flag` to prevent mass false kicks after restarts.
+
+- **Velocity — `LatencyCheckModule`: verified players bypass latency checks**: The module registered its own `LoginEvent` listener, independent of the pipeline's `skipForVerified()` mechanism. A player allowed by the pipeline could still be kicked by this module for a sub-5 ms login time (common on local datacenter proxies). Verified players now return early. Default `minimum-ms` lowered from 5 to 0 and default actions changed from `kick` to `flag`.
+
+- **Velocity — `ChatListener`: defers to `FastChatModule` when active**: Both `ChatListener` (backed by `ProxyExploitModule.checkChat()`) and `FastChatModule` subscribed to `PlayerChatEvent` independently with separate rate-limit counters. A single message could be evaluated by both systems, producing inconsistent deny decisions and sending two different error messages to the player. `ChatListener` now returns early when `FastChatModule.isEnabled()` is true.
+
+- **Velocity — `NicknameBlocker` + `HandshakeValidator`: Bedrock/Floodgate prefix exemption**: Floodgate prefixes usernames with `.` (e.g. `.BedrockPlayer123`). `ozel-karakter-engel: true` in NicknameBlocker and the `[a-zA-Z0-9_]+` regex in HandshakeValidator both rejected these names as containing illegal characters. A configurable `bedrock-prefix` key (default `.`) is now checked first in NicknameBlocker; HandshakeValidator strips a leading `.` or `*` before applying the character regex.
+
+- **Velocity — `JoinPatternDetector.getJoinScore()`: maximum capped at 60**: The raw score could reach 50 (rapid + quitter combined). With `joinPatternScore * 0.25` weighting and `flagCount = 1`, the 60 % single-flag reduction yields `50 * 0.25 * 0.60 = 7.5` — harmless alone. But combined with any second flag, the reduction disappears and the score contribution can push a borderline connection to medium-risk. The cap prevents this single detector from dominating the total score.
+
+- **Velocity — `AntiBotCheck`: redundant `antiBot.isVerified()` call removed**: `skipForVerified() = true` already prevents the check from running for verified players at the pipeline level. The additional `if (antiBot.isVerified(ctx.ip()))` guard inside `check()` was dead code that added unnecessary log noise and a redundant ConcurrentHashMap lookup on every pre-login.
+
+- **Velocity — `DDoSCheck`: verified status sourced from `ctx.verified()` instead of `AntiBot`**: Was calling `antiBot.isVerified(ctx.ip())` directly inside `check()`, ignoring that `ctx.verified()` already encodes the correct value (from both VerificationModule and AntiBot) as set by `ConnectionListener.onPreLogin()`. Unified to use `ctx.verified()` and removed the now-unused `VelocityAntiBotModule` import.
+
+- **Velocity — `ProtocolCheck`: protocol number included in kick message**: The kick message called `buildKickMessage("kick.protocol", Map.of("min", "1.21.4", "max", "1.21.4"))` with hardcoded version strings unrelated to the actual validation result. Replaced with `Map.of("sebep", result.reason(), "protokol", String.valueOf(ctx.protocol()))` so the message conveys the actual rejected protocol ID — useful for diagnosing ViaVersion setups.
+
+- **Velocity — `ConnectionPipeline.addCheck()` is now `synchronized`**: The method called `checks.clear()` then `checks.addAll(sorted)` on a `CopyOnWriteArrayList`. A `process()` call arriving between those two operations would see an empty list and skip all security checks silently. The method is now synchronized to make the snapshot-replace operation atomic.
+
+- **Velocity — `VPNCheck.check()`: timeout reduced to 2 s with `exceptionally` fail-open**: The synchronous `check()` called `checkAsync(ctx).join()`, blocking the Velocity event thread for up to 3 seconds on VPN lookup timeout. Timeout reduced to 2 seconds; `exceptionally(e -> CheckResult.allowed())` ensures any completion exception (timeout, network error) is treated as a pass rather than crashing the pipeline.
+
+- **Limbo — `GravityCheck`: tolerance widened and warmup period added**: `TOLERANCE` raised from `0.04` to `0.08` blocks. High-latency clients (300 ms+) may have multiple tick position updates batched into a single packet, causing the reported Y to deviate from the expected value by more than the old tolerance. A 2-tick warmup period is now applied — ticks 1 and 2 are never counted as incorrect — to absorb the initial positional offset that occurs when gravity integration begins from a rest state.
+
+### 🐛 Bug Fixes
+
+- **Core — `DuplicationFixModule.onInventoryClick()`: `ArrayIndexOutOfBoundsException` on slot -1**: `event.getRawSlot()` and `event.getSlot()` return `-1` for clicks outside the inventory window (e.g. dropping items, clicking the area around the inventory). The handler attempted array-index operations with this value. Added an early return when either slot is negative, guarding all subsequent slot-access code.
+
+- **Core — Duplicate `HandlerList.unregisterAll(this)` removed from six modules**: `AbstractModule.onDisable()` already calls `HandlerList.unregisterAll(this)`. Six subclasses (`SmartLagModule`, `ShulkerByteModule`, `BundleLockModule`, `StorageEntityLockModule`, `ItemSanitizerModule`, `RedstoneLimiterModule`, `DuplicationFixModule`) repeated this call after `super.onDisable()`, resulting in a no-op double-unregister on every plugin reload. Redundant calls removed.
+
 ## [2.2.0] - 2026-03-28
 
 ### 🔧 Improvements

@@ -29,11 +29,16 @@ public class GravityCheck {
     private static final double GRAVITY = 0.08;
     private static final double DRAG    = 0.98;
 
-    /** Tolerans: ±0.04 blok (ping kaynaklı gecikme + kayan nokta hatası) */
-    private static final double TOLERANCE = 0.04;
+    /** Tolerans: ±0.08 blok — 0.04'ten artırıldı.
+     *  300ms+ ping'li oyuncularda paket birleştirme nedeniyle birden fazla tick'in
+     *  pozisyon güncellemesi tek pakette gelebilir; bu durumda Y farkı büyür. */
+    private static final double TOLERANCE = 0.08;
 
     /** En az bu kadar tick pozisyon verisi toplanmadan karar verilmez */
     private static final int MIN_TICKS = 5;
+
+    /** İlk bu kadar tick warmup sayılır — ping kaynaklı ilk sapma tolere edilir */
+    private static final int WARMUP_TICKS = 2;
 
     /** Bu kadar tick sonra hâlâ belirsizse → belirsiz sonuç */
     private static final int MAX_TICKS = 25;
@@ -61,19 +66,23 @@ public class GravityCheck {
         tickCount++;
 
         double diff = Math.abs(playerY - expectedY);
-        if (diff <= TOLERANCE) {
+        // İlk WARMUP_TICKS tick warmup: ping kaynaklı ilk pozisyon sapması normal
+        if (tickCount > WARMUP_TICKS && diff <= TOLERANCE) {
             correctTicks++;
         }
 
-        if (tickCount >= MIN_TICKS) {
-            double accuracy = (double) correctTicks / tickCount;
+        // Karar: warmup sonrası en az MIN_TICKS tick değerlendirmesi gerekli
+        if (tickCount >= MIN_TICKS + WARMUP_TICKS) {
+            int evaluatedTicks = tickCount - WARMUP_TICKS;
+            double accuracy = (double) correctTicks / evaluatedTicks;
             if (accuracy >= 0.80) return Boolean.TRUE;  // %80+ doğru = gerçek client
             if (accuracy <= 0.25) return Boolean.FALSE; // %25- doğru = bot şüphesi
         }
 
         // Yeterince veri toplandı ama hâlâ belirsiz → timeout'a bırak
         if (tickCount >= MAX_TICKS) {
-            return correctTicks >= MIN_TICKS ? Boolean.TRUE : Boolean.FALSE;
+            int evaluatedTicks = tickCount - WARMUP_TICKS;
+            return correctTicks >= (evaluatedTicks / 2) ? Boolean.TRUE : Boolean.FALSE;
         }
 
         return null; // Henüz karar yok

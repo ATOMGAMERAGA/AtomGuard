@@ -260,8 +260,12 @@ public class DDoSProtectionModule extends VelocityModule {
     public ConnectionCheckResult checkConnection(String ip, boolean isVerified) {
         if (!enabled) return new ConnectionCheckResult(true, "disabled", null);
 
-        // CPS sayacını artır
-        synFloodDetector.recordConnection(ip);
+        // CPS sayacı: SADECE unverified bağlantıları say.
+        // Verified oyuncular meşru trafiktir — saldırı seviyesini yapay olarak yükseltmemeli.
+        // 50 verified oyuncu aynı anda bağlanırsa CPS=50 görünüp yapay LOCKDOWN tetiklememeli.
+        if (!isVerified) {
+            synFloodDetector.recordConnection(ip);
+        }
 
         // Burst değerlendirmesi — son 30 saniyedeki verified oranını hesapla
         if (burstAllowance != null) {
@@ -333,8 +337,9 @@ public class DDoSProtectionModule extends VelocityModule {
             if (reputationTracker.isLowReputation(ip)) {
                 return deny(ip, "low-reputation", "kick.ddos");
             }
-            // Saldırı sırasında bağlantı → itibar cezası
-            if (plugin.isAttackMode()) {
+            // Saldırı sırasında bağlantı → itibar cezası (sadece unverified)
+            // Verified oyuncuların normal reconnect'leri ceza almamalı.
+            if (plugin.isAttackMode() && !isVerified) {
                 reputationTracker.recordAttackConnection(ip);
             }
         }

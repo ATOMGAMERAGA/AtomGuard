@@ -6,6 +6,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 
+/**
+ * @deprecated Pipeline'dan kaldırıldı (v2.0). Verified sistemi trust score'un yerini aldı.
+ * Bu dosya geriye uyumluluk için korunuyor. Yeni kodda KULLANMAYIN.
+ */
+@Deprecated
 public class TrustScoreCheck implements ConnectionCheck {
     private final AtomGuardVelocity plugin;
 

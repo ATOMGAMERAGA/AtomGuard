@@ -66,8 +66,7 @@ public class StorageEntityLockModule extends AbstractModule implements Listener 
     @Override
 
     public void onDisable() {
-        super.onDisable();
-        HandlerList.unregisterAll(this);
+        super.onDisable(); // HandlerList.unregisterAll(this) zaten super içinde
         accessedEntities.clear();
         playerEntityMap.clear();
         debug("Depolama entity kilit modülü durduruldu.");

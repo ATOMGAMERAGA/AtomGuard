@@ -29,7 +29,15 @@ public class VPNCheck implements ConnectionCheck {
 
     @Override
     public @NotNull CheckResult check(@NotNull ConnectionContext ctx) {
-        return checkAsync(ctx).join();
+        try {
+            // 2 saniye timeout (async pipeline için 3'ten düşürüldü)
+            return checkAsync(ctx)
+                .orTimeout(2, java.util.concurrent.TimeUnit.SECONDS)
+                .exceptionally(e -> CheckResult.allowed()) // Timeout → fail-open
+                .join();
+        } catch (Exception e) {
+            return CheckResult.allowed(); // Her türlü hatada fail-open
+        }
     }
 
     @Override
