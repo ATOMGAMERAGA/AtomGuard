@@ -344,7 +344,7 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                             # Mevcut release varsa sil
                             OLD_RESP=\$(curl -s -H "Authorization: token \${GITHUB_TOKEN}" \
                                 "https://api.github.com/repos/${env.REPO}/releases/tags/${env.TAG_NAME}" || echo "")
-                            OLD_ID=\$(echo "\$OLD_RESP" | grep -oP '"id":\\K[0-9]+' | head -1 || echo "")
+                            OLD_ID=\$(echo "\$OLD_RESP" | grep -oP '"id":\\s*\\K[0-9]+' | head -1 || echo "")
                             if [ -n "\$OLD_ID" ]; then
                                 curl -s -X DELETE -H "Authorization: token \${GITHUB_TOKEN}" \
                                     "https://api.github.com/repos/${env.REPO}/releases/\$OLD_ID" || true
@@ -357,7 +357,7 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                                 -H "Content-Type: application/json" \
                                 "https://api.github.com/repos/${env.REPO}/releases" \
                                 --data-binary @/tmp/gh_stable_payload.json)
-                            NEW_ID=\$(echo "\$RESP" | grep -oP '"id":\\K[0-9]+' | head -1)
+                            NEW_ID=\$(echo "\$RESP" | grep -oP '"id":\\s*\\K[0-9]+' | head -1)
                             if [ -z "\$NEW_ID" ]; then
                                 echo "   ⚠️ Release oluşturulamadı: \$RESP"
                                 exit 1
@@ -406,7 +406,7 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
 
                             OLD_RESP=\$(curl -s -H "Authorization: token \${GITHUB_TOKEN}" \
                                 "https://api.github.com/repos/${env.REPO}/releases/tags/${env.TAG_NAME}" || echo "")
-                            OLD_ID=\$(echo "\$OLD_RESP" | grep -oP '"id":\\K[0-9]+' | head -1 || echo "")
+                            OLD_ID=\$(echo "\$OLD_RESP" | grep -oP '"id":\\s*\\K[0-9]+' | head -1 || echo "")
                             if [ -n "\$OLD_ID" ]; then
                                 curl -s -X DELETE -H "Authorization: token \${GITHUB_TOKEN}" \
                                     "https://api.github.com/repos/${env.REPO}/releases/\$OLD_ID" || true
@@ -417,7 +417,7 @@ ${env.RECENT_COMMITS ?: '_Commit bilgisi alınamadı._'}
                                 -H "Content-Type: application/json" \
                                 "https://api.github.com/repos/${env.REPO}/releases" \
                                 --data-binary @/tmp/gh_dev_payload.json)
-                            NEW_ID=\$(echo "\$RESP" | grep -oP '"id":\\K[0-9]+' | head -1)
+                            NEW_ID=\$(echo "\$RESP" | grep -oP '"id":\\s*\\K[0-9]+' | head -1)
                             if [ -z "\$NEW_ID" ]; then echo "   ⚠️ Release oluşturulamadı"; exit 1; fi
                             echo "   ✅ Dev release oluşturuldu (ID: \$NEW_ID)"
 
