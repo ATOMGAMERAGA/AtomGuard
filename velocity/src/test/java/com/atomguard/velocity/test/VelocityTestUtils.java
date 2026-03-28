@@ -18,7 +18,11 @@ public final class VelocityTestUtils {
     // ── ConnectionContext builders ──────────────────────────────────
 
     public static ConnectionContext contextForIp(String ip) {
-        return new ConnectionContext(ip, "TestPlayer", UUID.randomUUID(), "localhost", 25565, 767);
+        return new ConnectionContext(ip, "TestPlayer", UUID.randomUUID(), "localhost", 25565, 767, false);
+    }
+
+    public static ConnectionContext verifiedContextForIp(String ip) {
+        return new ConnectionContext(ip, "TestPlayer", UUID.randomUUID(), "localhost", 25565, 767, true);
     }
 
     public static ConnectionContext defaultContext() {

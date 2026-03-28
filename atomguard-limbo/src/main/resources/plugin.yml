@@ -1,0 +1,15 @@
+name: AtomGuard-Limbo
+version: ${project.version}
+main: com.atomguard.limbo.AtomGuardLimbo
+api-version: "1.21"
+description: "AtomGuard companion plugin for Velocity bot verification"
+authors:
+  - "AtomGuard Team"
+
+# AtomGuard-Limbo bu sunucuda çalışır ve Velocity'ye
+# plugin messaging ile doğrulama sonuçlarını bildirir.
+# Oyuncular hiçbir zaman bu sunucudan normal chat gönderemez.
+
+softdepend: []
+
+commands: {}

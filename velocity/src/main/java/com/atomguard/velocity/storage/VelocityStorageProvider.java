@@ -142,6 +142,12 @@ public class VelocityStorageProvider implements IStorageProvider {
         return dataSource != null ? dataSource.getDriverClassName().contains("sqlite") ? "SQLite" : "MySQL" : "Unknown";
     }
 
+    /** VerifiedPlayerStore gibi modüllerin kendi SQL'lerini çalıştırabilmesi için DataSource erişimi. */
+    public com.zaxxer.hikari.HikariDataSource getDataSource() { return dataSource; }
+
+    /** Async DB işlemleri için executor erişimi. */
+    public java.util.concurrent.ExecutorService getExecutor() { return executor; }
+
     // ═══════════════════════════════════════
     // Audit Logging (Plan Item 1 & 10)
     // ═══════════════════════════════════════

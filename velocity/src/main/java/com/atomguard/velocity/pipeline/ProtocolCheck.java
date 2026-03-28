@@ -30,8 +30,8 @@ public class ProtocolCheck implements ConnectionCheck {
         ProtocolValidationModule.ValidationResult result = module.validateHandshake(ctx.ip(), ctx.hostname(), ctx.port(), ctx.protocol());
         
         if (!result.valid()) {
-            return CheckResult.deny(
-                plugin.getMessageManager().buildKickMessage("kick.protocol", 
+            return CheckResult.softDeny(
+                plugin.getMessageManager().buildKickMessage("kick.protocol",
                     Map.of("min", "1.21.4", "max", "1.21.4")),
                 name(),
                 result.reason()

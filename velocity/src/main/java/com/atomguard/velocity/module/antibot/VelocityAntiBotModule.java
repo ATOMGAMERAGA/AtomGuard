@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
- * Anti-bot modülü. Config key: "bot-koruma"
+ * Anti-bot modülü. Config key: "bot-protection"  (config.yml ile eşleşir)
  *
  * <p>Düzeltmeler (false positive önleme):
  * <ul>
@@ -60,8 +60,11 @@ public class VelocityAntiBotModule extends VelocityModule {
         ConnectionAnalyzer connAnalyzer = new ConnectionAnalyzer(windowSec, suspiciousThreshold);
         HandshakeValidator hsValidator = new HandshakeValidator(enforceProtocols, extraProtocols);
         BrandAnalyzer brandAnalyzer = new BrandAnalyzer(blockedBrands, allowedBrands, allowUnknownBrands);
-        // maxJoinsInWindow=8, maxQuitsBeforeSuspect=15 (minimum değerler)
-        JoinPatternDetector joinDetector = new JoinPatternDetector(120, 8, 15);
+        // JoinPatternDetector parametreleri config'den okunur; minimum değerler detector içinde uygulanır
+        int joinWindow = getConfigInt("join-window-seconds", 120);
+        int maxJoins   = getConfigInt("max-joins-in-window", 8);
+        int maxQuits   = getConfigInt("max-quits-before-suspect", 20);
+        JoinPatternDetector joinDetector = new JoinPatternDetector(joinWindow, maxJoins, maxQuits);
 
         engine = new BotDetectionEngine(connAnalyzer, hsValidator, brandAnalyzer, joinDetector, highRisk, mediumRisk);
         captcha = new CaptchaVerification(captchaTimeout);
@@ -77,6 +80,7 @@ public class VelocityAntiBotModule extends VelocityModule {
 
     /**
      * Ön-giriş analizi. Doğrulanmış oyuncular → sıfır ThreatScore döner.
+     * Nickname kontrolü artık AntiBotCheck pipeline adımında yapılıyor.
      */
     public ThreatScore analyzePreLogin(String ip, String username, String hostname, int port, int protocol) {
         // Doğrulanmış oyuncu bypass
@@ -84,19 +88,23 @@ public class VelocityAntiBotModule extends VelocityModule {
             return new ThreatScore();
         }
 
-        NicknameBlocker.NicknameCheckResult nickResult = nicknameBlocker.check(username);
-        if (nickResult.isBlocked()) {
-            // Sadece username kategorisini işaretle — diğer kategorileri sahte şişirme.
-            // flagCount=1 olduğunda ThreatScore.calculate() %60 indirim uygular,
-            // bu sayede tek başına NicknameBlocker ban tetikleyemez (anlık-engel mekanizması ayrı).
-            ThreatScore score = new ThreatScore();
-            score.setUsernameScore(100);
-            score.calculate();
-            return score;
-        }
-
         engine.recordConnection(ip);
         return engine.analyze(ip, username, null, hostname, port, protocol);
+    }
+
+    /**
+     * Kullanıcı adı yasaklı mı? AntiBotCheck pipeline adımı tarafından kullanılır.
+     */
+    public boolean isNicknameBlocked(String username) {
+        return nicknameBlocker.check(username).isBlocked();
+    }
+
+    /**
+     * Kullanıcı adı yasak sebebi. null → yasak yok.
+     */
+    public String getNicknameBlockReason(String username) {
+        NicknameBlocker.NicknameCheckResult r = nicknameBlocker.check(username);
+        return r.isBlocked() ? r.getReason() : null;
     }
 
     public void recordBrand(String ip, String brand) {

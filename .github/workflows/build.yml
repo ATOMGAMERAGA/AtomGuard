@@ -41,12 +41,16 @@ jobs:
 
       - name: Verify build output
         run: |
-          CORE_JAR=$(find core/target -name "AtomGuard-core-*.jar" -not -name "*-sources*" | head -1)
-          VELOCITY_JAR=$(find velocity/target -name "AtomGuard-velocity-*.jar" -not -name "*-sources*" | head -1)
+          CORE_JAR=$(find core/target -maxdepth 1 -name "AtomGuard-core-*.jar" -not -name "*-sources*" -not -name "*original*" | head -1)
+          VELOCITY_JAR=$(find velocity/target -maxdepth 1 -name "AtomGuard-velocity-*.jar" -not -name "*-sources*" -not -name "*original*" | head -1)
+          API_JAR=$(find api/target -maxdepth 1 -name "AtomGuard-api-*.jar" -not -name "*-sources*" | head -1)
           if [ -n "$CORE_JAR" ] && [ -n "$VELOCITY_JAR" ]; then
-            echo "✅ Build successful: $CORE_JAR and $VELOCITY_JAR"
+            echo "✅ Build successful:"
+            echo "   Core     : $CORE_JAR ($(du -h $CORE_JAR | cut -f1))"
+            echo "   Velocity : $VELOCITY_JAR ($(du -h $VELOCITY_JAR | cut -f1)) ← Embedded Limbo"
+            echo "   API      : ${API_JAR:-N/A}"
           else
-            echo "❌ Build failed — JARs not found"
+            echo "❌ Build failed — JARs not found (core=$CORE_JAR velocity=$VELOCITY_JAR)"
             exit 1
           fi
 

@@ -3,8 +3,12 @@ package com.atomguard.velocity.listener;
 import com.atomguard.velocity.AtomGuardVelocity;
 import com.atomguard.velocity.communication.MessagingBridge;
 import com.atomguard.velocity.communication.SyncProtocol;
+import com.atomguard.velocity.module.verification.VerificationModule;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PluginMessageEvent;
+
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 /**
  * Plugin Messaging kanalı mesaj dinleyicisi (Core → Velocity).
@@ -19,6 +23,14 @@ public class PluginMessageListener {
 
     @Subscribe
     public void onPluginMessage(PluginMessageEvent event) {
+        // ── AtomGuard-Limbo doğrulama sonucu ──
+        if (event.getIdentifier().equals(VerificationModule.VERIFY_CHANNEL)) {
+            event.setResult(PluginMessageEvent.ForwardResult.handled());
+            handleVerifyResult(new String(event.getData(), StandardCharsets.UTF_8));
+            return;
+        }
+
+        // ── Mevcut Core ↔ Velocity mesaj kanalı ──
         if (!event.getIdentifier().equals(MessagingBridge.CHANNEL_ID)) return;
         event.setResult(PluginMessageEvent.ForwardResult.handled());
 
@@ -27,6 +39,29 @@ public class PluginMessageListener {
             handleMessage(msg.type(), msg.payload());
         } catch (Exception e) {
             plugin.getLogManager().warn("Plugin mesajı ayrıştırılamadı: " + e.getMessage());
+        }
+    }
+
+    /**
+     * AtomGuard-Limbo companion plugin'den gelen doğrulama sonucu.
+     * Format: {@code "PASS:<uuid>"} veya {@code "FAIL:<uuid>:<reason>"}
+     */
+    private void handleVerifyResult(String data) {
+        VerificationModule vm = plugin.getVerificationModule();
+        if (vm == null || vm.getLimbo() == null) return;
+
+        try {
+            if (data.startsWith("PASS:")) {
+                UUID uuid = UUID.fromString(data.substring(5));
+                vm.getLimbo().onVerificationResult(uuid, true, "ok");
+            } else if (data.startsWith("FAIL:")) {
+                String[] parts = data.split(":", 3);
+                UUID uuid = UUID.fromString(parts[1]);
+                String reason = parts.length > 2 ? parts[2] : "unknown";
+                vm.getLimbo().onVerificationResult(uuid, false, reason);
+            }
+        } catch (Exception e) {
+            plugin.getLogManager().warn("[Limbo] Doğrulama sonucu ayrıştırılamadı: " + data + " — " + e.getMessage());
         }
     }
 

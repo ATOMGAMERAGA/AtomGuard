@@ -20,6 +20,9 @@ kick:
   ddos-itibar: "<red>IP trust score insufficient. Please try again later.</red>"
   ddos-slot: "<red>Attack mode active. Only verified players can connect.</red>"
   genel: "<red>Connection rejected. Please try again later.</red>"
+  verification-failed: "<red>✖ Verification Failed</red><newline><gray>You must use a genuine Minecraft client to connect to this server.</gray>"
+  queue-full: "<yellow>⏳ Server Busy</yellow><newline><gray>Too many connection requests right now. Please try again in a few seconds.</gray>"
+  verification-timeout: "<red>⏱ Verification Timeout</red><newline><gray>Verification could not be completed in time. Please reconnect.</gray>"
 
 # IPTables Integration
 iptables:

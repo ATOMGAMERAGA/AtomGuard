@@ -1,0 +1,8 @@
+# AtomGuard Limbo - Yapılandırma
+# Bu plugin AtomGuard Velocity companion'ıdır.
+# Doğrulama ayarları çoğunlukla Velocity tarafında yapılır.
+
+verification:
+  # Doğrulama zaman aşımı (saniye)
+  # Velocity tarafındaki timeout ile uyumlu olmalı
+  timeout-seconds: 15

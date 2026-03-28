@@ -41,7 +41,10 @@ public class PlayerBehaviorProfile {
         int score = 50; // Başlangıç (nötr)
         
         score += Math.min(25, successfulLogins * 3);  // Başarılı girişler güveni artırır
-        score -= Math.min(40, failedChecks * 8);       // İhlaller güveni hızla düşürür
+        // Violation cezası yumuşatıldı: 8→5, max 40→30
+        // Rate limit ve throttle gibi geçici olaylar da violation olarak kaydediliyordu;
+        // bunların etkisini azaltmak için ceza ve tavan düşürüldü.
+        score -= Math.min(30, failedChecks * 5);
 
         if (totalSessions > 20) score += 15;           // Sadık kullanıcı bonusu
         // Offline-mode'da aynı IP'den farklı isimle giriş normaldir (aile, cracked launcher)

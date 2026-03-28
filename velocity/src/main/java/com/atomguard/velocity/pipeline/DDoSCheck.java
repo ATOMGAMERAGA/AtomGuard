@@ -29,6 +29,11 @@ public class DDoSCheck implements ConnectionCheck {
     public int priority() { return 30; }
 
     @Override
+    public boolean skipForVerified() {
+        return true; // Verified oyuncular DDoS throttle'dan muaf
+    }
+
+    @Override
     public boolean isEnabled() {
         return plugin.getDdosModule() != null && plugin.getDdosModule().isEnabled();
     }

@@ -151,14 +151,16 @@ pipeline {
                     ).trim()
 
                     if (!env.CORE_JAR || !env.VELOCITY_JAR) {
-                        error "❌ JAR dosyaları bulunamadı!"
+                        error "❌ JAR dosyaları bulunamadı! (core=${env.CORE_JAR} velocity=${env.VELOCITY_JAR})"
                     }
 
                     sh """
                         echo "✅ Artifact'lar doğrulandı:"
                         echo "   Core     : ${env.CORE_JAR} (\$(du -h ${env.CORE_JAR} | cut -f1))"
-                        echo "   Velocity : ${env.VELOCITY_JAR} (\$(du -h ${env.VELOCITY_JAR} | cut -f1))"
-                        echo "   API      : ${env.API_JAR} (\$(du -h ${env.API_JAR} | cut -f1))"
+                        echo "   Velocity : ${env.VELOCITY_JAR} (\$(du -h ${env.VELOCITY_JAR} | cut -f1)) ← Embedded Limbo"
+                        echo "   API      : ${env.API_JAR:-Bulunamadı} \$([ -n '${env.API_JAR}' ] && du -h ${env.API_JAR} | cut -f1 || echo '')"
+                        echo ""
+                        echo "ℹ️  NOT: Velocity JAR içinde embedded Limbo bulunur. Ayrı limbo JAR BEKLENMEZ."
                     """
                 }
             }
@@ -176,7 +178,7 @@ pipeline {
                     def ver = env.RELEASE_VERSION
 
                     env.CORE_RELEASE     = "AtomGuard-Core-${ver}.jar"
-                    env.VELOCITY_RELEASE = "AtomGuard-Velocity-${ver}.jar"
+                    env.VELOCITY_RELEASE = "AtomGuard-Velocity-${ver}.jar"  // Embedded Limbo
                     env.API_RELEASE      = "AtomGuard-API-${ver}.jar"
 
                     sh """
@@ -202,6 +204,13 @@ pipeline {
                     sha256sum *.jar > SHA256SUMS.txt
                     echo "🔐 Checksums:"
                     cat SHA256SUMS.txt
+                    echo ""
+                    echo "📏 JAR boyutları:"
+                    du -h *.jar
+                    if ls AtomGuard-Limbo-*.jar 2>/dev/null; then
+                        echo "⚠️  UYARI: Ayrı Limbo JAR bulundu! Bu release'e dahil edilmemeli."
+                        exit 1
+                    fi
                 """
             }
         }
@@ -257,8 +266,11 @@ pipeline {
 | Platform | Dosya | Hedef Klasör |
 |----------|-------|-------------|
 | Paper / Spigot | `${env.CORE_RELEASE}` | `plugins/` |
-| Velocity Proxy | `${env.VELOCITY_RELEASE}` | `plugins/` |
+| Velocity Proxy | `${env.VELOCITY_RELEASE}` | `plugins/` ← Embedded Limbo |
 | API (Geliştirici) | `${env.API_RELEASE}` | Maven dependency |
+
+> **Not:** Velocity eklentisi içinde fizik tabanlı bot doğrulaması (embedded Limbo) bulunur.
+> Ayrı bir Limbo sunucu eklentisine ihtiyaç yoktur.
 
 1. Sunucuyu durdur
 2. Eski AtomGuard JAR dosyalarını sil
@@ -290,7 +302,7 @@ sha256sum -c SHA256SUMS.txt
 | Platform | Dosya |
 |----------|-------|
 | Paper / Spigot | `${env.CORE_RELEASE}` |
-| Velocity Proxy | `${env.VELOCITY_RELEASE}` |
+| Velocity Proxy | `${env.VELOCITY_RELEASE}` ← Embedded Limbo |
 
 ### 📝 Son Değişiklikler
 

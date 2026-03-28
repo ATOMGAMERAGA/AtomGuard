@@ -127,7 +127,8 @@ public abstract class AbstractModule implements IModule {
 
         // Ağır işlemleri async'e taşı — Netty thread'i bloklanmasın
         final java.util.UUID uuid = player.getUniqueId();
-        final String ip = player.getAddress() != null ? player.getAddress().getAddress().getHostAddress() : "0.0.0.0";
+        final String ip = (player.getAddress() != null && player.getAddress().getAddress() != null)
+                ? player.getAddress().getAddress().getHostAddress() : "0.0.0.0";
         final String playerName = player.getName();
         final String moduleName = getName();
 

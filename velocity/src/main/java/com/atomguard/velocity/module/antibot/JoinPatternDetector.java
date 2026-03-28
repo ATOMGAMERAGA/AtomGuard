@@ -27,15 +27,18 @@ public class JoinPatternDetector {
     private final int maxJoinsInWindow;
     private final int maxQuitsBeforeSuspect;
 
-    /** Quit decay süresi: 10 dakika */
-    private static final long QUIT_DECAY_INTERVAL_MS = 600_000L;
-    /** Quit decay miktarı */
-    private static final int QUIT_DECAY_AMOUNT = 3;
+    /** Quit decay süresi: 3 dakika (önceden 5dk).
+     *  Server crash/restart sonrası 20 quit sayacı 3×3dk = 9dk'da sıfırlanır.
+     *  Eski değer (5dk) ile 20 quit → 20dk bekleme gerekiyordu. */
+    private static final long QUIT_DECAY_INTERVAL_MS = 180_000L;
+    /** Quit decay miktarı: 7 (önceden 5). Hızlı toparlanma için artırıldı. */
+    private static final int QUIT_DECAY_AMOUNT = 7;
 
     public JoinPatternDetector(int joinWindowSeconds, int maxJoinsInWindow, int maxQuitsBeforeSuspect) {
         this.joinWindowSeconds = joinWindowSeconds;
         this.maxJoinsInWindow = Math.max(8, maxJoinsInWindow);
-        this.maxQuitsBeforeSuspect = Math.max(15, maxQuitsBeforeSuspect);
+        // Minimum 20: internet sorunları veya sunucu restart'larında quit sayacı hızla yükselir
+        this.maxQuitsBeforeSuspect = Math.max(20, maxQuitsBeforeSuspect);
     }
 
     public void recordJoin(String ip) {

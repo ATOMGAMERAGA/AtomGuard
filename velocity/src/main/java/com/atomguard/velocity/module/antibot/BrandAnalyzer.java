@@ -13,11 +13,20 @@ public class BrandAnalyzer {
         "vanilla", "fabric", "forge", "quilt", "neoforge",
         "optifine", "lunar client", "badlion client", "feather client",
         "pvplounge", "labymod", "essential", "multimc",
-        // Yaygın kullanılan mod/client'lar — false positive önleme
+        // Yaygın mod/client'lar — false positive önleme
         "sodium", "iris", "liteclient", "liteloader",
         "fml,forge", "fml", "indium", "starlight",
-        "tlauncher", "shiginima", "pojav",   // Cracked launcher'lar (offline-mode sunucular)
-        "meteor", "wurst"                    // PvP client'ları
+        "tlauncher", "shiginima", "pojav",     // Cracked launcher'lar (offline-mode sunucular)
+        "prism", "prismlauncher",              // Prism Launcher
+        "cosmic", "cosmicclient",              // Cosmic Client
+        "atlauncher", "gdlauncher",            // Launcher'lar
+        "curseforge", "modrinth",              // Launcher platformları
+        "technic", "ftb", "polymc", "hmcl",    // Mod pack launcher'lar
+        "betacraft", "legacy",                 // Legacy sürümler
+        "impact", "aristois",                  // Diğer modded client'lar
+        "paper", "purpur", "folia"             // Bazen server-side brand olarak gelir
+        // Not: "meteor" ve "wurst" kaldırıldı — bunlar hack client'ları.
+        // Sunucu ihtiyacına göre "allowed-brands" config listesine eklenebilir.
     );
 
     private static final Set<String> SUSPICIOUS_KEYWORDS = Set.of(
@@ -41,8 +50,10 @@ public class BrandAnalyzer {
     }
 
     public BrandCheckResult check(String brand) {
+        // Boş brand skoru düşürüldü: 30 → 10
+        // Vanilla client bazen brand göndermez veya gecikmeli gönderir; bu tek başına bot işareti değil.
         if (brand == null || brand.isBlank())
-            return new BrandCheckResult(BrandStatus.SUSPICIOUS, "Boş client brand", 30);
+            return new BrandCheckResult(BrandStatus.SUSPICIOUS, "Boş client brand", 10);
 
         String lower = brand.toLowerCase(Locale.ROOT);
 

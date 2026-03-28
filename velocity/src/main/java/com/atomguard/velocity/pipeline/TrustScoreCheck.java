@@ -25,16 +25,20 @@ public class TrustScoreCheck implements ConnectionCheck {
     }
 
     @Override
+    public boolean skipForVerified() {
+        return true; // Verified oyuncuların trust score'u zaten yüksektir
+    }
+
+    @Override
     public @NotNull CheckResult check(@NotNull ConnectionContext ctx) {
         PlayerBehaviorProfile profile = plugin.getBehaviorManager().getProfile(ctx.ip());
         int score = profile.calculateTrustScore();
-        
-        int threshold = plugin.getConfigManager().getInt("modules.bot-protection.trust-score-threshold", 10);
-        
-        // Güven skoru eşiğin altındaysa, girişi reddet
+
+        int threshold = plugin.getConfigManager().getInt("modules.bot-protection.trust-score-threshold", 5);
+
         if (score < threshold) {
-            return CheckResult.deny(
-                plugin.getMessageManager().buildKickMessage("kick.trust-score", 
+            return CheckResult.softDeny(
+                plugin.getMessageManager().buildKickMessage("kick.trust-score",
                     Map.of("score", String.valueOf(score), "threshold", String.valueOf(threshold))),
                 name(),
                 "low-trust-score"

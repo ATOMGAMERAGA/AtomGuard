@@ -224,10 +224,10 @@ public class DiscordWebhookManager {
                 0xFFFF00); // Yellow
     }
 
-    private void sendEmbed(String title, String description, int color) {
+    private synchronized void sendEmbed(String title, String description, int color) {
         if (!enabled || webhookUrl == null || webhookUrl.isEmpty()) return;
 
-        // Rate limit check
+        // Rate limit check — synchronized ile atomik: removeIf + size + add
         long now = System.currentTimeMillis();
         sentTimestamps.removeIf(ts -> now - ts > 60_000);
         if (sentTimestamps.size() >= MAX_PER_MINUTE) return;

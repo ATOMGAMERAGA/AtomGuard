@@ -180,8 +180,8 @@ public class TokenBucketModule extends AbstractModule {
                     return; // Auth komutu — rate limit YOK
                 }
             } catch (Exception e) {
-                // Paket parse edilemezse sessizce geç
-                debug("CHAT_COMMAND parse hatası: " + e.getMessage());
+                // Parse hatası: auth muafiyeti uygulanamaz — rate limit devam eder (bypass önleme)
+                debug("CHAT_COMMAND parse hatası, rate limit uygulanıyor: " + e.getMessage());
             }
         }
 

@@ -74,6 +74,10 @@ public class AtomGuardVelocityCommand implements SimpleCommand {
             }
             case "rapor", "report" -> sendAttackReport(source);
             case "saglik", "health" -> sendHealthCheck(source);
+            case "debug" -> {
+                if (args.length < 2) { source.sendMessage(mm.deserialize("<red>Kullanım: /agv debug <ip></red>")); return; }
+                handleDebug(source, args[1]);
+            }
             default -> sendHelp(source);
         }
     }
@@ -108,6 +112,70 @@ public class AtomGuardVelocityCommand implements SimpleCommand {
         plugin.getLogManager().log("Yapılandırma yeniden yüklendi: " + getSourceName(source));
     }
 
+    private void handleDebug(CommandSource source, String target) {
+        // IP veya oyuncu adı
+        String ip = target;
+        com.velocitypowered.api.proxy.Player player = plugin.getProxyServer().getPlayer(target).orElse(null);
+        if (player != null) {
+            ip = player.getRemoteAddress().getAddress().getHostAddress();
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<gray>─── Debug: <white>").append(ip).append("</white> ───\n");
+
+        // AntiBot / ThreatScore
+        VelocityAntiBotModule ab = plugin.getAntiBotModule();
+        if (ab != null) {
+            ThreatScore ts = ab.getScore(ip);
+            boolean verified = ab.isVerified(ip);
+            sb.append("<white>Verified: ").append(verified ? "<green>EVET</green>" : "<red>HAYIR</red>").append("\n");
+            if (ts != null) {
+                sb.append("<white>ThreatScore: <yellow>total=").append(ts.getTotalScore())
+                  .append(", flags=").append(ts.getFlagCount()).append("</yellow>\n");
+                sb.append("<gray>  connRate=").append(ts.getConnectionRateScore())
+                  .append(", handshake=").append(ts.getHandshakeScore())
+                  .append(", brand=").append(ts.getBrandScore())
+                  .append(", joinPattern=").append(ts.getJoinPatternScore())
+                  .append(", username=").append(ts.getUsernameScore()).append("\n");
+            }
+        }
+
+        // TrustScore (BehaviorProfile)
+        if (plugin.getBehaviorManager() != null) {
+            com.atomguard.velocity.data.PlayerBehaviorProfile profile =
+                plugin.getBehaviorManager().getProfile(ip);
+            int trustScore = profile.calculateTrustScore();
+            sb.append("<white>TrustScore: <yellow>").append(trustScore).append("/100</yellow>")
+              .append(" <gray>(sessions=").append(profile.getTotalSessions())
+              .append(", logins=").append(profile.getSuccessfulLogins())
+              .append(", violations=").append(profile.getFailedChecks()).append(")\n");
+        }
+
+        // DDoS Reputation
+        if (plugin.getDdosModule() != null && plugin.getDdosModule().getReputationTracker() != null) {
+            int repScore = plugin.getDdosModule().getReputationTracker().getScore(ip);
+            sb.append("<white>DDoS İtibar: <yellow>").append(repScore).append("/100</yellow>\n");
+        }
+
+        // Throttle
+        if (plugin.getDdosModule() != null && plugin.getDdosModule().getThrottler() != null) {
+            int connCount = plugin.getDdosModule().getThrottler().getConnectionCount(ip);
+            sb.append("<white>Throttle (bu dakika): <yellow>").append(connCount).append("</yellow>\n");
+        }
+
+        // Firewall
+        com.atomguard.velocity.module.firewall.FirewallModule fw = plugin.getFirewallModule();
+        if (fw != null) {
+            boolean banned = fw.getTempBanManager().isBanned(ip) || fw.getBlacklistManager().isBlacklisted(ip);
+            int fwRep = fw.getReputationEngine().getScore(ip);
+            sb.append("<white>Firewall: ").append(banned ? "<red>YASAKLI</red>" : "<green>TEMİZ</green>")
+              .append(" | Firewall İtibar: <yellow>").append(fwRep).append("</yellow>\n");
+        }
+
+        sb.append("<gray>───────────────────────────");
+        source.sendMessage(mm.deserialize(sb.toString()));
+    }
+
     private void sendHelp(CommandSource source) {
         source.sendMessage(mm.deserialize(
             "<gray>─────────────────────────────\n" +
@@ -121,6 +189,7 @@ public class AtomGuardVelocityCommand implements SimpleCommand {
             "<yellow>/agv istatistik</yellow> <gray>- İstatistikler\n" +
             "<yellow>/agv saldiri</yellow> <gray>- Saldırı modunu aç/kapat\n" +
             "<yellow>/agv inceleme <ip></yellow> <gray>- Detaylı oyuncu/IP profili\n" +
+            "<yellow>/agv debug <ip></yellow> <gray>- Tüm güvenlik skorlarını göster\n" +
             "<yellow>/agv rapor</yellow> <gray>- Son 24 saat saldırı analizi\n" +
             "<yellow>/agv saglik</yellow> <gray>- Sunucu kaynak ve yük durumu\n" +
             "<gray>─────────────────────────────"
@@ -280,7 +349,7 @@ public class AtomGuardVelocityCommand implements SimpleCommand {
             if (args.length <= 1) {
                 String prefix = args.length == 1 ? args[0].toLowerCase() : "";
                 return List.of("durum", "yenile", "modul", "yasak", "af",
-                               "istatistik", "saldiri", "inceleme", "rapor", "saglik")
+                               "istatistik", "saldiri", "inceleme", "debug", "rapor", "saglik")
                     .stream().filter(s -> s.startsWith(prefix)).collect(Collectors.toList());
             }
             if (args.length == 2 && ("modul".equalsIgnoreCase(args[0]) || "module".equalsIgnoreCase(args[0]))) {

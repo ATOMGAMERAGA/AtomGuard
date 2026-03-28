@@ -12,8 +12,8 @@ import org.slf4j.Logger;
  */
 public final class VelocityBuildInfo {
 
-    public static final String VERSION = "2.1.4";
-    public static final String BUILD_DATE = "2026-03-26";
+    public static final String VERSION = "2.2.0";
+    public static final String BUILD_DATE = "2026-03-28";
     public static final String AUTHOR = "AtomGuard Team";
 
     private VelocityBuildInfo() {}

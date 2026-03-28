@@ -63,6 +63,11 @@ public class ModuleManager implements IModuleManager {
     public boolean registerModule(@NotNull AbstractModule module) {
         String moduleName = module.getName();
 
+        if (moduleName == null || moduleName.isEmpty()) {
+            plugin.getLogger().warning("Modül kaydı reddedildi: getName() null veya boş döndü (" + module.getClass().getSimpleName() + ")");
+            return false;
+        }
+
         // Zaten kayıtlı mı kontrol et
         if (modules.containsKey(moduleName)) {
             plugin.getLogger().warning("Modül zaten kayıtlı: " + moduleName);

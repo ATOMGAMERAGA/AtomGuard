@@ -22,13 +22,15 @@ public class ConnectionAnalyzer {
     private final int windowSeconds;
     private final int suspiciousThreshold;
 
-    /** Grace period: ilk bağlantıdan bu kadar ms sonrasına kadar şüpheli sayma */
-    private static final long GRACE_PERIOD_MS = 5_000L;
+    /** Grace period: ilk bağlantıdan bu kadar ms sonrasına kadar şüpheli sayma.
+     *  15 saniye: Forge modpack + yavaş auth sunucusu + skin download kombinasyonunda
+     *  10 saniye yetersiz kalıyordu; 15 saniye daha güvenli bir tampon sağlar. */
+    private static final long GRACE_PERIOD_MS = 15_000L;
 
     public ConnectionAnalyzer(int windowSeconds, int suspiciousThreshold) {
         this.windowSeconds = windowSeconds;
-        // Minimum 8 — çok düşük eşik false positive oluşturur
-        this.suspiciousThreshold = Math.max(8, suspiciousThreshold);
+        // Minimum 10 — çok düşük eşik false positive oluşturur
+        this.suspiciousThreshold = Math.max(10, suspiciousThreshold);
     }
 
     public void recordConnection(String ip) {

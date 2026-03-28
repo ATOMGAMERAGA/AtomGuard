@@ -78,12 +78,12 @@ public class DDoSProtectionModule extends VelocityModule {
     public void onEnable() {
         // ── 1. Temel parametreler ──────────────────────────
         int baseCpsThreshold   = getConfigInt("attack-mode.threshold", 50);
-        int connPerMinute      = getConfigInt("connection-limit.per-ip-per-minute", 10);
+        int connPerMinute      = getConfigInt("connection-limit.per-ip-per-minute", 15);
         int maxPingPerSecond   = getConfigInt("ping-limit", 5);
 
         // ── 2. AttackLevelManager ──────────────────────────
-        long hysteresisUpMs   = getConfigLong("attack-levels.hysteresis-rise-seconds", 5) * 1000L;
-        long hysteresisDownMs = getConfigLong("attack-levels.hysteresis-fall-seconds", 30) * 1000L;
+        long hysteresisUpMs   = getConfigLong("attack-levels.hysteresis-rise-seconds", 10) * 1000L;
+        long hysteresisDownMs = getConfigLong("attack-levels.hysteresis-fall-seconds", 20) * 1000L;
         boolean levelsEnabled = getConfigBoolean("attack-levels.enabled", true);
 
         levelManager = new AttackLevelManager(plugin, baseCpsThreshold,
@@ -129,16 +129,16 @@ public class DDoSProtectionModule extends VelocityModule {
         boolean repEnabled = getConfigBoolean("ip-reputation.enabled", true);
         if (repEnabled) {
             reputationTracker = new IPReputationTracker(
-                    getConfigInt("ip-reputation.initial-score", 50),
-                    getConfigInt("ip-reputation.successful-connection-bonus", 5),
-                    getConfigInt("ip-reputation.rate-limit-penalty", 10),
-                    getConfigInt("ip-reputation.invalid-handshake-penalty", 15),
+                    getConfigInt("ip-reputation.initial-score", 60),
+                    getConfigInt("ip-reputation.successful-connection-bonus", 8),
+                    getConfigInt("ip-reputation.rate-limit-penalty", 5),
+                    getConfigInt("ip-reputation.invalid-handshake-penalty", 8),
                     getConfigInt("ip-reputation.slowloris-penalty", 25),
-                    getConfigInt("ip-reputation.attack-connection-penalty", 20),
-                    getConfigInt("ip-reputation.auto-ban-threshold-1hour", 20),
-                    getConfigInt("ip-reputation.auto-ban-threshold-24hours", 5),
-                    getConfigInt("ip-reputation.decay-points-per-hour", 3),
-                    getConfigInt("ip-reputation.verified-minimum-score", 30)
+                    getConfigInt("ip-reputation.attack-connection-penalty", 10),
+                    getConfigInt("ip-reputation.auto-ban-threshold-1hour", 15),
+                    getConfigInt("ip-reputation.auto-ban-threshold-24hours", 10),
+                    getConfigInt("ip-reputation.decay-points-per-hour", 5),
+                    getConfigInt("ip-reputation.verified-minimum-score", 40)
             );
             // Firewall modülü bağlantısı (geç bağlanma — modüller birbirinden bağımsız yüklenir)
             if (plugin.getFirewallModule() != null) {
@@ -174,9 +174,9 @@ public class DDoSProtectionModule extends VelocityModule {
         pingFloodDetector = new PingFloodDetector(maxPingPerSecond);
         nullPingDetector  = new NullPingDetector();
 
-        int normalLimit     = getConfigInt("smart-throttle.normal-limit", 15);
-        int carefulLimit    = getConfigInt("smart-throttle.cautious-limit", 8);
-        int aggressiveLimit = getConfigInt("smart-throttle.aggressive-limit", 3);
+        int normalLimit     = getConfigInt("smart-throttle.normal-limit", 20);
+        int carefulLimit    = getConfigInt("smart-throttle.cautious-limit", 10);
+        int aggressiveLimit = getConfigInt("smart-throttle.aggressive-limit", 4);
         int lockdownLimit   = getConfigInt("smart-throttle.lockdown-limit", 1);
         throttleEngine = new SmartThrottleEngine(plugin, normalLimit, carefulLimit,
                 aggressiveLimit, lockdownLimit);

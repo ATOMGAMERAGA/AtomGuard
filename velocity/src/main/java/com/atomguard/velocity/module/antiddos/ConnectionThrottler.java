@@ -59,17 +59,19 @@ public class ConnectionThrottler {
 
     /**
      * Saldırı modunda bağlantı denemesi (limit yarıya düşer).
+     * Minimum 5 garantisi: çok düşük limit meşru oyuncuları da engeller.
      *
      * @param ip Kaynak IP
      * @return true ise izin verildi
      */
     public boolean tryConnectAttackMode(String ip) {
-        int attackLimit = Math.max(1, limitPerMinute / 2);
+        int attackLimit = Math.max(5, limitPerMinute / 2);
         return check(ip, attackLimit);
     }
 
     /**
-     * Saldırı modunda bağlantı denemesi — doğrulanmış oyuncular normal limit alır.
+     * Saldırı modunda bağlantı denemesi — doğrulanmış oyuncular 3x limit alır.
+     * Unverified için minimum 5 garantisi.
      *
      * @param ip         Kaynak IP
      * @param isVerified Oyuncu daha önce başarıyla giriş yapmış mı?
@@ -77,8 +79,8 @@ public class ConnectionThrottler {
      */
     public boolean tryConnectAttackMode(String ip, boolean isVerified) {
         int effectiveLimit = isVerified
-                ? limitPerMinute
-                : Math.max(1, limitPerMinute / 2);
+                ? Math.max(limitPerMinute * 3, 15)
+                : Math.max(5, limitPerMinute / 2);
         return check(ip, effectiveLimit);
     }
 

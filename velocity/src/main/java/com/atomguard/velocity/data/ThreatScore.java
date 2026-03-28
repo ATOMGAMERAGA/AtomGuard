@@ -59,11 +59,14 @@ public class ThreatScore {
      * eğer {@code flagCount <= 1} ise ham skor %60'a düşürülür.
      */
     public synchronized void calculate() {
+        // Ağırlık yeniden dengeleme (false positive azaltma):
+        // - handshake/brand azaltıldı (0.15→0.10): Forge + boş brand çok kolay yüksek skor alıyordu
+        // - connectionRate/joinPattern artırıldı (0.20→0.25): gerçek bot davranışı
         double raw =
-            connectionRateScore * 0.20 +
-            handshakeScore * 0.15 +
-            brandScore * 0.15 +
-            joinPatternScore * 0.20 +
+            connectionRateScore * 0.25 +
+            handshakeScore * 0.10 +
+            brandScore * 0.10 +
+            joinPatternScore * 0.25 +
             usernameScore * 0.10 +
             geoScore * 0.10 +
             protocolScore * 0.10;
@@ -95,7 +98,7 @@ public class ThreatScore {
      * @param intervalMs  son güncellemeden bu yana geçen süre (ms)
      * @param decayAmount azaltılacak puan miktarı
      */
-    public void applyTimeDecay(long intervalMs, int decayAmount) {
+    public synchronized void applyTimeDecay(long intervalMs, int decayAmount) {
         long now = System.currentTimeMillis();
         long elapsed = now - lastUpdateTime;
         if (elapsed >= intervalMs && totalScore > 0) {
@@ -125,14 +128,18 @@ public class ThreatScore {
     public void setProtocolScore(int score) { this.protocolScore = Math.min(100, Math.max(0, score)); }
 
     /**
-     * Yüksek risk: hem skor >= 75 hem en az 2 farklı kategoride şüpheli davranış.
+     * Yüksek risk: hem skor >= 75 hem en az 3 farklı kategoride şüpheli davranış.
+     * <p>
+     * flagCount >= 3 gereksinimi eklendi: Forge (handshake) + boş brand (brand) = 2 flag;
+     * bu ikisi meşru Modded client'larda görülür ve yalnızca bunlarla ban yapılmamalı.
+     * Gerçek botlar connection rate + join pattern + username gibi 3+ kategoriyi tetikler.
      */
-    public boolean isHighRisk() { return totalScore >= 75 && flagCount >= 2; }
+    public boolean isHighRisk() { return totalScore >= 75 && flagCount >= 3; }
 
     /**
-     * Orta risk: hem skor >= 45 hem en az 2 farklı kategoride şüpheli davranış.
+     * Orta risk: hem skor >= 45 hem en az 3 farklı kategoride şüpheli davranış.
      */
-    public boolean isMediumRisk() { return totalScore >= 45 && flagCount >= 2; }
+    public boolean isMediumRisk() { return totalScore >= 45 && flagCount >= 3; }
 
     public boolean isLowRisk() { return !isHighRisk() && !isMediumRisk(); }
 

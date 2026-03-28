@@ -275,8 +275,19 @@ public class IPReputationManager implements IReputationService {
                 futures.add(CompletableFuture.supplyAsync(() -> downloadWithRetry(listUrl)));
             }
 
-            // Tüm indirmelerin tamamlanmasını bekle
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            // Tüm indirmelerin tamamlanmasını bekle — max 2 dakika timeout
+            try {
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(120, TimeUnit.SECONDS);
+            } catch (TimeoutException te) {
+                plugin.getLogger().warning("[Anti-VPN] Proxy listesi indirme zaman aşımına uğradı (2 dakika). Tamamlanan sonuçlar kullanılacak.");
+                futures.forEach(f -> f.cancel(false));
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                refreshInProgress.set(false);
+                return;
+            } catch (ExecutionException ee) {
+                plugin.getLogger().warning("[Anti-VPN] İndirme hatası: " + ee.getCause());
+            }
 
             Set<String> downloadedIps = ConcurrentHashMap.newKeySet();
             int successCount = 0;
@@ -298,29 +309,31 @@ public class IPReputationManager implements IReputationService {
                 }
             }
 
-            if (!downloadedIps.isEmpty()) {
-                int previousSize = proxyIpSet.size();
-                proxyIpSet.clear();
-                proxyIpSet.addAll(downloadedIps);
-                saveProxyListToFile();
-                lastRefreshTime.set(System.currentTimeMillis());
+            try {
+                if (!downloadedIps.isEmpty()) {
+                    int previousSize = proxyIpSet.size();
+                    proxyIpSet.clear();
+                    proxyIpSet.addAll(downloadedIps);
+                    saveProxyListToFile();
+                    lastRefreshTime.set(System.currentTimeMillis());
 
-                long duration = System.currentTimeMillis() - startTime;
-                String msg = String.format(
-                        "[Anti-VPN] Proxy listeleri güncellendi! %d benzersiz IP (%d kaynaktan) — %dms — Önceki: %d",
-                        proxyIpSet.size(), successCount, duration, previousSize
-                );
-                plugin.getLogger().info(msg);
+                    long duration = System.currentTimeMillis() - startTime;
+                    String msg = String.format(
+                            "[Anti-VPN] Proxy listeleri güncellendi! %d benzersiz IP (%d kaynaktan) — %dms — Önceki: %d",
+                            proxyIpSet.size(), successCount, duration, previousSize
+                    );
+                    plugin.getLogger().info(msg);
 
-                // Admin bildirimi
-                if (adminNotifyEnabled) {
-                    notifyAdmins("Anti-VPN proxy listesi güncellendi: " + proxyIpSet.size() + " IP yüklendi.");
+                    // Admin bildirimi
+                    if (adminNotifyEnabled) {
+                        notifyAdmins("Anti-VPN proxy listesi güncellendi: " + proxyIpSet.size() + " IP yüklendi.");
+                    }
+                } else if (successCount == 0) {
+                    plugin.getLogger().warning("[Anti-VPN] Hiçbir proxy listesi indirilemedi! Yerel önbellek kullanılıyor (" + proxyIpSet.size() + " IP).");
                 }
-            } else if (successCount == 0) {
-                plugin.getLogger().warning("[Anti-VPN] Hiçbir proxy listesi indirilemedi! Yerel önbellek kullanılıyor (" + proxyIpSet.size() + " IP).");
+            } finally {
+                refreshInProgress.set(false);
             }
-
-            refreshInProgress.set(false);
         });
     }
 

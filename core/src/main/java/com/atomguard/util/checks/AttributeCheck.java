@@ -42,7 +42,9 @@ public final class AttributeCheck {
             case "generic.max_health", "max_health" -> 2048.0;
             case "generic.armor", "armor" -> 30.0;
             case "generic.knockback_resistance", "knockback_resistance" -> 1.0;
-            default -> Double.MAX_VALUE; // Bilinmeyen attribute'lar sınırsız
+            // Bilinmeyen attribute'lar için fail-open: kontrol yapılmaz, engellenmez.
+            // Yeni Minecraft attribute'larında false positive oluşmaması için kasıtlı.
+            default -> Double.MAX_VALUE;
         };
     }
 

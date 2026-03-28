@@ -127,7 +127,6 @@ public class NettyCrashModule extends AbstractModule implements Listener {
      */
     private void injectHandler(@NotNull Player player) {
         UUID uuid = player.getUniqueId();
-        if (injectedPlayers.contains(uuid)) return;
 
         try {
             Object channelObj = PacketEvents.getAPI().getPlayerManager().getChannel(player);
@@ -141,6 +140,9 @@ public class NettyCrashModule extends AbstractModule implements Listener {
                 try {
                     ChannelPipeline pipeline = channel.pipeline();
 
+                    // Atomic gate: add() false döndürürse zaten inject edilmiş — çık
+                    if (!injectedPlayers.add(uuid)) return;
+
                     if (pipeline.get(NettyCrashHandler.HANDLER_NAME) != null) {
                         pipeline.remove(NettyCrashHandler.HANDLER_NAME);
                     }
@@ -148,12 +150,13 @@ public class NettyCrashModule extends AbstractModule implements Listener {
                     if (pipeline.get("decoder") != null) {
                         NettyCrashHandler handler = new NettyCrashHandler(plugin, uuid, player.getName());
                         pipeline.addAfter("decoder", NettyCrashHandler.HANDLER_NAME, handler);
-                        injectedPlayers.add(uuid);
                         debug("Netty handler enjekte edildi: " + player.getName());
                     } else {
+                        injectedPlayers.remove(uuid); // pipeline hazır değil — geri al
                         debug("Decoder handler bulunamadı: " + player.getName());
                     }
                 } catch (Exception e) {
+                    injectedPlayers.remove(uuid); // hata durumunda geri al
                     error("Handler enjeksiyonu sırasında hata (" + player.getName() + "): " + e.getMessage());
                 }
             });

@@ -33,7 +33,7 @@ public class GlobalRateLimitModule extends VelocityModule {
 
     @Override
     public void onConfigReload() {
-        int connLimit = getConfigInt("connections-per-second.per-ip-max", 3);
+        int connLimit = getConfigInt("connections-per-second.per-ip-max", 5);
         int pingLimit = getConfigInt("ping-per-second.per-ip-max", 5);
         
         // Sayaçlar sıfırlanabilir (Reload anında küçük bir tolerans), önemli olan yeni limitin devreye girmesi.
@@ -44,7 +44,7 @@ public class GlobalRateLimitModule extends VelocityModule {
 
     @Override
     public void onEnable() {
-        int connLimit = getConfigInt("connections-per-second.per-ip-max", 3);
+        int connLimit = getConfigInt("connections-per-second.per-ip-max", 5);
         int pingLimit = getConfigInt("ping-per-second.per-ip-max", 5);
         
         // Window is 1 second for these "per second" limits
@@ -72,7 +72,7 @@ public class GlobalRateLimitModule extends VelocityModule {
         if (!isEnabled()) return ConnectionRateLimiter.RateLimitResult.ALLOWED;
 
         // Global Check
-        int globalMax = getConfigInt("connections-per-second.global-max", 50);
+        int globalMax = getConfigInt("connections-per-second.global-max", 100);
         if (globalConnectionCounter.get() >= globalMax) {
             incrementBlocked();
             return new ConnectionRateLimiter.RateLimitResult(false, 1000); 
@@ -93,7 +93,7 @@ public class GlobalRateLimitModule extends VelocityModule {
         if (!isEnabled()) return true;
 
         // Global Check
-        int globalMax = getConfigInt("ping-saniye.global-max", 200);
+        int globalMax = getConfigInt("ping-per-second.global-max", 200);
         if (globalPingCounter.get() >= globalMax) {
             return false;
         }

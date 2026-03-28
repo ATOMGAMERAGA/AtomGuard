@@ -40,9 +40,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SmartLagModule extends AbstractModule implements Listener {
 
-    private long lastTickTime;
+    private volatile long lastTickTime;
     private final Set<Long> frozenChunks = ConcurrentHashMap.newKeySet(); // ChunkKey hash'leri
-    private boolean isFreezingActive = false;
+    private volatile boolean isFreezingActive = false;
     private int freezeDurationTicks = 100; // 5 saniye dondur
     private int watchdogTaskId = -1;
     private static final int MAX_FROZEN_CHUNKS = 10; // Aşırı freeze'i önler

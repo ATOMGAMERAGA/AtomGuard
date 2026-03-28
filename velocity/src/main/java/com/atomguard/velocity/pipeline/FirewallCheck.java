@@ -30,7 +30,7 @@ public class FirewallCheck implements ConnectionCheck {
         FirewallModule.FirewallCheckResult fwResult = firewall.check(ctx.ip());
         
         if (fwResult.verdict() == FirewallModule.FirewallVerdict.DENY) {
-            return CheckResult.deny(
+            return CheckResult.hardDeny(
                 plugin.getMessageManager().buildKickMessage("kick.yasakli",
                     Map.of("ip", ctx.ip(), "sebep", fwResult.reason())),
                 name(),

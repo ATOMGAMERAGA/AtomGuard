@@ -115,6 +115,9 @@ public class AtomGuard extends JavaPlugin {
             intelligenceEngine.start();
             if (coreMetrics != null) coreMetrics.start();
 
+            // API'yi modüller başlamadan önce başlat — modüller onEnable()'da API'ya erişebilir
+            initializeAPI();
+
             // ÖNCE PacketListener oluştur — modüller onEnable()'da registerReceiveHandler() çağırdığından
             this.packetListener = new PacketListener(this);
             PacketEvents.getAPI().getEventManager().registerListener(packetListener);
@@ -179,9 +182,6 @@ public class AtomGuard extends JavaPlugin {
             getCommand("atomguard").setExecutor(new AtomGuardCommand(this));
             getCommand("atomguard").setTabCompleter(new AtomGuardTabCompleter(this));
             getCommand("panic").setExecutor(new PanicCommand(this));
-
-            // API initialization
-            initializeAPI();
 
             getLogger().info("AtomGuard (Core) has been enabled!");
 

@@ -3,6 +3,28 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.2.0] - 2026-03-28
+
+### 🔧 Improvements
+
+- **Velocity — BotDetectionEngine: `flagCount` threshold raised to 3 for high-risk and medium-risk classification**: `isHighRisk()` and `isMediumRisk()` previously required `flagCount >= 2`, while `ThreatScore`'s own identical methods enforced `>= 3`. The discrepancy meant a player triggering exactly two suspicious categories (e.g. unusual connection rate + join-pattern) could be flagged as medium-risk. Both methods now consistently require **3 independent suspicious categories** before any blocking action is taken, making it mathematically impossible to reach a block threshold through 2-flag scenarios alone (max achievable score with 2 flags ≈ 37, well below both thresholds).
+
+- **Velocity — ConnectionAnalyzer: grace period extended from 10 s to 15 s**: The first-connection grace window (during which connection-rate counting is suppressed) was 10 seconds. Forge modpack clients, slow authentication servers, and skin-download overhead can easily exceed 10 seconds, causing the connection counter to start incrementing during legitimate join flow. Extended to 15 seconds to provide a safe buffer.
+
+- **Velocity — JoinPatternDetector: quit-count decay accelerated**: The decay interval was reduced from **5 minutes to 3 minutes**, and the decay amount was increased from **5 to 7** points per cycle. Previously, an IP that accumulated 20 quit-counts (e.g. during a server crash or mass disconnect) would take up to 20 minutes to clear the `maxQuitsBeforeSuspect` threshold. With the new values, a count of 20 decays to zero in roughly **9 minutes** (3 cycles × 7 points).
+
+- **Velocity — JoinPatternDetector: parameters now configurable via `config.yml`**: `joinWindowSeconds`, `maxJoinsInWindow`, and `maxQuitsBeforeSuspect` were previously hardcoded in `VelocityAntiBotModule.onEnable()` as `(120, 8, 15)`. Added three new config keys under `modules.bot-protection`: `join-window-seconds` (default 120), `max-joins-in-window` (default 8), `max-quits-before-suspect` (default 20). The `JoinPatternDetector` constructor still enforces its own minimums (8 / 20) as a safety floor.
+
+- **Velocity — IP Reputation: initial score raised and invalid-handshake penalty reduced**: `initial-score` increased **60 → 75**. Combined with the previous `invalid-handshake-penalty: 8`, a Forge/FML client whose handshake failed validation only 7 times (before ever logging in) could drop below the 24-hour auto-ban threshold. Penalty reduced **8 → 3**: a Forge client that fails 10 consecutive handshake checks now loses only 30 points (75 → 45), remaining well above both auto-ban thresholds (15 and 10).
+
+- **Velocity — BurstAllowance: `min-verified-ratio-percent` reduced 30 % → 15 %**: Burst mode was gated on at least 30 % of connections being from verified IPs. During server restarts or event starts, the verified ratio is naturally low (new players joining for the first time), so burst mode never activated precisely when it was needed most. Lowered to 15 % to allow burst mode to engage during realistic restart traffic.
+
+- **Velocity — `ping-per-second` config section added to `rate-limit`**: `GlobalRateLimitModule` read per-IP and global ping-rate limits from `modules.rate-limit.ping-per-second.*`, but that YAML section was missing from `config.yml`. All ping rate-limit reads fell through to hardcoded Java defaults, making the config keys invisible and non-functional. Section added with `per-ip-max: 5` and `global-max: 200`.
+
+### 🐛 Bug Fixes
+
+- **Velocity — GlobalRateLimitModule: `ping-saniye.global-max` config key never resolved**: `allowPing()` called `getConfigInt("ping-saniye.global-max", 200)` — a Turkish/English mixed key that does not exist in `config.yml`. The read always returned the default value of 200 and could never be overridden. Corrected to `"ping-per-second.global-max"` to match the newly added YAML section.
+
 ## [2.1.4] - 2026-03-26
 
 ### 🐛 Bug Fixes

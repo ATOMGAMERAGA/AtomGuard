@@ -43,6 +43,10 @@ public class BehaviorManager {
 
     public void recordLogin(String ip, String username) {
         PlayerBehaviorProfile profile = getProfile(ip);
+        // Offline-mode sunucularda aynı IP'den farklı kullanıcı adıyla giriş normaldir (aile, cracked).
+        // Config'den offline-mode ayarını oku ve profildeki penaltıyı devre dışı bırak.
+        boolean offlineMode = plugin.getConfigManager().getBoolean("general.offline-mode", false);
+        profile.setOfflineModeLenient(offlineMode);
         profile.recordSession(username, "Unknown");
         profile.recordLoginSuccess();
         saveProfile(profile);

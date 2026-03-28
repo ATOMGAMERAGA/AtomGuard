@@ -70,14 +70,10 @@ public class CreativeItemsModule extends AbstractModule implements Listener {
     @Override
 
     public void onDisable() {
-        super.onDisable();
+        super.onDisable(); // HandlerList.unregisterAll(this) zaten parent'ta çağrılıyor
 
         // Blacklist'i temizle
         blacklistedItems.clear();
-
-        // Event listener'ı kaldır
-        InventoryClickEvent.getHandlerList().unregister(this);
-        PlayerGameModeChangeEvent.getHandlerList().unregister(this);
 
         debug("Modül devre dışı bırakıldı.");
     }

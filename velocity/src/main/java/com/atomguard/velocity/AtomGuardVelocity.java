@@ -38,6 +38,8 @@ import com.atomguard.velocity.module.fastchat.FastChatModule;
 import com.atomguard.velocity.module.reconnect.ReconnectControlModule;
 import com.atomguard.velocity.module.auth.PasswordCheckModule;
 import com.atomguard.velocity.module.latency.LatencyCheckModule;
+import com.atomguard.velocity.module.verification.VerificationModule;
+import com.atomguard.velocity.module.limbo.LimboVerificationModule;
 
 import com.google.inject.Inject;
 import com.velocitypowered.api.command.CommandMeta;
@@ -102,6 +104,8 @@ public class AtomGuardVelocity {
     private ReconnectControlModule reconnectControlModule;
     private PasswordCheckModule passwordCheckModule;
     private LatencyCheckModule latencyCheckModule;
+    private VerificationModule verificationModule;
+    private LimboVerificationModule limboModule;
 
     private volatile boolean attackMode = false;
     private volatile long attackModeStartTime = 0;
@@ -313,6 +317,8 @@ public class AtomGuardVelocity {
         reconnectControlModule = new ReconnectControlModule(this);
         passwordCheckModule = new PasswordCheckModule(this);
         latencyCheckModule = new LatencyCheckModule(this);
+        verificationModule = new VerificationModule(this);
+        limboModule = new LimboVerificationModule(this);
 
         moduleManager.register(firewallModule);    // Önce güvenlik duvarı
         moduleManager.register(rateLimitModule);
@@ -321,7 +327,7 @@ public class AtomGuardVelocity {
         moduleManager.register(antiBotModule);
         moduleManager.register(vpnModule);
         moduleManager.register(exploitModule);
-        
+
         // Register New Modules
         moduleManager.register(ipTablesModule);
         moduleManager.register(accountFirewallModule);
@@ -330,16 +336,27 @@ public class AtomGuardVelocity {
         moduleManager.register(reconnectControlModule);
         moduleManager.register(passwordCheckModule);
         moduleManager.register(latencyCheckModule);
+        moduleManager.register(verificationModule);
+        moduleManager.register(limboModule);
 
-        // Register Pipeline Checks
+        // Register Pipeline Checks (öncelik sırasına göre)
+        // priority=5:  Protocol kontrolü (versiyon)
         connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.ProtocolCheck(this));
+        // priority=10: Firewall (blacklist/tempban) — her zaman çalışır
         connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.FirewallCheck(this));
-        connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.TrustScoreCheck(this));
+        // priority=11: Verified bypass → protocol+firewall sonrası, diğerlerinden önce
+        connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.VerifiedBypassCheck(this));
+        // priority=20: Rate limit
         connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.RateLimitCheck(this));
+        // priority=30: DDoS koruması
         connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.DDoSCheck(this));
+        // priority=40: Hesap güvenlik duvarı
         connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.AccountFirewallCheck(this));
+        // priority=50: AntiBot (passive — limbo yokken fallback)
         connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.AntiBotCheck(this));
+        // priority=60: VPN kontrolü
         connectionPipeline.addCheck(new com.atomguard.velocity.pipeline.VPNCheck(this));
+        // TrustScoreCheck kaldırıldı — verified sistemi TrustScore'un yerini aldı
     }
 
     private void registerListeners() {
@@ -428,4 +445,6 @@ public class AtomGuardVelocity {
     public ReconnectControlModule getReconnectControlModule() { return reconnectControlModule; }
     public PasswordCheckModule getPasswordCheckModule() { return passwordCheckModule; }
     public LatencyCheckModule getLatencyCheckModule() { return latencyCheckModule; }
+    public VerificationModule getVerificationModule() { return verificationModule; }
+    public LimboVerificationModule getLimboModule() { return limboModule; }
 }

@@ -23,11 +23,13 @@ public class ConnectionPipeline {
     public CheckResult process(@NotNull ConnectionContext ctx) {
         for (ConnectionCheck check : checks) {
             if (!check.isEnabled()) continue;
-            
+            // Verified oyuncular için soft/medium check'leri atla
+            if (ctx.verified() && check.skipForVerified()) continue;
+
             CheckResult result = check.check(ctx);
-            if (result.denied()) {
-                return result;
-            }
+            if (result.denied()) return result;
+            // verifiedBypass() → geri kalan check'leri atla
+            if (result.pipelineComplete()) return result;
         }
         return CheckResult.allowed();
     }
@@ -37,9 +39,14 @@ public class ConnectionPipeline {
         CompletableFuture<CheckResult> chain = CompletableFuture.completedFuture(CheckResult.allowed());
         for (ConnectionCheck check : checks) {
             if (!check.isEnabled()) continue;
+            final ConnectionCheck c = check;
             chain = chain.thenCompose(prev -> {
                 if (prev.denied()) return CompletableFuture.completedFuture(prev);
-                return check.checkAsync(ctx);
+                // verifiedBypass() → geri kalan check'leri atla
+                if (prev.pipelineComplete()) return CompletableFuture.completedFuture(prev);
+                // Verified oyuncular için soft/medium check'leri atla
+                if (ctx.verified() && c.skipForVerified()) return CompletableFuture.completedFuture(CheckResult.allowed());
+                return c.checkAsync(ctx);
             });
         }
         return chain;

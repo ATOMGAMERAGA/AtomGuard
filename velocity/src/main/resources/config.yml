@@ -31,20 +31,30 @@ discord-webhook:
   enabled: false
   webhook-url: ""
 
+# General Settings
+general:
+  # Offline-mode (cracked) sunucular için: aynı IP'den farklı kullanıcı adıyla giriş normal sayılır.
+  # true ise TrustScore'da "çok fazla farklı isim" penaltısı devre dışı kalır.
+  offline-mode: false
+
 # Pipeline Modules (Processed in Priority Order)
 modules:
   bot-protection:
     enabled: true
-    analysis-window: 15
-    suspicious-threshold: 8
-    high-risk-threshold: 75
-    medium-risk-threshold: 45
-    trust-score-threshold: 10 # IPs below this threshold are rejected by TrustScoreCheck
+    analysis-window: 20          # was 15 — daha geniş analiz penceresi
+    suspicious-threshold: 10     # was 8 — daha toleranslı eşik
+    high-risk-threshold: 80      # was 75 — daha az agresif
+    medium-risk-threshold: 50    # was 45 — daha az agresif
+    trust-score-threshold: 5     # was 10 — yeni oyuncu koruması (başlangıç skoru 50)
     protocol-validation: true
     allow-unknown-brands: true
     blocked-brands: []
     allowed-brands: []
     extra-protocols: []
+    # JoinPatternDetector parametreleri — sunucu tipine göre ayarlanabilir
+    join-window-seconds: 120         # Bu süre içindeki join sayısı takip edilir
+    max-joins-in-window: 8           # Pencerede bu kadar join → rapid-joiner flag (min 8)
+    max-quits-before-suspect: 20     # Bu kadar quit → frequent-quitter flag (min 20)
     captcha:
       enabled: false
       timeout: 60
@@ -68,13 +78,16 @@ modules:
   rate-limit:
     enabled: true
     connections-per-second:
-      per-ip-max: 5
+      per-ip-max: 5      # Reconnect toleransı (verified oyuncular bu limitten muaf)
       global-max: 100
+    ping-per-second:
+      per-ip-max: 5      # IP başına saniyede maksimum ping isteği
+      global-max: 200    # Sunucu geneli saniyede maksimum ping isteği
   ddos-protection:
     enabled: true
     dry-run: false  # true yapılırsa engeller loglanır ama bağlantı reddedilmez
     connection-limit:
-      per-ip-per-minute: 10
+      per-ip-per-minute: 15     # was 10 — reconnect toleransı (verified oyuncular muaf)
       global-per-second: 100
       per-subnet-per-minute: 30
       subnet-ban-enabled: false
@@ -85,17 +98,17 @@ modules:
       min-unique-ips: 15
     attack-levels:
       enabled: true
-      hysteresis-rise-seconds: 5
-      hysteresis-fall-seconds: 30
+      hysteresis-rise-seconds: 10   # was 5 — daha yavaş saldırı seviyesi yükseltme
+      hysteresis-fall-seconds: 20   # was 30 — daha hızlı normale dönüş
       verified-reserved-slots: 50
       captcha-levels:
         - "ELEVATED"
         - "HIGH"
     smart-throttle:
       enabled: true
-      normal-limit: 15
-      cautious-limit: 8
-      aggressive-limit: 3
+      normal-limit: 20       # was 15 — daha toleranslı normal trafik
+      cautious-limit: 10     # was 8
+      aggressive-limit: 4    # was 3
       lockdown-limit: 1
     anomaly-detection:
       enabled: true
@@ -112,16 +125,16 @@ modules:
       mass-threshold: 20
     ip-reputation:
       enabled: true
-      initial-score: 50
-      successful-connection-bonus: 5
-      rate-limit-penalty: 10
-      invalid-handshake-penalty: 15
+      initial-score: 75              # was 60 — Forge el sıkışması false ban riskini azaltmak için artırıldı
+      successful-connection-bonus: 8  # was 5 — başarılı bağlantı daha fazla ödül
+      rate-limit-penalty: 5           # was 10 — geçici throttle çok fazla ceza veriyordu
+      invalid-handshake-penalty: 3    # was 8 — Forge/FML handshake geçersiz sayılabiliyor, ceza düşürüldü
       slowloris-penalty: 25
-      attack-connection-penalty: 20
-      auto-ban-threshold-1hour: 20
-      auto-ban-threshold-24hours: 5
-      decay-points-per-hour: 3
-      verified-minimum-score: 30
+      attack-connection-penalty: 10   # was 20 — saldırı sırasında reconnect çok fazla ceza veriyordu
+      auto-ban-threshold-1hour: 15    # was 20 — skor 15'in altına düşerse 1 saatlik ban (daha az agresif)
+      auto-ban-threshold-24hours: 10  # was 5 — skor 10'un altına düşerse 24 saatlik ban
+      decay-points-per-hour: 5        # was 3 — daha hızlı toparlanma
+      verified-minimum-score: 40      # was 30 — verified IP'lerin minimum skoru artırıldı
     attack-recording:
       enabled: true
       json-save: true
@@ -144,7 +157,7 @@ modules:
       burst-window-seconds: 15   # Burst tolerans süresi
       burst-multiplier: 3        # Burst sırasında limitler 3x
       max-bursts-per-hour: 10    # Abuse önleme
-      min-verified-ratio-percent: 30  # Burst için minimum verified IP oranı
+      min-verified-ratio-percent: 15  # was 30 — server restart'larında %30 verified oran elde edilemiyordu
     geo-blocking:
       enabled: false
       blocked-countries: []
@@ -172,6 +185,50 @@ modules:
       - "cp"
   account-firewall:
     enabled: true
+
+  # ══════════════════════════════════════════════════════════════
+  # Sonar-Tarzı Limbo Doğrulama (v2.2.0+)
+  # ══════════════════════════════════════════════════════════════
+  # Oyuncuları sahte bir limbo sunucuya yönlendirerek gerçek MC
+  # client'ı olduklarını doğrular. Bot yazılımları fizik simülasyonu
+  # yapamadığı için %99.9+ tespit oranı.
+  #
+  # KURULUM:
+  # 1. velocity.toml'a limbo sunucu ekle:
+  #      [servers]
+  #      limbo = "127.0.0.1:25567"
+  # 2. AtomGuard-Limbo.jar'ı limbo sunucuya kur
+  # 3. Bu modülü aktifleştir
+  dogrulama:
+    enabled: false   # true yaparak aktifleştir (limbo sunucu kurulumu gerekli)
+
+    # Limbo sunucu ayarları
+    limbo:
+      max-concurrent: 50       # Aynı anda max doğrulama
+      timeout-seconds: 15      # Doğrulama zaman aşımı
+
+    # Bağlantı kuyruğu
+    queue:
+      max-size: 200            # Toplam kuyruk kapasitesi
+      per-ip-max: 3            # IP başına kuyrukta max bağlantı
+
+    # Ana sunucu adı (doğrulama sonrası yönlendirilecek)
+    main-server: "lobby"
+
+    # Doğrulanmış oyuncu veritabanı
+    storage:
+      expiry-days: 30          # Verified süresi (gün)
+
+  # ══════════════════════════════════════════════════════════════
+  # Embedded Physics Limbo Doğrulama (v2.2.0+)
+  # ══════════════════════════════════════════════════════════════
+  # MEDIUM_RISK bot tespiti → oyuncuyu anlık fizik testine alır.
+  # Ayrı bir limbo sunucuya gerek yok — Velocity içine gömülü.
+  limbo-dogrulama:
+    enabled: false               # true yaparak aktifleştir
+    timeout-saniye: 6            # Fizik doğrulaması bekleme süresi
+    timeout-banlama: false       # true → timeout = bot say; false → geçir
+    hedef-sunucu: "survival"     # Doğrulama sonrası gidilecek sunucu (velocity'de kayıtlı)
 
 # External Service URLs (use defaults unless you need to change them)
 external-services:

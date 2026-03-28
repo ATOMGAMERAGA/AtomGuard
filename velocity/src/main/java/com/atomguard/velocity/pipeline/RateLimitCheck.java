@@ -25,14 +25,19 @@ public class RateLimitCheck implements ConnectionCheck {
     }
 
     @Override
+    public boolean skipForVerified() {
+        return true; // Verified oyuncular rate limit'ten muaf
+    }
+
+    @Override
     public @NotNull CheckResult check(@NotNull ConnectionContext ctx) {
         GlobalRateLimitModule rateLimiter = plugin.getRateLimitModule();
         com.atomguard.velocity.module.ratelimit.ConnectionRateLimiter.RateLimitResult result = rateLimiter.allowConnectionWithInfo(ctx.ip());
-        
+
         if (!result.allowed()) {
             int seconds = (int) Math.ceil(result.retryAfterMs() / 1000.0);
-            return CheckResult.deny(
-                plugin.getMessageManager().buildKickMessage("kick.rate-limit", 
+            return CheckResult.softDeny(
+                plugin.getMessageManager().buildKickMessage("kick.rate-limit",
                     Map.of("sure", String.valueOf(seconds))),
                 name(),
                 "rate-limit-exceeded"

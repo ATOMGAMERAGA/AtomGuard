@@ -20,6 +20,9 @@ kick:
   tempban: "<red>Geçici olarak engellendiniz.<br><gray>Kalan süre: <white><sure></white></gray>"
   protocol: "<red>Desteklenmeyen oyun sürümü.<br><gray>İzin verilen: <white><min> - <max></white></gray>"
   genel: "<red>Bağlantı reddedildi. Lütfen daha sonra tekrar deneyin.</red>"
+  verification-failed: "<red>✖ Doğrulama Başarısız</red><newline><gray>Sunucumuza giriş yapabilmek için gerçek bir Minecraft istemcisi kullanmanız gerekmektedir.</gray>"
+  queue-full: "<yellow>⏳ Sunucu Yoğun</yellow><newline><gray>Şu anda çok fazla bağlantı isteği var. Lütfen birkaç saniye sonra tekrar deneyin.</gray>"
+  verification-timeout: "<red>⏱ Doğrulama Zaman Aşımı</red><newline><gray>Doğrulama süresi içinde tamamlanamadı. Lütfen tekrar bağlanın.</gray>"
 
 # IPTables Entegrasyonu
 iptables:

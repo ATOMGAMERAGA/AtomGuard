@@ -48,9 +48,11 @@ public class RateLimitMiddleware {
 
         boolean tryAcquire(int maxRequests) {
             long now = System.currentTimeMillis();
-            if (now - lastReset > 1000) {
-                lastReset = now;
-                requests.set(0);
+            synchronized (this) {
+                if (now - lastReset > 1000) {
+                    lastReset = now;
+                    requests.set(0);
+                }
             }
             return requests.incrementAndGet() <= maxRequests;
         }

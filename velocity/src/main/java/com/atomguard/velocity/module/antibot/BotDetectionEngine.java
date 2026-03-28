@@ -64,19 +64,18 @@ public class BotDetectionEngine {
         // Her analiz döngüsü başlamadan önce sıfırla — birikim sorununu önler
         score.resetForNewAnalysis();
 
-        // Zaman bazlı decay uygula
-        score.applyTimeDecay(60_000L, 10);
-
         // Bağlantı hızı analizi
         if (connectionAnalyzer.isSuspicious(ip)) {
             score.setConnectionRateScore((int) (connectionAnalyzer.getConnectionRate(ip) * 10));
         }
 
         // Handshake doğrulama
+        // Skor 50 → 20: Forge/FML veya bilinmeyen protocol gibi meşru durumlar çok yüksek skor alıyordu.
+        // Handshake hatası tek başına yeterli flag değil; bağlantı hızı veya join pattern ile birleşmeli.
         if (hostname != null || port > 0 || protocol > 0) {
             HandshakeValidator.ValidationResult hvResult =
                     handshakeValidator.validate(hostname, port, protocol, username);
-            if (!hvResult.valid()) score.setHandshakeScore(50);
+            if (!hvResult.valid()) score.setHandshakeScore(20);
         }
 
         // Brand analizi
@@ -129,7 +128,10 @@ public class BotDetectionEngine {
     public boolean isHighRisk(String ip) {
         if (verifiedPlayers.contains(ip)) return false;
         ThreatScore score = threatScores.get(ip);
-        return score != null && score.getTotalScore() >= highRiskThreshold && score.getFlagCount() >= 2;
+        // flagCount >= 3: ThreatScore.isHighRisk() ile tutarlı.
+        // 2 flag ile eşiğe ulaşmak matematiksel olarak neredeyse imkansız (max ~37 puan),
+        // ama mutlak false positive güvencesi için >= 3 zorunlu kılındı.
+        return score != null && score.getTotalScore() >= highRiskThreshold && score.getFlagCount() >= 3;
     }
 
     /**
@@ -138,7 +140,8 @@ public class BotDetectionEngine {
     public boolean isMediumRisk(String ip) {
         if (verifiedPlayers.contains(ip)) return false;
         ThreatScore score = threatScores.get(ip);
-        return score != null && score.getTotalScore() >= mediumRiskThreshold && score.getFlagCount() >= 2;
+        // flagCount >= 3: tek vektörle veya 2 vektörle medium-risk tetiklenemez.
+        return score != null && score.getTotalScore() >= mediumRiskThreshold && score.getFlagCount() >= 3;
     }
 
     public ThreatScore getScore(String ip) {

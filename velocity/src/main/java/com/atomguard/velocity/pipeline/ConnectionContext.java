@@ -1,15 +1,26 @@
 package com.atomguard.velocity.pipeline;
 
-import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Gelen bağlantının bağlam bilgileri.
+ * <p>
+ * {@code verified=true} ise bu IP daha önce başarılı giriş yapmış;
+ * pipeline içinde soft/medium check'ler bu IP için atlanır.
+ */
 public record ConnectionContext(
     String ip,
     String username,
     @Nullable UUID uuid,
     @Nullable String hostname,
     int port,
-    int protocol
+    int protocol,
+    boolean verified
 ) {
     public @interface Nullable {}
+
+    /** Geriye uyumluluk: verified=false ile oluşturur. */
+    public ConnectionContext(String ip, String username, UUID uuid, String hostname, int port, int protocol) {
+        this(ip, username, uuid, hostname, port, protocol, false);
+    }
 }

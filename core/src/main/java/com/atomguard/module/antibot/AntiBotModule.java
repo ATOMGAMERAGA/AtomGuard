@@ -231,18 +231,21 @@ public class AntiBotModule extends AbstractModule implements Listener {
             PlayerProfile existing = playerProfiles.get(uuid);
             if (existing != null) return existing;
 
-            // 2. UUID yok — IP ile bak, varsa UUID'ye bağla (profil birleştirme)
+            // 2. IP ile bak, varsa UUID'ye bağla (profil birleştirme)
             PlayerProfile ipProfile = ipProfiles.get(ip);
             if (ipProfile != null) {
                 ipProfile.updateIdentity(uuid, ipProfile.getUsername());
-                playerProfiles.put(uuid, ipProfile);
-                return ipProfile;
+                // putIfAbsent: başka thread aynı UUID için profil oluşturduysa onu kullan
+                PlayerProfile race = playerProfiles.putIfAbsent(uuid, ipProfile);
+                return (race != null) ? race : ipProfile;
             }
 
-            // 3. Hiçbiri yok — yeni oluştur, her iki map'e koy
-            PlayerProfile newProfile = new PlayerProfile(uuid, null, ip);
-            playerProfiles.put(uuid, newProfile);
-            ipProfiles.put(ip, newProfile);
+            // 3. Hiçbiri yok — yeni oluştur (computeIfAbsent atomik)
+            final String finalIp = ip;
+            PlayerProfile newProfile = new PlayerProfile(uuid, null, finalIp);
+            PlayerProfile put = playerProfiles.putIfAbsent(uuid, newProfile);
+            if (put != null) return put; // başka thread önce oluşturmuş
+            ipProfiles.putIfAbsent(finalIp, newProfile);
             return newProfile;
         } else {
             return ipProfiles.computeIfAbsent(ip, k -> new PlayerProfile(null, null, ip));

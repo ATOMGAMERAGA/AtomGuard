@@ -28,6 +28,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Lightweight embedded web panel for AtomGuard.
@@ -54,8 +55,8 @@ public class WebPanel {
     // Event buffer
     private final ConcurrentLinkedDeque<EventRecord> recentEvents = new ConcurrentLinkedDeque<>();
 
-    // Login attempt tracking
-    private final Cache<String, long[]> loginAttempts = Caffeine.newBuilder()
+    // Login attempt tracking (AtomicLong — thread-safe increment)
+    private final Cache<String, AtomicLong> loginAttempts = Caffeine.newBuilder()
             .maximumSize(1000)
             .expireAfterWrite(30, TimeUnit.MINUTES)
             .build();
@@ -171,9 +172,13 @@ public class WebPanel {
                 return;
             }
 
+            if (exchange.getRemoteAddress() == null || exchange.getRemoteAddress().getAddress() == null) {
+                sendResponse(exchange, 400, "application/json", "{\"error\":\"Invalid request\"}");
+                return;
+            }
             String ip = exchange.getRemoteAddress().getAddress().getHostAddress();
-            long[] entry = loginAttempts.getIfPresent(ip);
-            int attempts = (entry == null) ? 0 : (int) entry[0];
+            AtomicLong entry = loginAttempts.getIfPresent(ip);
+            long attempts = (entry == null) ? 0 : entry.get();
 
             if (attempts >= 5) {
                 sendResponse(exchange, 429, "application/json", "{\"error\":\"Too many login attempts. Try again later.\"}");
@@ -195,12 +200,8 @@ public class WebPanel {
                 loginAttempts.invalidate(ip);
                 sendResponse(exchange, 200, "application/json", "{\"token\":\"" + token + "\"}");
             } else {
-                long[] existingEntry = loginAttempts.getIfPresent(ip);
-                if (existingEntry == null) {
-                    loginAttempts.put(ip, new long[]{1, System.currentTimeMillis()});
-                } else {
-                    existingEntry[0]++;
-                }
+                // computeIfAbsent + incrementAndGet — atomik, race condition yok
+                loginAttempts.asMap().computeIfAbsent(ip, k -> new AtomicLong(0)).incrementAndGet();
                 sendResponse(exchange, 401, "application/json", "{\"error\":\"Invalid credentials\"}");
             }
         }
@@ -338,8 +339,8 @@ public class WebPanel {
         return text.replace("\\", "\\\\")
                    .replace("\"", "\\\"")
                    .replace("\n", "\\n")
-                   .replace("\r", "")
-                   .replace("\t", "    ");
+                   .replace("\r", "\\r")
+                   .replace("\t", "\\t");
     }
 
     private String formatTimestamp(long ts) {

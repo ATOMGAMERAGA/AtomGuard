@@ -176,18 +176,21 @@ public class LogManager {
      */
     private void createDailyLogFile() {
         try {
-            closeWriter();
-
             String fileName = "atomguard-" + LocalDate.now().format(FILE_DATE_FORMAT) + ".log";
-            currentLogFile = new File(logFolder, fileName);
+            File newLogFile = new File(logFolder, fileName);
 
-            if (!currentLogFile.exists()) {
-                currentLogFile.createNewFile();
+            if (!newLogFile.exists()) {
+                newLogFile.createNewFile();
             }
 
-            logWriter = Files.newBufferedWriter(currentLogFile.toPath(),
+            BufferedWriter newWriter = Files.newBufferedWriter(newLogFile.toPath(),
                     StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+
+            // Yeni writer başarıyla açıldı — şimdi eskisini kapat
+            closeWriter();
+            currentLogFile = newLogFile;
+            logWriter = newWriter;
 
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Log dosyası oluşturulamadı!", e);
@@ -211,7 +214,7 @@ public class LogManager {
     /**
      * Writer'ı kapatır
      */
-    private void closeWriter() {
+    private synchronized void closeWriter() {
         if (logWriter != null) {
             try {
                 logWriter.flush();
@@ -228,7 +231,7 @@ public class LogManager {
      *
      * @param entry Log entry
      */
-    private void writeLogEntry(@NotNull LogEntry entry) {
+    private synchronized void writeLogEntry(@NotNull LogEntry entry) {
         if (logWriter == null) {
             return;
         }

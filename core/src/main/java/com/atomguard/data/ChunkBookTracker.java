@@ -53,22 +53,24 @@ public class ChunkBookTracker {
      */
     public int removeBook(@NotNull Chunk chunk) {
         ChunkKey key = new ChunkKey(chunk);
-        AtomicInteger count = bookCounts.get(key);
 
-        if (count == null) {
-            return 0;
+        // compute() atomik — decrement + conditional remove race condition önleme
+        int[] result = {0};
+        bookCounts.compute(key, (k, count) -> {
+            if (count == null) return null;
+            int newVal = Math.max(0, count.decrementAndGet());
+            result[0] = newVal;
+            if (newVal == 0) {
+                totalTrackedChunks.decrementAndGet();
+                return null; // map'ten sil
+            }
+            return count;
+        });
+
+        if (result[0] >= 0) {
+            totalBooks.decrementAndGet();
         }
-
-        int newCount = Math.max(0, count.decrementAndGet());
-        totalBooks.decrementAndGet();
-
-        // Eğer chunk'ta hiç kitap kalmadıysa, chunk kaydını sil
-        if (newCount == 0) {
-            bookCounts.remove(key);
-            totalTrackedChunks.decrementAndGet();
-        }
-
-        return newCount;
+        return result[0];
     }
 
     /**

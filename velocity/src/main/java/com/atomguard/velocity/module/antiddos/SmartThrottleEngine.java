@@ -73,7 +73,7 @@ public class SmartThrottleEngine {
                 case NORMAL     -> normalLimit;
                 case CAREFUL    -> carefulLimit;
                 case AGGRESSIVE -> isVerified ? aggressiveLimit : aggressiveLimit / 2;
-                case LOCKDOWN   -> isVerified ? lockdownLimit : 0;
+                case LOCKDOWN   -> isVerified ? lockdownLimit : 1; // 0→1: saldırı sırasında bile 1 deneme hakkı
             };
         }
         if (limit <= 0) return isVerified;
@@ -101,7 +101,7 @@ public class SmartThrottleEngine {
             case NONE     -> normalLimit;
             case ELEVATED -> carefulLimit;
             case HIGH     -> isVerified ? carefulLimit : aggressiveLimit;
-            case CRITICAL -> isVerified ? aggressiveLimit : 1;
+            case CRITICAL -> isVerified ? aggressiveLimit : Math.max(1, aggressiveLimit / 2);
             case LOCKDOWN -> isVerified ? lockdownLimit : 0;
         };
     }

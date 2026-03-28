@@ -86,12 +86,11 @@ public class SessionManager {
      * Periyodik olarak cagrilmali.
      */
     public void cleanupBlacklist() {
-        // JWT token'lari kendi expire mekanizmasina sahip oldugundan,
-        // blacklist'te biriken eski token'lari temizle
-        // Basit yaklasim: blacklist boyutu limitini kontrol et
-        if (blacklistedTokens.size() > 10000) {
-            blacklistedTokens.clear();
-        }
+        // Süresi dolmuş token'ları kaldır — JWT zaten expire mekanizmasına sahip,
+        // blacklist'te sadece aktif (henüz süresi dolmamış) tokenlar tutulmalı.
+        // Geçersiz (expire olmuş) token'lar validateToken()'dan null döneceğinden
+        // blacklist'te tutmak gerekmez.
+        blacklistedTokens.removeIf(token -> jwtProvider.validateToken(token) == null);
     }
 
     public int getBlacklistSize() {
