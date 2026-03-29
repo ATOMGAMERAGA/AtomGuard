@@ -3,6 +3,46 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.2.2] - 2026-03-29
+
+### ✨ New Features
+
+- **Velocity — 10-layer VPN/Proxy detection system (`VPNProviderChain` v2)**: Replaced the previous multi-provider API chain with a 10-layer consensus engine: local IP list → CIDR blocker → IP2Proxy database → DNSBL (9 lists) → ASN analysis → Reverse DNS hostname patterns → Port scanning → proxycheck.io → iphub.info → AbuseIPDB / ip-api. Each layer casts a weighted vote; a configurable consensus threshold decides the final verdict.
+
+- **Velocity — `ReverseDNSDetector`**: New detection engine that resolves the connecting IP's hostname and matches it against 100+ known VPN/hosting/proxy provider patterns (NordVPN, ExpressVPN, Vultr, Hetzner, Tor exit nodes, etc.). Includes a residential ISP whitelist (Comcast, Telekom, Turkcell, etc.) to prevent false positives. Detection types: `vpn`, `hosting`, `proxy`, `tor`.
+
+- **Velocity — `PortScanDetector`**: New engine that probes 14 known proxy ports (SOCKS4/5: 1080/1081, Tor: 9050/9150, Squid/HTTP-Proxy: 3128/8080/8118, OpenVPN: 1194, PPTP: 1723, IKEv2: 500, SSH: 22) on the connecting IP using non-blocking `SocketChannel` with 800 ms connect timeout. Runs entirely on a virtual thread pool. SSH alone is never flagged; ports 443 and 8080 require at least one additional significant port to count. Requires ≥ 2 meaningful open proxy ports for `suspicious=true`.
+
+- **Velocity — `ASNDetector`**: New ASN-based engine with an embedded database of 60+ known VPN ASNs (NordVPN, ExpressVPN, Mullvad, ProtonVPN, PIA…), 35+ hosting ASNs (AWS, GCP, Azure, DigitalOcean, Hetzner, Vultr…), and 8 residential-proxy network ASNs (Bright Data, Oxylabs, SmartProxy…). Queries ip-api.com with a 10-minute local cache. Classification: `vpn` (confidence 95), `proxy` (90), `hosting` (70), `residential` (pass).
+
+- **Velocity — `DNSBLChecker` v2**: Expanded from 3 to 9 DNSBL lists (`dronebl.org`, `spamhaus xbl/zen`, `sorbs`, `socks.sorbs`, `http.sorbs`, `s5h.net`, `efnetrbl.org`, `beetjevansen.nl`). All lists are queried in parallel with a 3-second total timeout. Introduces `DNSBLResult` with `listedIn()` and `listCount()` for per-list visibility.
+
+- **Velocity — IP + Username pair verification (`VerifiedPlayerStore` v2)**: The verified-player store now tracks `(ip, username)` pairs instead of IP-only. Consequences: same IP + same username → bypass; same username + different IP → re-verification required; different username + same IP → re-verification required. Backed by a new `ag_verified_players` table with `verify_count` and `last_login` columns. Automatic migration from the old `ag_limbo_verified` table. File backup (`verified-players.txt`) maintained alongside the database.
+
+- **Velocity — Kick-After-Verify flow (`VerificationLimbo` v2)**: After passing the Limbo physics challenge the player is now kicked with a styled success message ("Your IP and username have been verified — please reconnect") instead of being silently transferred to the main server. Configurable via `kick-after-verify: true`. The kick message includes the masked IP (`1.2.*.**`) and username. Failure kick and timeout kick messages are also redesigned with coloured borders.
+
+- **Velocity — `VPNCheck` v2**: Timeout extended from 2 s to 6 s to accommodate the multi-layer chain. New `fail-closed-on-timeout` config option: when `true` and attack mode is active, a timeout result becomes a deny instead of a pass. VPN detections now use `hardDeny` (was `deny`) so the trust-score penalty is proportionally larger. Audit log entries now include the detection method, confidence score, and all reporting providers.
+
+### 🔧 Improvements
+
+- **Velocity — Consensus algorithm with 7 decision rules**: Tor detection → unconditional block (confidence ≥ 98). ≥ 3 strong non-hosting votes → unconditional block. ≥ 2 strong votes + confidence ≥ threshold → block. Single strong vote + individual confidence ≥ 90 + weighted confidence ≥ 70 → block. Hosting-only flags → always pass (false-positive protection). General consensus threshold → block. Insufficient consensus → pass.
+
+- **Velocity — `VPNProviderChain`: private-IP check extended**: Now covers `172.16.x–172.31.x` (full RFC-1918 /12 range), `::1`, `fc00::/7`, `fe80::`, and `0.0.0.0`, preventing unnecessary lookups for link-local and ULA addresses.
+
+- **Velocity — `VPNDetectionModule`: verified-clean cache enlarged to 20 000**: Previously 10 000. Also added a 15-minute cleanup scheduler and an hourly statistics log (total checks, blocked, cache hits, verified-clean size).
+
+- **Velocity — `VPNResultCache` capacity raised to 50 000**: Configured via `vpn-proxy-block.cache-max-size` (default 50 000). TTL remains 1 hour, configurable via `vpn-proxy-block.cache-ttl-ms`.
+
+- **Velocity — `VerifiedBypassCheck` v2**: When `require-ip-username-pair: true` the bypass is granted only if both the IP **and** the username match a verified pair. Switching to a different username from the same IP forces a new Limbo session.
+
+- **Velocity — `VerificationModule`: new API methods**: `isVerifiedPair(ip, username)`, `isIPChanged(ip, username)`, `hasEverBeenVerified(username)`, `isKickAfterVerify()`, `isRequireIPUsernamePair()`.
+
+- **Velocity — `ConnectionListener` v2**: Pre-login verified flag now uses `isVerifiedPair()` when `require-ip-username-pair` is enabled. Login handler logs IP-change events ("IP change detected: &lt;user&gt; new IP: &lt;ip&gt; — re-verification") before routing to Limbo. Login handler logs verified logins explicitly.
+
+- **Velocity — `PortScanDetector`: virtual thread pool**: Uses `Executors.newVirtualThreadPerTaskExecutor()` — no thread-pool sizing needed, OS-level scheduling, ideal for high-volume I/O-bound port probing.
+
+- **Velocity — `ASNDetector`: org/ISP name keyword fallback**: If the ASN number is not in the embedded database, the org and ISP strings returned by ip-api are scanned for keywords (`vpn`, `nordvpn`, `mullvad`, `proxy`, `luminati`, `bright data`, `hosting`, `datacenter`, `vps`, etc.) to catch new or unlisted providers.
+
 ## [2.2.1] - 2026-03-28
 
 ### 🔧 Improvements

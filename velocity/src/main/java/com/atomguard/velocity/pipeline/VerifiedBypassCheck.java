@@ -5,15 +5,11 @@ import com.atomguard.velocity.module.verification.VerificationModule;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Limbo doğrulamasından daha önce geçmiş oyuncuları pipeline'dan bypass eder.
+ * Doğrulanmış oyuncu bypass — v2 (IP + Username Çifti).
  *
- * <p>Bu check {@link CheckResult#verifiedBypass()} döndürürse
- * {@link ConnectionPipeline} geri kalan tüm check'leri atlar —
- * doğrulanmış oyuncuya tekrar bot/VPN/rate-limit testi uygulanmaz.
- *
- * <p>Priority = 11 → ProtocolCheck (5) ve FirewallCheck (10)'ten SONRA çalışır.
- * Bu sayede verified oyuncular da protocol ve blacklist/ban kontrolünden geçer.
- * RateLimit (20), DDoS (30), AntiBot (50), VPN (60) check'leri atlanır.
+ * <p>Priority = 11 → ProtocolCheck (5) ve FirewallCheck (10)'ten SONRA.
+ * Doğrulanmış oyuncular protocol+blacklist kontrolünden geçer ama
+ * RateLimit, DDoS, AntiBot, VPN check'leri atlanır.
  */
 public class VerifiedBypassCheck implements ConnectionCheck {
 
@@ -40,12 +36,20 @@ public class VerifiedBypassCheck implements ConnectionCheck {
         VerificationModule vm = plugin.getVerificationModule();
         if (vm == null) return CheckResult.allowed();
 
-        if (vm.isVerified(ctx.ip())) {
-            // pipelineComplete=true → sonraki check'ler (RateLimit, DDoS, AntiBot, VPN) atlanır.
-            // Protocol (5) ve Firewall (10) check'leri priority < 11 olduğu için zaten çalışmıştır.
-            return CheckResult.verifiedBypass();
+        if (vm.isRequireIPUsernamePair()) {
+            // v2: IP + Username çifti kontrolü
+            if (ctx.username() != null && vm.isVerifiedPair(ctx.ip(), ctx.username())) {
+                return CheckResult.verifiedBypass();
+            }
+            // IP değişikliği: doğrulanmış user farklı IP → pipeline devam
+            // LoginEvent'te Limbo'ya yönlendirilecek
+            return CheckResult.allowed();
+        } else {
+            // Eski mod: sadece IP
+            if (vm.isVerified(ctx.ip())) {
+                return CheckResult.verifiedBypass();
+            }
+            return CheckResult.allowed();
         }
-
-        return CheckResult.allowed();
     }
 }

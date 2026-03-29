@@ -9,6 +9,17 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * VPN/Proxy pipeline check'i — v2.
+ *
+ * <h2>Değişiklikler (v1 → v2)</h2>
+ * <ul>
+ *   <li>Timeout 2s → 6s (çok katmanlı kontrol daha uzun sürebilir)</li>
+ *   <li>Timeout durumunda configüre edilebilir davranış: fail-open veya fail-closed</li>
+ *   <li>VPN tespit edildiğinde HARD severity (trust score ciddi düşer)</li>
+ *   <li>Confidence score kick mesajına eklenir (debug için)</li>
+ * </ul>
+ */
 public class VPNCheck implements ConnectionCheck {
     private final AtomGuardVelocity plugin;
 
@@ -30,13 +41,24 @@ public class VPNCheck implements ConnectionCheck {
     @Override
     public @NotNull CheckResult check(@NotNull ConnectionContext ctx) {
         try {
-            // 2 saniye timeout (async pipeline için 3'ten düşürüldü)
             return checkAsync(ctx)
-                .orTimeout(2, java.util.concurrent.TimeUnit.SECONDS)
-                .exceptionally(e -> CheckResult.allowed()) // Timeout → fail-open
-                .join();
+                    .orTimeout(6, TimeUnit.SECONDS)
+                    .exceptionally(e -> {
+                        // Timeout veya hata durumu
+                        boolean failClosed = plugin.getConfigManager().getBoolean(
+                                "vpn-proxy-block.fail-closed-on-timeout", false);
+                        if (failClosed && plugin.isAttackMode()) {
+                            // Saldırı modunda timeout → engelle (güvenli taraf)
+                            return CheckResult.deny(
+                                    plugin.getMessageManager().buildKickMessage("kick.vpn-timeout", Map.of()),
+                                    name(), "vpn-check-timeout-attack-mode"
+                            );
+                        }
+                        return CheckResult.allowed(); // Fail-open (normal mod)
+                    })
+                    .join();
         } catch (Exception e) {
-            return CheckResult.allowed(); // Her türlü hatada fail-open
+            return CheckResult.allowed(); // Hata → fail-open
         }
     }
 
@@ -44,26 +66,34 @@ public class VPNCheck implements ConnectionCheck {
     public @NotNull CompletableFuture<CheckResult> checkAsync(@NotNull ConnectionContext ctx) {
         VPNDetectionModule vpn = plugin.getVpnModule();
 
+        // Doğrulanmış temiz IP → bypass
         if (vpn.isVerifiedClean(ctx.ip())) {
             return CompletableFuture.completedFuture(CheckResult.allowed());
         }
 
         return vpn.check(ctx.ip(), false)
-                .orTimeout(3, TimeUnit.SECONDS)
-                .exceptionally(e -> new VPNDetectionModule.DetectionResult(false, 0, "timeout", List.of(), "timeout"))
+                .orTimeout(6, TimeUnit.SECONDS)
+                .exceptionally(e -> new VPNDetectionModule.DetectionResult(
+                        false, 0, "timeout", List.of(), "timeout"))
                 .thenApply(vpnResult -> {
                     if (vpnResult.isVPN()) {
+                        // Audit log
                         if (plugin.getAuditLogger() != null) {
                             plugin.getAuditLogger().log(
-                                com.atomguard.velocity.audit.AuditLogger.EventType.VPN_DETECTED,
-                                ctx.ip(), ctx.username(), name(), "Provider: " + vpnResult.getDetectedBy(),
-                                com.atomguard.velocity.audit.AuditLogger.Severity.INFO
+                                    com.atomguard.velocity.audit.AuditLogger.EventType.VPN_DETECTED,
+                                    ctx.ip(), ctx.username(), name(),
+                                    "Yöntem: " + vpnResult.getMethod() +
+                                            " | Güven: %" + vpnResult.getConfidenceScore() +
+                                            " | Sağlayıcılar: " + String.join(", ", vpnResult.getDetectedBy()),
+                                    com.atomguard.velocity.audit.AuditLogger.Severity.WARN
                             );
                         }
-                        return CheckResult.deny(
-                            plugin.getMessageManager().buildKickMessage("kick.vpn", Map.of()),
-                            name(),
-                            "vpn-detected"
+
+                        // VPN tespiti → HARD deny (ciddi ihlal)
+                        return CheckResult.hardDeny(
+                                plugin.getMessageManager().buildKickMessage("kick.vpn", Map.of()),
+                                name(),
+                                "vpn-detected:" + vpnResult.getMethod()
                         );
                     }
                     return CheckResult.allowed();

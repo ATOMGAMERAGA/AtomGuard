@@ -20,9 +20,21 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Bağlantı olayları dinleyicisi — pre-login, login, disconnect.
- * 
- * Pipeline mimarisine geçilmiştir.
+ * Gelişmiş Bağlantı Dinleyicisi — v2 (IP + Username Çifti Sistemi).
+ *
+ * <h2>Akış</h2>
+ * <pre>
+ * PreLogin:
+ *   1. IP+Username çifti kontrol → doğrulanmışsa verified=true
+ *   2. Pipeline check'leri (Protocol, Firewall, VerifiedBypass, RateLimit, DDoS, AntiBot, VPN)
+ *   3. Deny → kick
+ *
+ * Login:
+ *   1. IP+Username doğrulanmış → direkt ana sunucuya
+ *   2. Doğrulanmamış ve doğrulama modülü aktif → Limbo'ya yönlendir
+ *   3. IP değişikliği tespit → Limbo'ya yönlendir (tekrar doğrulama)
+ *   4. Doğrulama modülü kapalı → normal giriş
+ * </pre>
  */
 public class ConnectionListener {
 
@@ -32,13 +44,16 @@ public class ConnectionListener {
         this.plugin = plugin;
     }
 
+    // ─────────────────────────── PreLogin ───────────────────────────
+
     @Subscribe(order = PostOrder.EARLY)
     public EventTask onPreLogin(PreLoginEvent event) {
         String ip = event.getConnection().getRemoteAddress().getAddress().getHostAddress();
         String username = event.getUsername();
         UUID uuid = event.getUniqueId();
         if (uuid == null) {
-            uuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            uuid = UUID.nameUUIDFromBytes(
+                    ("OfflinePlayer:" + username).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         }
         String hostname = event.getConnection().getVirtualHost()
                 .map(addr -> addr.getHostString()).orElse(null);
@@ -46,11 +61,17 @@ public class ConnectionListener {
                 .map(addr -> addr.getPort()).orElse(0);
         int protocol = event.getConnection().getProtocolVersion().getProtocol();
 
-        // Pipeline'a verified flag'i ekle — VerificationModule öncelikli, fallback antibot
+        // ── Verified flag hesapla ──
         boolean verified = false;
         VerificationModule verificationModule = plugin.getVerificationModule();
         if (verificationModule != null && verificationModule.isEnabled()) {
-            verified = verificationModule.isVerified(ip);
+            if (verificationModule.isRequireIPUsernamePair()) {
+                // v2: IP + Username çifti kontrolü
+                verified = verificationModule.isVerifiedPair(ip, username);
+            } else {
+                // Eski mod: sadece IP
+                verified = verificationModule.isVerified(ip);
+            }
         } else {
             VelocityAntiBotModule antiBotForCtx = plugin.getAntiBotModule();
             if (antiBotForCtx != null) verified = antiBotForCtx.isVerified(ip);
@@ -67,14 +88,13 @@ public class ConnectionListener {
                             plugin.getAuditLogger().connectionBlocked(ip, result.module(), result.reason());
                         }
 
-                        // Detaylı deny logu
                         plugin.getLogManager().log(String.format(
-                            "[DENY] IP=%s User=%s Module=%s Reason=%s Verified=%s Severity=%s",
-                            ip, username, result.module(), result.reason(), ctx.verified(), result.severity()
+                                "[DENY] IP=%s User=%s Module=%s Reason=%s Verified=%s Severity=%s",
+                                ip, username, result.module(), result.reason(),
+                                ctx.verified(), result.severity()
                         ));
 
-                        // Violation kaydı: SADECE ciddi ihlallerde (antibot, firewall, vpn).
-                        // Rate limit ve throttle gibi geçici SOFT deny'lar trust score düşürmemeli.
+                        // Violation kaydı: SADECE ciddi ihlallerde
                         if (plugin.getBehaviorManager() != null
                                 && result.severity() != CheckResult.Severity.SOFT
                                 && isHardViolationModule(result.module())) {
@@ -87,12 +107,15 @@ public class ConnectionListener {
                     plugin.getStatisticsManager().increment("pre_login_checks");
                 })
                 .exceptionally(e -> {
-                    plugin.getLogManager().log("PreLogin pipeline hatası (" + ip + "): " + e.getMessage());
+                    plugin.getLogManager().log(
+                            "PreLogin pipeline hatası (" + ip + "): " + e.getMessage());
                     return null;
                 });
 
         return EventTask.resumeWhenComplete(future);
     }
+
+    // ─────────────────────────── Login ───────────────────────────
 
     @Subscribe
     public void onLogin(LoginEvent event) {
@@ -102,29 +125,49 @@ public class ConnectionListener {
 
         VerificationModule verificationModule = plugin.getVerificationModule();
 
-        // Doğrulama modülü aktifse ve bu oyuncu henüz verified değilse → limbo
-        if (verificationModule != null && verificationModule.isEnabled()
-                && !verificationModule.isVerified(ip)) {
+        // ── Doğrulama Modülü Aktif ──
+        if (verificationModule != null && verificationModule.isEnabled()) {
 
-            // Kuyruğa al
-            verificationModule.getConnectionQueue().enqueue(ip).thenAccept(slotAcquired -> {
-                if (!slotAcquired) {
-                    event.getPlayer().disconnect(
-                        plugin.getMessageManager().buildKickMessage("kick.queue-full", Map.of()));
-                    return;
+            boolean isVerified;
+            if (verificationModule.isRequireIPUsernamePair()) {
+                // v2: IP + Username çifti kontrolü
+                isVerified = verificationModule.isVerifiedPair(ip, username);
+            } else {
+                // Eski mod: sadece IP
+                isVerified = verificationModule.isVerified(ip);
+            }
+
+            if (!isVerified) {
+                // ── Bu IP+Username çifti doğrulanmamış → Limbo'ya yönlendir ──
+
+                // IP değişikliği loglama
+                if (verificationModule.isIPChanged(ip, username)) {
+                    plugin.getLogManager().log(String.format(
+                            "[Doğrulama] IP değişikliği tespit: %s (yeni IP: %s) — tekrar doğrulama",
+                            username, ip));
                 }
-                // Limbo'ya yönlendir
-                verificationModule.getLimbo().sendToLimbo(event.getPlayer());
-            });
 
-            // Behavior / history kaydı yönlendirme sonrası yapılır; burada sadece
-            // connection counter'ı artır
-            plugin.getStatisticsManager().increment("total_connections");
-            plugin.getLogManager().log("Limbo yönlendirme: " + username + " (" + ip + ")");
-            return;
+                // Kuyruğa al
+                verificationModule.getConnectionQueue().enqueue(ip).thenAccept(slotAcquired -> {
+                    if (!slotAcquired) {
+                        event.getPlayer().disconnect(
+                                plugin.getMessageManager().buildKickMessage("kick.queue-full", Map.of()));
+                        return;
+                    }
+                    // Limbo'ya yönlendir
+                    verificationModule.getLimbo().sendToLimbo(event.getPlayer());
+                });
+
+                plugin.getStatisticsManager().increment("total_connections");
+                plugin.getLogManager().log("[Doğrulama] Limbo yönlendirme: " + username + " (" + ip + ")");
+                return;
+            }
+
+            // ── IP+Username doğrulanmış → normal giriş akışı ──
+            plugin.getLogManager().log("[Doğrulama] Doğrulanmış giriş: " + username + " (" + ip + ")");
         }
 
-        // Embedded limbo doğrulaması (MEDIUM_RISK oyuncular için)
+        // ── Embedded limbo doğrulaması (MEDIUM_RISK oyuncular için) ──
         if (plugin.getLimboModule() != null && plugin.getLimboModule().isEnabled()
                 && plugin.getLimboModule().needsVerification(ip)) {
             plugin.getLimboModule().onLogin(event.getPlayer());
@@ -132,7 +175,7 @@ public class ConnectionListener {
             return;
         }
 
-        // Doğrulama modülü kapalı veya oyuncu zaten verified → normal giriş akışı
+        // ── Normal giriş akışı ──
         VelocityAntiBotModule antiBot = plugin.getAntiBotModule();
         if (antiBot != null) {
             antiBot.markVerified(ip);
@@ -150,12 +193,18 @@ public class ConnectionListener {
         }
 
         // Behavior & History
-        if (plugin.getBehaviorManager() != null) plugin.getBehaviorManager().recordLogin(ip, username);
-        if (plugin.getConnectionHistory() != null) plugin.getConnectionHistory().recordLogin(uuid, ip, username);
+        if (plugin.getBehaviorManager() != null) {
+            plugin.getBehaviorManager().recordLogin(ip, username);
+        }
+        if (plugin.getConnectionHistory() != null) {
+            plugin.getConnectionHistory().recordLogin(uuid, ip, username);
+        }
 
         plugin.getStatisticsManager().increment("total_connections");
         plugin.getLogManager().log("Giriş: " + username + " (" + ip + ")");
     }
+
+    // ─────────────────────────── Disconnect ───────────────────────────
 
     @Subscribe
     public void onDisconnect(DisconnectEvent event) {
@@ -172,22 +221,24 @@ public class ConnectionListener {
 
         if (plugin.getConnectionHistory() != null) plugin.getConnectionHistory().recordLogout(uuid);
 
-        // VerifiedPlayerShield slot serbest bırakma:
-        // onConnectionClosed çağrılmazsa slotsInUse sürekli artar → saatler sonra verified da giremez.
         if (plugin.getDdosModule() != null) {
             plugin.getDdosModule().onConnectionClosed(ip, "player-disconnect");
         }
     }
 
+    // ─────────────────────────── Server Switch ───────────────────────────
+
     @Subscribe
     public void onServerSwitch(com.velocitypowered.api.event.player.ServerConnectedEvent event) {
         if (plugin.getConnectionHistory() != null) {
             plugin.getConnectionHistory().recordServerSwitch(
-                event.getPlayer().getUniqueId(), 
-                event.getServer().getServerInfo().getName()
+                    event.getPlayer().getUniqueId(),
+                    event.getServer().getServerInfo().getName()
             );
         }
     }
+
+    // ─────────────────────────── Brand ───────────────────────────
 
     @Subscribe
     public void onBrand(PlayerClientBrandEvent event) {
@@ -195,33 +246,23 @@ public class ConnectionListener {
         VelocityAntiBotModule antiBot = plugin.getAntiBotModule();
         if (antiBot == null) return;
 
-        // Doğrulanmış oyuncuları atla
         if (antiBot.isVerified(ip)) return;
 
-        // Race condition düzeltmesi: brand event bazen login event'ten ÖNCE gelir.
-        // Oyuncu zaten bir backend sunucusuna bağlıysa login tamamlanmış demektir
-        // → verified olarak işaretle, kick yapma.
         if (event.getPlayer().getCurrentServer().isPresent()) {
             antiBot.markVerified(ip);
             return;
         }
 
-        // Oyuncu login sürecini tamamlamışsa (isActive) verified olarak işaretle
         if (event.getPlayer().isActive()) {
             antiBot.markVerified(ip);
             return;
         }
 
-        // Brand kaydı — sadece analiz için, KICK YAPMA.
-        // Kick kararı yalnızca PreLogin pipeline'ı verir.
-        // Brand event'inde kick yapmak race condition ve çift kontrol sorununa yol açar.
         antiBot.recordBrand(ip, event.getBrand());
     }
 
-    /**
-     * Bu modül ciddi ihlal mi? (violation kaydı için kullanılır)
-     * Rate limit, throttle gibi geçici durumlar violation sayılmaz.
-     */
+    // ─────────────────────────── Yardımcı ───────────────────────────
+
     private static boolean isHardViolationModule(String module) {
         if (module == null) return false;
         return switch (module) {
