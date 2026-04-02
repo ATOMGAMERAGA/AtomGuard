@@ -3,6 +3,15 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.2.3] - 2026-04-02
+
+### 🐛 Bug Fixes
+
+- **`SmartLagModule` — Dispenser/dropper false positive fix**: During a lag spike (tick delta > 80 ms), the module froze heavy chunks by cancelling all `BlockRedstoneEvent`, `BlockPhysicsEvent`, and `EntitySpawnEvent` in those chunks. This inadvertently broke dispensers and droppers: redstone signals to dispenser/dropper blocks were zeroed (so they never fired), placed water/lava did not flow (physics cancelled), and item/projectile entities spawned by droppers and dispensers were suppressed. Three targeted exemptions added:
+  - `onRedstone`: Dispenser and dropper blocks are now skipped — their redstone signals are never blocked by the freeze.
+  - `onPhysics`: `WATER` and `LAVA` blocks are now exempt — fluid physics proceed normally even in a frozen chunk.
+  - `onSpawn`: `Item` and `Projectile` entities are now exempt — items dropped by droppers and projectiles shot by dispensers are no longer cancelled.
+
 ## [2.2.2] - 2026-03-29
 
 ### ✨ New Features

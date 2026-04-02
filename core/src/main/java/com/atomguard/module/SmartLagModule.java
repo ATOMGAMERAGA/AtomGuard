@@ -208,8 +208,13 @@ public class SmartLagModule extends AbstractModule implements Listener {
         if (!isFreezingActive) return;
         Chunk chunk = event.getBlock().getChunk();
         long key = Chunk.getChunkKey(chunk.getX(), chunk.getZ());
-        
+
         if (frozenChunks.contains(key)) {
+            // Dispenser/dropper sinyallerini engelleme — normal kullanım kırılır
+            org.bukkit.Material type = event.getBlock().getType();
+            if (type == org.bukkit.Material.DISPENSER || type == org.bukkit.Material.DROPPER) {
+                return;
+            }
             event.setNewCurrent(0); // Redstone'u kapat
         }
     }
@@ -219,19 +224,32 @@ public class SmartLagModule extends AbstractModule implements Listener {
         if (!isFreezingActive) return;
         Chunk chunk = event.getBlock().getChunk();
         long key = Chunk.getChunkKey(chunk.getX(), chunk.getZ());
-        
+
         if (frozenChunks.contains(key)) {
+            // Su ve lav fiziğini engelleme — kovadan yerleştirilen sıvı akmaz
+            org.bukkit.Material type = event.getBlock().getType();
+            if (type == org.bukkit.Material.WATER || type == org.bukkit.Material.LAVA) {
+                return;
+            }
             event.setCancelled(true);
         }
     }
-    
+
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onSpawn(EntitySpawnEvent event) {
         if (!isFreezingActive) return;
         Chunk chunk = event.getEntity().getChunk();
         long key = Chunk.getChunkKey(chunk.getX(), chunk.getZ());
-        
-        if (frozenChunks.contains(key) && !(event.getEntity() instanceof Player)) {
+
+        if (frozenChunks.contains(key)) {
+            org.bukkit.entity.Entity entity = event.getEntity();
+            // Oyuncular, dropper'dan düşen item'lar ve dispenser'dan fırlatılan
+            // mermiler hiçbir zaman engellenmez
+            if (entity instanceof Player
+                    || entity instanceof Item
+                    || entity instanceof Projectile) {
+                return;
+            }
             event.setCancelled(true);
         }
     }
