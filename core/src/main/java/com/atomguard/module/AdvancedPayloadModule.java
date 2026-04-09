@@ -31,6 +31,11 @@ public class AdvancedPayloadModule extends AbstractModule {
             "MC|BSign", "MC|BEdit", "MC|TrSel", "MC|PickItem"
     );
 
+    /** BungeeCord üzerinden sunucu yönetimini etkileyen tehlikeli anahtar kelimeler */
+    private static final Set<String> BUNGEE_DANGEROUS_KEYWORDS = Set.of(
+            "op ", "deop ", "ban ", "ban-ip ", "pardon ", "stop\n", "stop\r", "whitelist "
+    );
+
     /** Bilinen crash client imzaları */
     private static final Set<String> CRASH_CLIENT_SIGNATURES = Set.of(
             "crasher", "exploit", "grief", "nuke", "destroyer",
@@ -136,18 +141,32 @@ public class AdvancedPayloadModule extends AbstractModule {
                 return;
             }
 
-            // 5. Brand analizi
+            // 5. BungeeCord ForceOP keyword tespiti — izin verilen kanalda olsa dahi içerik taranır
+            if (data != null && ("bungeecord:main".equals(channel) || "bungeecord".equals(channel))) {
+                String payloadStr = new String(data, StandardCharsets.UTF_8).toLowerCase();
+                for (String keyword : BUNGEE_DANGEROUS_KEYWORDS) {
+                    if (payloadStr.contains(keyword)) {
+                        event.setCancelled(true);
+                        blockExploit(player,
+                                "BungeeCord tehlikeli payload ('" + keyword.trim() + "')",
+                                AlertSeverity.CRITICAL);
+                        return;
+                    }
+                }
+            }
+
+            // 6. Brand analizi
             if ("minecraft:brand".equals(channel) && data != null) {
                 analyzeBrand(player, data);
             }
             
-            // 6. Zararlı içerik kontrolü (CustomPayloadModule'den taşındı)
+            // 7. Zararlı içerik kontrolü (CustomPayloadModule'den taşındı)
             if (data != null && containsMaliciousContent(data)) {
                 blockPacket(event, player, "Zararlı payload içeriği tespit edildi! (Anormal null byte oranı)");
                 return;
             }
-            
-            // 7. CR-07: Register/Unregister kanal sayısı ve uzunluk kontrolü
+
+            // 8. CR-07: Register/Unregister kanal sayısı ve uzunluk kontrolü
             if (channel.equals("minecraft:register") || channel.equals("minecraft:unregister")) {
                 if (data == null) return;
                 String channels = new String(data, StandardCharsets.UTF_8);

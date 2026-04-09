@@ -6,14 +6,22 @@ import com.atomguard.api.module.IModule;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketTypeCommon;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.jetbrains.annotations.NotNull;
+import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
@@ -56,6 +64,14 @@ public abstract class AbstractModule implements IModule {
     // Packet handler tracking
     private final List<AbstractMap.SimpleEntry<PacketTypeCommon, Consumer<PacketReceiveEvent>>> registeredReceiveHandlers = new ArrayList<>();
     private final List<AbstractMap.SimpleEntry<PacketTypeCommon, Consumer<PacketSendEvent>>> registeredSendHandlers = new ArrayList<>();
+
+    // Alert cooldown — aynı uyarının 30sn içinde tekrar gönderilmesini önler
+    private final Map<String, Long> alertCooldowns = new ConcurrentHashMap<>();
+
+    /** Admin bildirim izni */
+    private static final String ADMIN_NOTIFY_PERMISSION = "atomguard.admin.notify";
+    /** Alert cooldown süresi (ms) */
+    private static final long ALERT_COOLDOWN_MS = 30_000L;
 
     /**
      * AbstractModule constructor
@@ -171,6 +187,121 @@ public abstract class AbstractModule implements IModule {
                 plugin.getCoreMetrics().recordModuleBlock(moduleName);
             }
         });
+    }
+
+    /**
+     * Exploit engellendiğinde çağrılır — mevcut davranışa ek olarak admin bildirim sistemi de tetiklenir.
+     *
+     * @param player   Exploit'i gerçekleştiren oyuncu
+     * @param details  Detay mesajı
+     * @param severity Uyarı seviyesi (CRITICAL → title + ses + Discord)
+     */
+    protected void blockExploit(@NotNull Player player, @NotNull String details, @NotNull AlertSeverity severity) {
+        incrementBlockedCount();
+        logExploit(player.getName(), details);
+
+        String alertMsg = "<red><bold>⚠ " + severity.name() + ":</bold> <gray>[" + name + "] <white>"
+                + player.getName() + " <dark_gray>— <gray>" + details;
+        alertAdmins(alertMsg, severity);
+
+        final java.util.UUID uuid = player.getUniqueId();
+        final String ip = (player.getAddress() != null && player.getAddress().getAddress() != null)
+                ? player.getAddress().getAddress().getHostAddress() : "0.0.0.0";
+        final String playerName = player.getName();
+        final String moduleName = getName();
+
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            ExploitBlockedEvent event = new ExploitBlockedEvent(moduleName, player, playerName, ip, details);
+            Bukkit.getPluginManager().callEvent(event);
+
+            if (plugin.getHeuristicEngine() != null) {
+                double heuristicWeight;
+                switch (moduleName) {
+                    case "piston-limiter":
+                    case "redstone-limiter":
+                    case "falling-block-limiter":
+                    case "explosion-limiter":
+                        heuristicWeight = 0.02;
+                        break;
+                    default:
+                        heuristicWeight = 0.1;
+                }
+                plugin.getHeuristicEngine().getProfile(uuid).addSuspicion(heuristicWeight);
+            }
+
+            if (plugin.getTrustScoreManager() != null) {
+                plugin.getTrustScoreManager().recordViolation(uuid, moduleName);
+            }
+
+            if (plugin.getForensicsManager() != null && plugin.getForensicsManager().isRecording()) {
+                plugin.getForensicsManager().recordModuleBlock(moduleName);
+                if (!ip.equals("0.0.0.0")) {
+                    plugin.getForensicsManager().recordBlock(ip);
+                }
+            }
+
+            if (plugin.getCoreMetrics() != null) {
+                plugin.getCoreMetrics().recordModuleBlock(moduleName);
+            }
+        });
+    }
+
+    /**
+     * Online adminlere uyarı mesajı gönderir.
+     *
+     * <p>Cooldown: aynı mesaj 30 saniye içinde tekrar gönderilmez.
+     * Herhangi bir thread'den güvenle çağrılabilir.
+     *
+     * @param message  MiniMessage formatında mesaj
+     * @param severity Uyarı seviyesi — yükseldikçe daha fazla kanal kullanılır
+     */
+    protected void alertAdmins(@NotNull String message, @NotNull AlertSeverity severity) {
+        if (severity == AlertSeverity.LOW) {
+            plugin.getLogManager().warning("[ALERT:LOW] [" + name + "] " + message);
+            return;
+        }
+
+        // Cooldown kontrolü
+        String cooldownKey = name + ":" + message.hashCode();
+        long now = System.currentTimeMillis();
+        Long lastAlert = alertCooldowns.get(cooldownKey);
+        if (lastAlert != null && now - lastAlert < ALERT_COOLDOWN_MS) return;
+        alertCooldowns.put(cooldownKey, now);
+
+        // Log
+        plugin.getLogManager().warning("[ALERT:" + severity + "] [" + name + "] " + message);
+
+        // In-game bildirim — main thread'de çalıştır
+        final Component parsedMsg = plugin.getMessageManager().parse(message);
+        final boolean playSound = severity.ordinal() >= AlertSeverity.HIGH.ordinal();
+        final boolean showTitle = severity == AlertSeverity.CRITICAL;
+
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            for (Player admin : Bukkit.getOnlinePlayers()) {
+                if (!admin.hasPermission(ADMIN_NOTIFY_PERMISSION)) continue;
+                admin.sendMessage(parsedMsg);
+                if (playSound) {
+                    admin.playSound(admin.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 0.5f);
+                }
+                if (showTitle) {
+                    admin.showTitle(Title.title(
+                            Component.text("⚠ ATOMGUARD", NamedTextColor.RED, TextDecoration.BOLD),
+                            Component.text("Kritik exploit algılandı!", NamedTextColor.YELLOW),
+                            Title.Times.times(
+                                    Duration.ofMillis(500),
+                                    Duration.ofSeconds(3),
+                                    Duration.ofSeconds(1)
+                            )
+                    ));
+                    admin.playSound(admin.getLocation(), Sound.ENTITY_WITHER_SPAWN, 0.5f, 1.0f);
+                }
+            }
+        });
+
+        // Discord webhook — HIGH ve üzeri
+        if (playSound && plugin.getDiscordWebhookManager() != null) {
+            plugin.getDiscordWebhookManager().notifyExploitBlocked(name, "SYSTEM", message);
+        }
     }
 
     /**

@@ -45,6 +45,13 @@ engelleme:
   # v2.3 — Yeni mesajlar
   baglanti-siniri: "<red>⚠ Çok fazla bağlantı denemesi! Lütfen bir dakika bekleyin."
   saldiri-engel: "<red>⚠ Sunucu saldırı altında. Lütfen daha sonra tekrar deneyin."
+  # v2.3 — Force OP Tespiti
+  forceop-komut-engellendi: "<red><bold>⚠</bold> Yetkisiz OP komutu engellendi!"
+  forceop-oyuncu-alert: "<red><bold>⚠ KRİTİK:</bold> <white><oyuncu> <red>Force OP exploit kullandı! <gray>(<detay>)"
+  forceop-bungee-engellendi: "<red><bold>⚠</bold> BungeeCord üzerinden zararlı komut engellendi: <white><detay>"
+  forceop-op-degisimi: "<gold><bold>⚠</bold> Beklenmedik OP değişikliği: <white><oyuncu> <gold>artık OP!"
+  forceop-op-kaldirildi: "<green>✓ <white><oyuncu><green> oyuncusunun OP yetkisi otomatik olarak kaldırıldı."
+  forceop-konsol-op: "<yellow><bold>⚠</bold> Konsol OP komutu çalıştırıldı: <white><komut>"
 
 antibot:
   kick-mesaji: "<red>⚠ Şüpheli bağlantı tespit edildi. Lütfen birkaç dakika sonra tekrar deneyin."

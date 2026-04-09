@@ -247,7 +247,9 @@ public class SmartLagModule extends AbstractModule implements Listener {
             // mermiler hiçbir zaman engellenmez
             if (entity instanceof Player
                     || entity instanceof Item
-                    || entity instanceof Projectile) {
+                    || entity instanceof Projectile
+                    || entity instanceof org.bukkit.entity.ArmorStand
+                    || entity instanceof org.bukkit.entity.ItemFrame) {
                 return;
             }
             event.setCancelled(true);

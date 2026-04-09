@@ -3,6 +3,14 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.2.4] - 2026-04-09
+
+### 🐛 Bug Fixes
+
+- **`DispenserCrasherModule` — Shulker box dispense false positive fix**: Vanilla shulker box dispensing from dispensers/droppers was being treated as a crash exploit. Shulker boxes (all colors via `Tag.SHULKER_BOXES`) are now explicitly exempted from both `BlockDispenseEvent` distance/position checks and the `InventoryMoveItemEvent` hopper-loading path. Removed dead `SHULKER_BOX` comment block in `onInventoryMove`.
+- **`DispenserCrasherModule` — Armor dispense false positive fix**: `BlockDispenseArmorEvent` (a subclass of `BlockDispenseEvent`) was triggering the same handler. For armor-equip dispenses, `getVelocity()` carries the target entity offset rather than a real velocity vector, which made the 10-block distance check fail and cancelled legitimate armor equipping. The handler now early-returns for `BlockDispenseArmorEvent` instances.
+- **`SmartLagModule` — Armor stand / item frame freeze false positive fix**: During lag freeze, `EntitySpawnEvent` was cancelled for all non-player/item/projectile entities in frozen chunks, which prevented players from placing armor stands and item frames. `ArmorStand` and `ItemFrame` are now in the freeze exemption list alongside `Player`, `Item`, and `Projectile`.
+
 ## [2.2.3] - 2026-04-02
 
 ### 🐛 Bug Fixes

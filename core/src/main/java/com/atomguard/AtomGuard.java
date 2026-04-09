@@ -369,6 +369,7 @@ public class AtomGuard extends JavaPlugin {
         moduleManager.registerModule(new BookCrasherModule(this));
         moduleManager.registerModule(new MapLabelCrasherModule(this));
         moduleManager.registerModule(new HoneypotModule(this));
+        moduleManager.registerModule(new ForceOPDetectionModule(this));
     }
 
     public static AtomGuard getInstance() { return instance; }

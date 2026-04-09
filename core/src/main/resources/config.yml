@@ -753,6 +753,49 @@ modules:
     # Log file name
     log-file: "panic-bans.log"
 
+  # ═══════════════════════════════════════
+  # Force OP Detection — Exploit & Permission Abuse Prevention
+  # Monitors /op commands, BungeeCord channel exploitation, and runtime OP changes.
+  # CRITICAL alerts sent to players with atomguard.admin.notify permission.
+  # ═══════════════════════════════════════
+  force-op-detection:
+    enabled: true
+
+    # Monitor /op, /deop commands sent by players (PlayerCommandPreprocessEvent)
+    monitor-op-commands: true
+
+    # Log and alert when /op is executed from console or ServerCommandEvent
+    monitor-console-op: true
+
+    # Scan bungeecord:main plugin channel payloads for dangerous commands
+    monitor-bungee-exploit: true
+
+    # How often to compare Bukkit.getOperators() against the last snapshot (seconds)
+    op-snapshot-interval-seconds: 5
+
+    # Whitelisted player UUIDs who are allowed to use /op without triggering alerts.
+    # Leave empty to alert on ALL unauthorized /op attempts.
+    whitelisted-op-users: []
+
+    # Actions on detection
+    actions:
+      # When a player attempts /op without permission: KICK, BAN, ALERT_ONLY
+      on-player-forceop: "KICK"
+      # When a dangerous BungeeCord payload is detected: BLOCK (always blocks), KICK, ALERT_ONLY
+      on-bungee-exploit: "BLOCK"
+      # When OP list changes unexpectedly at runtime: REMOVE_OP, ALERT_ONLY
+      on-unknown-op-change: "ALERT_ONLY"
+
+    # Commands to block/alert when found inside bungeecord:main payloads
+    blocked-bungee-commands:
+      - "op"
+      - "deop"
+      - "stop"
+      - "ban"
+      - "ban-ip"
+      - "pardon"
+      - "whitelist"
+
   # Bot Protection Module (Legacy — AtomShield protocol checks)
   # This module only provides AtomShield protocol features in attack analysis.
   # Use AntiBotModule (anti-bot) for the verification system.

@@ -45,6 +45,13 @@ engelleme:
   # v2.3 — New messages
   baglanti-siniri: "<red>⚠ Too many connection attempts! Please wait a minute."
   saldiri-engel: "<red>⚠ Server is under attack. Please try again later."
+  # v2.3 — Force OP Detection
+  forceop-komut-engellendi: "<red><bold>⚠</bold> Unauthorized OP command blocked!"
+  forceop-oyuncu-alert: "<red><bold>⚠ CRITICAL:</bold> <white><oyuncu> <red>attempted Force OP exploit! <gray>(<detay>)"
+  forceop-bungee-engellendi: "<red><bold>⚠</bold> Malicious BungeeCord command blocked: <white><detay>"
+  forceop-op-degisimi: "<gold><bold>⚠</bold> Unexpected OP change: <white><oyuncu> <gold>is now OP!"
+  forceop-op-kaldirildi: "<green>✓ <white><oyuncu><green>'s OP status has been automatically revoked."
+  forceop-konsol-op: "<yellow><bold>⚠</bold> Console OP command executed: <white><komut>"
 
 antibot:
   kick-mesaji: "<red>⚠ Suspicious connection detected. Please try again in a few minutes."

@@ -3,6 +3,7 @@ package com.atomguard.module;
 import com.atomguard.AtomGuard;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -67,12 +68,23 @@ public class DispenserCrasherModule extends AbstractModule implements Listener {
             return;
         }
 
+        // Armor dispense (BlockDispenseArmorEvent) — vanilya zırh giydirme davranışı, muaf tut
+        if (event instanceof org.bukkit.event.block.BlockDispenseArmorEvent) {
+            return;
+        }
+
         Block block = event.getBlock();
         // ... (existing code for BlockDispenseEvent) ...
         Material dispensed = event.getItem().getType();
 
         // Sadece dispenser ve dropper'ları kontrol et
         if (block.getType() != Material.DISPENSER && block.getType() != Material.DROPPER) {
+            return;
+        }
+
+        // Shulker box'lar vanilya davranışı — crasher kontrolünden muaf tut (false positive önleme)
+        if (isShulkerBox(dispensed)) {
+            debug("Shulker box dispense — kontrol atlandı (vanilya davranışı)");
             return;
         }
 
@@ -125,17 +137,16 @@ public class DispenserCrasherModule extends AbstractModule implements Listener {
         if (event.getDestination().getType() == org.bukkit.event.inventory.InventoryType.DISPENSER ||
             event.getDestination().getType() == org.bukkit.event.inventory.InventoryType.DROPPER) {
             
+            // Shulker box'ları muaf tut — vanilya hopper davranışı
+            if (isShulkerBox(item.getType())) {
+                return;
+            }
+
             // Check NBT using NBTUtils/NBTCrasherModule logic if possible
             if (com.atomguard.util.NBTUtils.estimateNBTSize(item) > 200000) { // Limit from config ideally
                 event.setCancelled(true);
                 incrementBlockedCount();
                 logExploit("SYSTEM", "Dispenser'a aşırı büyük NBT item girişi engellendi");
-            }
-            
-            // Check Shulker Boxes
-            if (item.getType().name().contains("SHULKER_BOX")) {
-                // Perform deep check or block moving shulkers into dispensers if desired
-                // For now, size check above handles most NBT bombs
             }
         }
     }
@@ -198,6 +209,17 @@ public class DispenserCrasherModule extends AbstractModule implements Listener {
     @NotNull
     private String locationToString(@NotNull Location loc) {
         return String.format("%.2f, %.2f, %.2f", loc.getX(), loc.getY(), loc.getZ());
+    }
+
+    /**
+     * Material'in shulker box olup olmadığını kontrol eder
+     */
+    private boolean isShulkerBox(@NotNull Material material) {
+        try {
+            return Tag.SHULKER_BOXES.isTagged(material);
+        } catch (Exception e) {
+            return material.name().contains("SHULKER_BOX");
+        }
     }
 
     /**
