@@ -227,8 +227,11 @@ public class SmartLagModule extends AbstractModule implements Listener {
 
         if (frozenChunks.contains(key)) {
             // Su ve lav fiziğini engelleme — kovadan yerleştirilen sıvı akmaz
+            // Vault bloğu: trial chamber kasası açılma animasyonu fizik olayı üretir, engelleme
             org.bukkit.Material type = event.getBlock().getType();
-            if (type == org.bukkit.Material.WATER || type == org.bukkit.Material.LAVA) {
+            if (type == org.bukkit.Material.WATER
+                    || type == org.bukkit.Material.LAVA
+                    || type == org.bukkit.Material.VAULT) {
                 return;
             }
             event.setCancelled(true);

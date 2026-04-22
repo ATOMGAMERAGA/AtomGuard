@@ -156,6 +156,7 @@ public class FrameCrashModule extends AbstractModule implements Listener {
         AtomicInteger count = frameCounts.computeIfAbsent(key, k -> new AtomicInteger(countEntitiesInChunk(chunk, EntityType.ITEM_FRAME, EntityType.GLOW_ITEM_FRAME)));
 
         if (count.incrementAndGet() > maxFramesPerChunk) {
+            count.decrementAndGet();
             event.setCancelled(true);
             incrementBlockedCount();
             debug("Frame spawn engellendi (limit aşımı)");
@@ -169,6 +170,7 @@ public class FrameCrashModule extends AbstractModule implements Listener {
         AtomicInteger count = armorStandCounts.computeIfAbsent(key, k -> new AtomicInteger(countEntitiesInChunk(chunk, EntityType.ARMOR_STAND)));
 
         if (count.incrementAndGet() > maxArmorStandsPerChunk) {
+            count.decrementAndGet();
             event.setCancelled(true);
             incrementBlockedCount();
             debug("Armor stand spawn engellendi (limit aşımı)");
@@ -203,6 +205,7 @@ public class FrameCrashModule extends AbstractModule implements Listener {
     public void clearChunk(@NotNull Chunk chunk) {
         ChunkKey key = new ChunkKey(chunk);
         frameCounts.remove(key);
+        armorStandCounts.remove(key);
         debug("Chunk temizlendi: " + key);
     }
 
@@ -211,6 +214,7 @@ public class FrameCrashModule extends AbstractModule implements Listener {
      */
     public void clearAll() {
         frameCounts.clear();
+        armorStandCounts.clear();
         debug("Tüm frame kayıtları temizlendi");
     }
 
@@ -221,7 +225,11 @@ public class FrameCrashModule extends AbstractModule implements Listener {
         frameCounts.entrySet().removeIf(entry -> {
             ChunkKey key = entry.getKey();
             org.bukkit.World world = plugin.getServer().getWorld(key.worldName);
-            // Dünya yoksa veya chunk yüklü değilse kaldır
+            return world == null || !world.isChunkLoaded(key.x, key.z);
+        });
+        armorStandCounts.entrySet().removeIf(entry -> {
+            ChunkKey key = entry.getKey();
+            org.bukkit.World world = plugin.getServer().getWorld(key.worldName);
             return world == null || !world.isChunkLoaded(key.x, key.z);
         });
     }

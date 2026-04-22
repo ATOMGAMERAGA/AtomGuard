@@ -25,8 +25,8 @@ import org.jetbrains.annotations.NotNull;
  */
 public class InvalidSlotModule extends AbstractModule {
 
-    // Maksimum slot sayısı (Double Chest + Player Inventory)
-    private static final int MAX_SLOT = 90;
+    // Maksimum slot sayısı — 128 covers all vanilla container types (vault, double chest, etc.)
+    private static final int MAX_SLOT = 128;
     private static final int MIN_SLOT = -999; // -999 outside inventory için kullanılır
 
     /**

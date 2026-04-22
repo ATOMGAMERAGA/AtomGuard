@@ -55,8 +55,11 @@ public class ExplosionLimiterModule extends AbstractModule implements Listener {
     public void onEntityExplode(EntityExplodeEvent event) {
         if (!isEnabled()) return;
 
-        // Kristal patlamalarına karışma (User request)
-        if (event.getEntityType() == EntityType.END_CRYSTAL) return;
+        // Kristal ve rüzgar topu patlamalarına karışma — rate limit uygulanmaz
+        EntityType et = event.getEntityType();
+        if (et == EntityType.END_CRYSTAL
+                || et == EntityType.WIND_CHARGE
+                || et == EntityType.BREEZE_WIND_CHARGE) return;
 
         if (explosionCount.incrementAndGet() > maxPerSecond) {
             event.setCancelled(true);

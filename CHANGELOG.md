@@ -3,6 +3,16 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.2.5] - 2026-04-22
+
+### 🐛 Bug Fixes
+
+- **`FrameCrashModule` — Armor stand counter overflow causing permanent placement block**: When `handleArmorStandSpawn()` (and `handleFrameSpawn()`) blocked a spawn, `count.incrementAndGet()` was called but never rolled back, permanently inflating the per-chunk counter. Once the counter drifted above the configured limit, all subsequent placements in that chunk were rejected indefinitely. Fixed by calling `count.decrementAndGet()` immediately before cancelling the event. Same fix applied to the item-frame path.
+- **`FrameCrashModule` — Stale `armorStandCounts` persisting across chunk reloads**: `clearChunk()`, `clearAll()`, and `cleanup()` only operated on `frameCounts` and completely ignored `armorStandCounts`. On chunk unload/reload the stale counter (e.g. 50) was reused instead of being recalculated from real entity counts, causing all new armor stand spawns to be blocked. All three methods now also remove/clean entries from `armorStandCounts`.
+- **`ExplosionLimiterModule` — Wind Charge projectile not pushing players**: `EntityType.WIND_CHARGE` and `EntityType.BREEZE_WIND_CHARGE` were counted against the 10-explosion-per-second rate limit. When other explosions (TNT, creepers, beds) consumed the budget, wind charge `EntityExplodeEvent` was cancelled, preventing its velocity/knockback effect. Both entity types are now exempt from the rate limit alongside `END_CRYSTAL`.
+- **`InvalidSlotModule` — Trial Chamber vault interaction blocked by too-strict slot cap**: `MAX_SLOT` was set to 90 (double chest + player inventory), which is insufficient for vault inventories in Trial Chambers. Any CLICK_WINDOW packet with a slot ID above 90 was cancelled and the inventory force-closed, preventing the vault from being opened with the trial key. `MAX_SLOT` raised to 128 to cover all vanilla container types.
+- **`SmartLagModule` — Trial Chamber vault state machine blocked during lag freeze**: During a lag-freeze cycle, `onPhysics()` cancelled all `BlockPhysicsEvent` in frozen chunks except WATER and LAVA. The `VAULT` block uses block-physics events to advance its state machine (INACTIVE → ACTIVE → UNLOCKING → DEACTIVATED), so physics cancellation prevented the vault from opening. `VAULT` is now added to the physics exemption list alongside WATER and LAVA.
+
 ## [2.2.4] - 2026-04-09
 
 ### 🐛 Bug Fixes
