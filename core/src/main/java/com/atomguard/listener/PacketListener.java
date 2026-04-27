@@ -6,7 +6,9 @@ import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.protocol.player.DiggingAction;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientAnimation;
+import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerPositionAndRotation;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerRotation;
 import com.github.retrooper.packetevents.protocol.packettype.PacketTypeCommon;
@@ -185,7 +187,8 @@ public class PacketListener extends PacketListenerAbstract {
     private void handleLegacyIncoming(PacketReceiveEvent event) {
         if (event.getPacketType() != PacketType.Play.Client.PLAYER_ROTATION
                 && event.getPacketType() != PacketType.Play.Client.PLAYER_POSITION_AND_ROTATION
-                && event.getPacketType() != PacketType.Play.Client.ANIMATION) {
+                && event.getPacketType() != PacketType.Play.Client.ANIMATION
+                && event.getPacketType() != PacketType.Play.Client.PLAYER_DIGGING) {
             return;
         }
 
@@ -212,6 +215,18 @@ public class PacketListener extends PacketListenerAbstract {
             WrapperPlayClientAnimation wrapper = new WrapperPlayClientAnimation(event);
             if (wrapper.getHand() == com.github.retrooper.packetevents.protocol.player.InteractionHand.MAIN_HAND) {
                 plugin.getHeuristicEngine().analyzeClick(player);
+            }
+        } else if (event.getPacketType() == PacketType.Play.Client.PLAYER_DIGGING) {
+            WrapperPlayClientPlayerDigging wrapper = new WrapperPlayClientPlayerDigging(event);
+            DiggingAction action = wrapper.getAction();
+            var profile = plugin.getHeuristicEngine().getProfile(player.getUniqueId());
+            if (action == DiggingAction.START_DIGGING) {
+                profile.setDigging(true);
+                // Mining swing'leri sample olarak toplanmasın diye tampon temizlenir.
+                profile.clearClickSamples();
+            } else if (action == DiggingAction.FINISHED_DIGGING
+                    || action == DiggingAction.CANCELLED_DIGGING) {
+                profile.setDigging(false);
             }
         }
     }

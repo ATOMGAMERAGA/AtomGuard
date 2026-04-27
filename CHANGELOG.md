@@ -3,6 +3,22 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.2.7] - 2026-04-27
+
+### 🐛 Bug Fixes
+
+- **`HeuristicEngine` — Mining-induced macro/bot false-positive kick**: While a player was mining a block (especially ores), the Minecraft client sent an `ANIMATION` packet every tick (~50 ms) for the duration of the swing. `HeuristicEngine.analyzeClick()` treated every animation packet as a click, so 15+ samples accumulated with near-zero variance and an average interval below 100 ms — exactly the macro/bot detection signature, adding `+4.0` suspicion per cycle. On servers with a legacy `heuristic.kick-threshold` (pre-v2.1.4 default `150.0`), this triggered a kick after 2–3 ores were broken, with the message `§cŞüpheli davranış tespit edildi. (Heuristic)`. Fixed by tracking the player's digging state via the `PLAYER_DIGGING` packet (`START_DIGGING` / `FINISHED_DIGGING` / `CANCELLED_DIGGING`) on `HeuristicProfile`, and skipping `analyzeClick()` sampling while the player is actively mining or within `mining-cooldown-ms` (default 750 ms) of a dig event. The click-sample buffer is also cleared on `START_DIGGING` so any pre-mining samples cannot leak into post-mining analysis.
+
+### 🔧 Improvements
+
+- **`HeuristicProfile` — New fields and accessors for digging state**: Added `volatile boolean digging`, `volatile long lastDigEventTime`, and a `clearClickSamples()` helper. The `setDigging(boolean)` setter automatically updates `lastDigEventTime` so the cooldown window is consistent regardless of which side of the transition you are on.
+- **`PacketListener` — `PLAYER_DIGGING` wired into the legacy heuristic dispatch**: Adds the `PLAYER_DIGGING` packet type to `handleLegacyIncoming()` and uses `WrapperPlayClientPlayerDigging` + `DiggingAction` to flip the digging flag and clear stale samples on START. No new heuristic state is created on Netty threads — the existing `getProfile(uuid)` path is reused.
+- **`config.yml` — New `heuristic.mining-cooldown-ms` knob (default 750)**: Server admins who use modified pickaxes, custom break-speed plugins, or unusually long mining animations can raise this value if they still see false positives. Lowering it below 250 is not recommended.
+
+### 🧪 Tests
+
+- **`HeuristicEngineTest` — Renamed `suspicionCappedAt100` → `suspicionCappedAt200`**: The suspicion cap was raised from `100.0` to `200.0` in v2.1.4 but the corresponding test was never updated, leaving an unrelated red test in the suite. The test now asserts the real cap (`200.0`) using `addSuspicion(150.0) × 2`.
+
 ## [2.2.6] - 2026-04-22
 
 ### 🐛 Bug Fixes

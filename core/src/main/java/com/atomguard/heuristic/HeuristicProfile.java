@@ -32,6 +32,10 @@ public class HeuristicProfile {
     private long lastSpikeTime = 0;
     /** Session başlangıç zamanı — grace period hesabı için */
     private long sessionStartTime = 0;
+    /** Aktif mining durumu — mining swing'leri click sayılmasın */
+    private volatile boolean digging = false;
+    /** Son DIG_START / DIG_FINISH / DIG_CANCEL zamanı (ms) */
+    private volatile long lastDigEventTime = 0;
 
     public HeuristicProfile(UUID uuid) {
         this.uuid = uuid;
@@ -64,6 +68,13 @@ public class HeuristicProfile {
 
     public long getSessionStartTime() { return sessionStartTime; }
     public void setSessionStartTime(long time) { this.sessionStartTime = time; }
+
+    public boolean isDigging() { return digging; }
+    public void setDigging(boolean digging) {
+        this.digging = digging;
+        this.lastDigEventTime = System.currentTimeMillis();
+    }
+    public long getLastDigEventTime() { return lastDigEventTime; }
 
     public UUID getUuid() {
         return uuid;
@@ -98,6 +109,10 @@ public class HeuristicProfile {
             clickIntervals.poll();
         }
         clickIntervals.add(interval);
+    }
+
+    public void clearClickSamples() {
+        clickIntervals.clear();
     }
 
     public Queue<Long> getClickIntervals() {

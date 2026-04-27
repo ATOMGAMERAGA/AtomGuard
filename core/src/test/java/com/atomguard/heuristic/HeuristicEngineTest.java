@@ -74,14 +74,14 @@ class HeuristicEngineTest {
     }
 
     @Test
-    void suspicionCappedAt100() {
+    void suspicionCappedAt200() {
         UUID uuid = UUID.randomUUID();
         HeuristicProfile profile = engine.getProfile(uuid);
 
-        profile.addSuspicion(60.0);
-        profile.addSuspicion(60.0);
+        profile.addSuspicion(150.0);
+        profile.addSuspicion(150.0);
 
-        assertThat(profile.getSuspicionLevel()).isLessThanOrEqualTo(100.0);
+        assertThat(profile.getSuspicionLevel()).isLessThanOrEqualTo(200.0);
     }
 
     @Test

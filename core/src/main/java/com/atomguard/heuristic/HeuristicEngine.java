@@ -119,6 +119,16 @@ public class HeuristicEngine {
         HeuristicProfile profile = getProfile(player.getUniqueId());
 
         long now = System.currentTimeMillis();
+
+        // Mining swing'leri click sayma — Minecraft client mining sırasında
+        // her tick ANIMATION paketi gönderir. Bu paketler düşük variance ve
+        // <100ms interval üretir → macro false positive'i tetikler.
+        long miningCooldownMs = plugin.getConfig().getLong("heuristic.mining-cooldown-ms", 750);
+        if (profile.isDigging() || now - profile.getLastDigEventTime() < miningCooldownMs) {
+            profile.setLastClickTime(now);
+            return;
+        }
+
         long lastClick = profile.getLastClickTime();
 
         if (lastClick == 0) {

@@ -962,6 +962,9 @@ heuristic:
   min-click-samples: 15
   min-click-variance: 5.0
   max-avg-click-interval: 100.0
+  # Mining sırasında ANIMATION paketleri her tick gönderilir (~50ms).
+  # DIG_START sonrası bu süre boyunca click sample'ları atlanır — false positive önler.
+  mining-cooldown-ms: 750
 
 # ═══════════════════════════════════════
 # External Service URLs
