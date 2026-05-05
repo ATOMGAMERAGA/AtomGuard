@@ -18,6 +18,14 @@
     <description>Enterprise-grade Velocity proxy security suite for AtomGuard</description>
 
     <repositories>
+        <!-- Maven Central first — see parent pom.xml for the slf4j-jdk14 mirror story -->
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
         <repository>
             <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
