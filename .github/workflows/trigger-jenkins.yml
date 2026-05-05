@@ -1,0 +1,121 @@
+name: Trigger Jenkins
+
+# Why this workflow exists
+# ------------------------
+# The repo has a `push` webhook to https://jenkins.atomland.xyz/github-webhook/
+# that returns HTTP 200 — i.e. Jenkins is RECEIVING the events — but the
+# pipeline never runs. That happens when the Jenkins job's "GitHub hook
+# trigger for GITScm polling" checkbox is off, or a multibranch pipeline
+# hasn't yet re-indexed since the Jenkinsfile changed (the
+# `triggers { githubPush() }` block in the Jenkinsfile only takes effect
+# AFTER Jenkins has run the pipeline once with that block present —
+# chicken-and-egg).
+#
+# This workflow bypasses the webhook entirely and POSTs directly to a
+# Jenkins remote-build URL stored in the `JENKINS_BUILD_URL` repository
+# secret. It runs on every push to main, every `v*` tag push, and can be
+# triggered manually from the Actions tab to force a release for an
+# already-pushed tag.
+#
+# How to set up (one-time)
+# ------------------------
+# 1. In Jenkins, open the AtomGuard job → Configure → Build Triggers →
+#    enable "Trigger builds remotely (e.g., from scripts)" and set an
+#    "Authentication Token" (e.g. a long random string). Save.
+# 2. The remote-build URL is then:
+#       https://jenkins.atomland.xyz/job/<JOB_NAME>/build?token=<THE_TOKEN>
+#    For a multibranch pipeline use:
+#       https://jenkins.atomland.xyz/job/<JOB_NAME>/job/main/build?token=<THE_TOKEN>
+#    Or, if the Generic Webhook Trigger plugin is installed:
+#       https://jenkins.atomland.xyz/generic-webhook-trigger/invoke?token=<THE_TOKEN>
+# 3. In GitHub: Settings → Secrets and variables → Actions → New repository
+#    secret. Name: `JENKINS_BUILD_URL`. Value: the full URL from step 2.
+# 4. (Optional, for jobs that require basic auth) Add `JENKINS_USER` and
+#    `JENKINS_API_TOKEN` secrets — the workflow auto-detects them.
+#
+# After step 3, every push and every tag automatically triggers Jenkins.
+# To trigger Jenkins for the already-pushed v2.2.9 tag, go to Actions →
+# "Trigger Jenkins" → "Run workflow" once.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why are you manually triggering Jenkins?'
+        required: false
+        default: 'Manual rerun'
+
+concurrency:
+  group: jenkins-trigger-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST to Jenkins remote-build URL
+        env:
+          URL: ${{ secrets.JENKINS_BUILD_URL }}
+          JENKINS_USER: ${{ secrets.JENKINS_USER }}
+          JENKINS_API_TOKEN: ${{ secrets.JENKINS_API_TOKEN }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -u
+
+          if [ -z "${URL:-}" ]; then
+            echo "::warning::JENKINS_BUILD_URL secret is not set — skipping Jenkins trigger."
+            echo "::warning::See the comment header of .github/workflows/trigger-jenkins.yml for setup."
+            exit 0
+          fi
+
+          AUTH_FLAGS=()
+          if [ -n "${JENKINS_USER:-}" ] && [ -n "${JENKINS_API_TOKEN:-}" ]; then
+            AUTH_FLAGS=(-u "${JENKINS_USER}:${JENKINS_API_TOKEN}")
+            echo "Using basic auth (JENKINS_USER + JENKINS_API_TOKEN)"
+          else
+            echo "Using token-only auth (URL contains the auth token)"
+          fi
+
+          # Sanitize the ref/sha into a URL-safe cause string — restrict to
+          # alnum, dash, slash, dot, plus.
+          SAFE_REF=$(printf '%s' "${REF:-unknown}" | tr -cd 'A-Za-z0-9/.+-' | head -c 80)
+          SAFE_SHA=$(printf '%s' "${SHA:-unknown}" | tr -cd 'A-Za-z0-9' | head -c 7)
+          CAUSE="GitHub+Actions+trigger:+${SAFE_REF}+@+${SAFE_SHA}"
+
+          if echo "$URL" | grep -q '?'; then
+            FULL_URL="${URL}&cause=${CAUSE}"
+          else
+            FULL_URL="${URL}?cause=${CAUSE}"
+          fi
+
+          # Show only the host so the token in the URL doesn't leak in logs.
+          HOST=$(printf '%s' "$URL" | sed 's|^https\?://||' | sed 's|/.*$||')
+          echo "Posting to Jenkins host: ${HOST}"
+
+          HTTP_CODE=$(curl -sS -o /tmp/jenkins-resp -w "%{http_code}" \
+                          -X POST \
+                          "${AUTH_FLAGS[@]}" \
+                          "$FULL_URL" || echo "000")
+
+          echo "HTTP status: ${HTTP_CODE}"
+          echo "----- Jenkins response (first 1KB) -----"
+          head -c 1024 /tmp/jenkins-resp || true
+          echo
+          echo "----------------------------------------"
+
+          # Jenkins returns 200/201 on success, 302 if it redirects to the
+          # queued-build page, 404 if the URL is wrong, 401/403 on auth.
+          case "${HTTP_CODE}" in
+            200|201|302)
+              echo "✅ Jenkins build queued."
+              ;;
+            *)
+              echo "::error::Jenkins returned HTTP ${HTTP_CODE} — build was NOT queued."
+              echo "::error::Common causes: wrong URL, missing/invalid token, job needs basic auth (set JENKINS_USER + JENKINS_API_TOKEN secrets)."
+              exit 1
+              ;;
+          esac
