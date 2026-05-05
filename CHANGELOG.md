@@ -14,6 +14,7 @@ Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 ### 🔧 Improvements
 
 - **`config.yml` — `frame-crash.max-armor-stands-per-chunk` key removed**: Leftover values in user configs are silently ignored; the module no longer reads any armor-stand-related config.
+- **`.github/workflows/trigger-jenkins.yml` — direct Jenkins trigger from GitHub Actions**: The repo's existing GitHub→Jenkins push webhook (`https://jenkins.atomland.xyz/github-webhook/`) returns HTTP 200 for every push, but the Jenkins job hadn't been actually starting builds (likely because the job's "GitHub hook trigger for GITScm polling" checkbox was off, or a multibranch pipeline hadn't re-indexed since the Jenkinsfile triggers were added). New workflow bypasses the webhook entirely and POSTs directly to a Jenkins remote-build URL stored in a `JENKINS_BUILD_URL` repo secret on every push to `main`, every `v*` tag push, and on manual `workflow_dispatch` runs. Skips silently if the secret is unset so contributors without Jenkins access don't see workflow failures. Auto-detects optional `JENKINS_USER` + `JENKINS_API_TOKEN` for jobs that require basic auth instead of a URL token.
 
 ## [2.2.7] - 2026-04-27
 
