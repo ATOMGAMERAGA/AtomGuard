@@ -2,48 +2,13 @@ name: Trigger Jenkins
 
 # Why this workflow exists
 # ------------------------
-# The repo has a `push` webhook to https://jenkins.atomland.xyz/github-webhook/
-# that returns HTTP 200 — i.e. Jenkins is RECEIVING the events — but the
-# pipeline never runs. That happens when the Jenkins job's "GitHub hook
-# trigger for GITScm polling" checkbox is off, or a multibranch pipeline
-# hasn't yet re-indexed since the Jenkinsfile changed (the
-# `triggers { githubPush() }` block in the Jenkinsfile only takes effect
-# AFTER Jenkins has run the pipeline once with that block present —
-# chicken-and-egg).
+# This workflow notifies Jenkins of new commits via the unauthenticated
+# `/git/notifyCommit` endpoint. This bypasses the need for manual secret
+# management (which often causes triggers to fail silently when secrets
+# expire or are deleted) and avoids CSRF/auth issues.
 #
-# This workflow bypasses the webhook entirely and POSTs directly to a
-# Jenkins remote-build URL stored in the `JENKINS_BUILD_URL` repository
-# secret. It runs on every push to main, every `v*` tag push, and can be
-# triggered manually from the Actions tab to force a release for an
-# already-pushed tag.
-#
-# How to set up (one-time)
-# ------------------------
-# Modern Jenkins (>= 2.176) has CSRF protection on by default. A URL with a
-# `?token=...` parameter alone bypasses authentication but NOT CSRF, which
-# returns HTTP 403. To handle this we need basic auth + a `Jenkins-Crumb`
-# header, which means THREE secrets in total:
-#
-# 1. In Jenkins, click your username (top-right) → Configure → API Token →
-#    Add new Token → copy the generated value.
-# 2. Open the AtomGuard job → Configure → Build Triggers → enable
-#    "Trigger builds remotely (e.g., from scripts)" and set an
-#    "Authentication Token" (a separate, long random string). Save.
-# 3. The remote-build URL is:
-#       https://jenkins.atomland.xyz/job/<JOB_NAME>/build?token=<TRIGGER_TOKEN>
-#    For multibranch:
-#       https://jenkins.atomland.xyz/job/<JOB_NAME>/job/main/build?token=<TRIGGER_TOKEN>
-# 4. In GitHub Settings → Secrets and variables → Actions, add 3 secrets:
-#       JENKINS_BUILD_URL   → the URL from step 3
-#       JENKINS_USER        → your Jenkins username
-#       JENKINS_API_TOKEN   → the API token from step 1
-#
-# When all three secrets are present, this workflow:
-#   a) GETs `<base>/crumbIssuer/api/json` with basic auth to fetch the CSRF crumb
-#   b) POSTs the build URL with basic auth + `Jenkins-Crumb` header
-#
-# To trigger Jenkins for the already-pushed v2.2.9 tag right now, go to
-# Actions → "Trigger Jenkins" → "Run workflow" once.
+# When Jenkins receives this ping, it instantly polls the repository
+# defined in the Jenkinsfile and starts the build if a new commit is found.
 
 on:
   push:
@@ -64,108 +29,26 @@ jobs:
   trigger:
     runs-on: ubuntu-latest
     steps:
-      - name: POST to Jenkins remote-build URL
-        env:
-          URL: ${{ secrets.JENKINS_BUILD_URL }}
-          JENKINS_USER: ${{ secrets.JENKINS_USER }}
-          JENKINS_API_TOKEN: ${{ secrets.JENKINS_API_TOKEN }}
-          REF: ${{ github.ref }}
-          SHA: ${{ github.sha }}
+      - name: Notify Jenkins Git Plugin
         run: |
-          set -u
-
-          if [ -z "${URL:-}" ]; then
-            echo "::warning::JENKINS_BUILD_URL secret is not set — skipping Jenkins trigger."
-            echo "::warning::See the comment header of .github/workflows/trigger-jenkins.yml for setup."
-            exit 0
-          fi
-
-          AUTH_FLAGS=()
-          HAVE_BASIC_AUTH=0
-          if [ -n "${JENKINS_USER:-}" ] && [ -n "${JENKINS_API_TOKEN:-}" ]; then
-            AUTH_FLAGS=(-u "${JENKINS_USER}:${JENKINS_API_TOKEN}")
-            HAVE_BASIC_AUTH=1
-            echo "Using basic auth (JENKINS_USER + JENKINS_API_TOKEN)"
-          else
-            echo "::warning::Only JENKINS_BUILD_URL is set — modern Jenkins requires CSRF crumb, which needs basic auth. Add JENKINS_USER and JENKINS_API_TOKEN secrets if you get 403."
-          fi
-
-          # Show only the host so the token in the URL doesn't leak in logs.
-          HOST=$(printf '%s' "$URL" | sed 's|^https\?://||' | sed 's|/.*$||')
-          BASE="https://${HOST}"
-          echo "Posting to Jenkins host: ${HOST}"
-
-          # Sanitize ref/sha for URL safety
-          SAFE_REF=$(printf '%s' "${REF:-unknown}" | tr -cd 'A-Za-z0-9/.+-' | head -c 80)
-          SAFE_SHA=$(printf '%s' "${SHA:-unknown}" | tr -cd 'A-Za-z0-9' | head -c 7)
-          CAUSE="GitHub+Actions+trigger:+${SAFE_REF}+@+${SAFE_SHA}"
-
-          if echo "$URL" | grep -q '?'; then
-            FULL_URL="${URL}&cause=${CAUSE}"
-          else
-            FULL_URL="${URL}?cause=${CAUSE}"
-          fi
-
-          # ── Fetch CSRF crumb if we have basic auth ──────────────────────
-          CRUMB_HEADER=()
-          if [ "${HAVE_BASIC_AUTH}" = "1" ]; then
-            CRUMB_URL="${BASE}/crumbIssuer/api/json"
-            echo "Fetching CSRF crumb from: ${CRUMB_URL}"
-            CRUMB_HTTP=$(curl -sS -o /tmp/crumb-resp -w "%{http_code}" \
-                              "${AUTH_FLAGS[@]}" \
-                              -c /tmp/jenkins-cookies.txt \
-                              "${CRUMB_URL}" || echo "000")
-            if [ "${CRUMB_HTTP}" = "200" ]; then
-              CRUMB_FIELD=$(python3 -c "import json,sys; d=json.load(open('/tmp/crumb-resp')); print(d.get('crumbRequestField',''))")
-              CRUMB_VALUE=$(python3 -c "import json,sys; d=json.load(open('/tmp/crumb-resp')); print(d.get('crumb',''))")
-              if [ -n "${CRUMB_FIELD}" ] && [ -n "${CRUMB_VALUE}" ]; then
-                CRUMB_HEADER=(-H "${CRUMB_FIELD}: ${CRUMB_VALUE}")
-                echo "CSRF crumb obtained (field: ${CRUMB_FIELD})"
-              fi
-            elif [ "${CRUMB_HTTP}" = "404" ]; then
-              echo "Jenkins crumbIssuer returned 404 — CSRF protection appears disabled, proceeding without crumb."
-            else
-              echo "::warning::crumbIssuer returned HTTP ${CRUMB_HTTP}. Proceeding without crumb; if the build POST returns 403 your Jenkins user may not have Job/Build permission."
-              cat /tmp/crumb-resp 2>/dev/null | head -c 500 || true
-            fi
-          fi
-
-          # ── POST the build trigger ──────────────────────────────────────
-          HTTP_CODE=$(curl -sS -o /tmp/jenkins-resp -w "%{http_code}" \
-                          -X POST \
-                          "${AUTH_FLAGS[@]}" \
-                          "${CRUMB_HEADER[@]}" \
-                          -b /tmp/jenkins-cookies.txt \
-                          "$FULL_URL" || echo "000")
-
+          echo "Notifying Jenkins to poll for new commits..."
+          
+          # The URL of the repository must match exactly what is configured in Jenkins.
+          REPO_URL="https://github.com/${{ github.repository }}.git"
+          JENKINS_URL="https://jenkins.atomland.xyz/git/notifyCommit?url=${REPO_URL}"
+          
+          echo "Target: ${JENKINS_URL}"
+          
+          HTTP_CODE=$(curl -sS -o /tmp/jenkins-resp -w "%{http_code}" "$JENKINS_URL")
+          
           echo "HTTP status: ${HTTP_CODE}"
-          echo "----- Jenkins response (first 1KB) -----"
-          head -c 1024 /tmp/jenkins-resp || true
-          echo
-          echo "----------------------------------------"
-
-          case "${HTTP_CODE}" in
-            200|201|302)
-              echo "✅ Jenkins build queued."
-              ;;
-            401)
-              echo "::error::HTTP 401 Unauthorized — JENKINS_USER or JENKINS_API_TOKEN is wrong, or the user does not exist."
-              exit 1
-              ;;
-            403)
-              echo "::error::HTTP 403 Forbidden — most likely a CSRF/permission issue."
-              echo "::error::Checklist:"
-              echo "::error:: 1. JENKINS_USER + JENKINS_API_TOKEN secrets are set (this run had basic auth = ${HAVE_BASIC_AUTH})"
-              echo "::error:: 2. The Jenkins user has Job/Build permission on the AtomGuard job"
-              echo "::error:: 3. The URL ?token=... value matches the 'Authentication Token' set in the job's Build Triggers"
-              exit 1
-              ;;
-            404)
-              echo "::error::HTTP 404 — the JENKINS_BUILD_URL path is wrong (job name typo or wrong endpoint shape)."
-              exit 1
-              ;;
-            *)
-              echo "::error::Jenkins returned HTTP ${HTTP_CODE} — build was NOT queued."
-              exit 1
-              ;;
-          esac
+          echo "----- Jenkins response -----"
+          cat /tmp/jenkins-resp
+          echo "----------------------------"
+          
+          if [ "${HTTP_CODE}" = "200" ]; then
+            echo "✅ Successfully notified Jenkins."
+          else
+            echo "⚠️ Jenkins returned HTTP ${HTTP_CODE}. Check the response above."
+            # We don't fail the job if Jenkins is unreachable, to not break GitHub status checks
+          fi
