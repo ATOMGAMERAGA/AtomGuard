@@ -20,24 +20,21 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Chunk başına item frame sayısını kontrol eder ve crash exploit'lerini önler.
  * EntitySpawnEvent ile frame spawn tracking yapar.
  *
- * Özellikler:
- * - Chunk başına maksimum frame sayısı kontrolü
- * - Item frame ve glow item frame kontrolü
- * - Spawn engelleme
- * - Memory efficient tracking
+ * Not: Armor stand limiti TAMAMEN KALDIRILDI (v2.2.9) — armor stand'in vanilla
+ * crash exploit'i yoktur, harita-sanatı / detaylı yapılarda yanlış engelleme
+ * yapıyordu ve "yere koyulmuyor / hep aynı yöne bakıyor" sorunlarına neden
+ * oluyordu. Sadece map-NBT crash vektörü olan item frame'ler kontrol altında.
  *
  * @author AtomGuard Team
- * @version 2.0.0
+ * @version 2.2.9
  */
 public class FrameCrashModule extends AbstractModule implements Listener {
 
-    // Chunk başına frame ve armor stand sayısını tutan map
+    // Chunk başına item frame sayısını tutan map
     private final Map<ChunkKey, AtomicInteger> frameCounts;
-    private final Map<ChunkKey, AtomicInteger> armorStandCounts;
 
     // Config cache
     private int maxFramesPerChunk;
-    private int maxArmorStandsPerChunk;
 
     /**
      * FrameCrashModule constructor
@@ -45,9 +42,8 @@ public class FrameCrashModule extends AbstractModule implements Listener {
      * @param plugin Ana plugin instance
      */
     public FrameCrashModule(@NotNull AtomGuard plugin) {
-        super(plugin, "frame-crash", "Item frame ve Armor stand crash kontrolü");
+        super(plugin, "frame-crash", "Item frame crash kontrolü");
         this.frameCounts = new ConcurrentHashMap<>();
-        this.armorStandCounts = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -61,7 +57,7 @@ public class FrameCrashModule extends AbstractModule implements Listener {
         // CR-05: Periyodik temizlik görevi (5 dakikada bir)
         plugin.getServer().getScheduler().runTaskTimer(plugin, this::cleanup, 6000L, 6000L);
 
-        debug("Modül aktifleştirildi. Max frame: " + maxFramesPerChunk + ", Max armor stand: " + maxArmorStandsPerChunk);
+        debug("Modül aktifleştirildi. Max frame: " + maxFramesPerChunk);
     }
 
     @Override
@@ -69,36 +65,32 @@ public class FrameCrashModule extends AbstractModule implements Listener {
     public void onDisable() {
         super.onDisable();
 
-        // Map'leri temizle
         frameCounts.clear();
-        armorStandCounts.clear();
 
-        // Event listener'ı kaldır
         EntitySpawnEvent.getHandlerList().unregister(this);
-        // Remove event handlers
         org.bukkit.event.entity.EntityDeathEvent.getHandlerList().unregister(this);
         org.bukkit.event.entity.EntityRemoveEvent.getHandlerList().unregister(this);
         org.bukkit.event.world.ChunkUnloadEvent.getHandlerList().unregister(this);
 
         debug("Modül devre dışı bırakıldı.");
     }
-    
+
     // CR-05: Entity silinme takibi
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityRemove(org.bukkit.event.entity.EntityRemoveEvent event) {
         handleEntityRemoval(event.getEntity());
     }
-    
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityDeath(org.bukkit.event.entity.EntityDeathEvent event) {
         handleEntityRemoval(event.getEntity());
     }
-    
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onChunkUnload(org.bukkit.event.world.ChunkUnloadEvent event) {
         clearChunk(event.getChunk());
     }
-    
+
     private void handleEntityRemoval(Entity entity) {
         if (!isEnabled()) return;
 
@@ -109,11 +101,6 @@ public class FrameCrashModule extends AbstractModule implements Listener {
             if (frameCounts.containsKey(key)) {
                 frameCounts.get(key).decrementAndGet();
             }
-        } else if (type == EntityType.ARMOR_STAND) {
-            ChunkKey key = ChunkKey.fromLocation(entity.getLocation());
-            if (armorStandCounts.containsKey(key)) {
-                armorStandCounts.get(key).decrementAndGet();
-            }
         }
     }
 
@@ -122,13 +109,12 @@ public class FrameCrashModule extends AbstractModule implements Listener {
      */
     private void loadConfig() {
         this.maxFramesPerChunk = getConfigInt("max-frames-per-chunk", 100);
-        this.maxArmorStandsPerChunk = getConfigInt("max-armor-stands-per-chunk", 50);
 
-        debug("Config yüklendi: maxFrames=" + maxFramesPerChunk + ", maxArmorStands=" + maxArmorStandsPerChunk);
+        debug("Config yüklendi: maxFrames=" + maxFramesPerChunk);
     }
 
     /**
-     * Entity spawn olayını dinler
+     * Entity spawn olayını dinler — sadece item frame kontrolü, armor stand DEĞIL
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onEntitySpawn(EntitySpawnEvent event) {
@@ -139,13 +125,9 @@ public class FrameCrashModule extends AbstractModule implements Listener {
         Entity entity = event.getEntity();
         EntityType type = entity.getType();
 
-        // Item frame'leri kontrol et
+        // Sadece item frame'leri kontrol et — armor stand serbest
         if (type == EntityType.ITEM_FRAME || type == EntityType.GLOW_ITEM_FRAME) {
             handleFrameSpawn(event, entity);
-        } 
-        // Armor stand'leri kontrol et
-        else if (type == EntityType.ARMOR_STAND) {
-            handleArmorStandSpawn(event, entity);
         }
     }
 
@@ -160,20 +142,6 @@ public class FrameCrashModule extends AbstractModule implements Listener {
             event.setCancelled(true);
             incrementBlockedCount();
             debug("Frame spawn engellendi (limit aşımı)");
-        }
-    }
-
-    private void handleArmorStandSpawn(EntitySpawnEvent event, Entity entity) {
-        Chunk chunk = entity.getLocation().getChunk();
-        ChunkKey key = new ChunkKey(chunk);
-
-        AtomicInteger count = armorStandCounts.computeIfAbsent(key, k -> new AtomicInteger(countEntitiesInChunk(chunk, EntityType.ARMOR_STAND)));
-
-        if (count.incrementAndGet() > maxArmorStandsPerChunk) {
-            count.decrementAndGet();
-            event.setCancelled(true);
-            incrementBlockedCount();
-            debug("Armor stand spawn engellendi (limit aşımı)");
         }
     }
 
@@ -205,7 +173,6 @@ public class FrameCrashModule extends AbstractModule implements Listener {
     public void clearChunk(@NotNull Chunk chunk) {
         ChunkKey key = new ChunkKey(chunk);
         frameCounts.remove(key);
-        armorStandCounts.remove(key);
         debug("Chunk temizlendi: " + key);
     }
 
@@ -214,7 +181,6 @@ public class FrameCrashModule extends AbstractModule implements Listener {
      */
     public void clearAll() {
         frameCounts.clear();
-        armorStandCounts.clear();
         debug("Tüm frame kayıtları temizlendi");
     }
 
@@ -223,11 +189,6 @@ public class FrameCrashModule extends AbstractModule implements Listener {
      */
     public void cleanup() {
         frameCounts.entrySet().removeIf(entry -> {
-            ChunkKey key = entry.getKey();
-            org.bukkit.World world = plugin.getServer().getWorld(key.worldName);
-            return world == null || !world.isChunkLoaded(key.x, key.z);
-        });
-        armorStandCounts.entrySet().removeIf(entry -> {
             ChunkKey key = entry.getKey();
             org.bukkit.World world = plugin.getServer().getWorld(key.worldName);
             return world == null || !world.isChunkLoaded(key.x, key.z);

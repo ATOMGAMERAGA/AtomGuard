@@ -15,10 +15,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Patlama Sınırlandırıcı Modülü
  *
  * Saniye başına patlama sayısını ve blok hasarını sınırlar.
- * Kristal patlamalarını görmezden gelir.
+ *
+ * MUAFIYETLER (kullanıcı isteği — v2.2.5+):
+ *   - END_CRYSTAL: hasarına ve knockback'ine ASLA dokunulmaz, rate limit uygulanmaz
+ *   - WIND_CHARGE / BREEZE_WIND_CHARGE: patlama hızına dokunulmaz, her oyuncu serbestçe kullanır
+ *
+ * Bu modül yalnızca patlama SAYISINI ve blockList boyutunu kısıtlar — entity'lerin
+ * aldığı hasarı veya itme (knockback) vektörünü hiçbir biçimde değiştirmez.
  *
  * @author AtomGuard Team
- * @version 2.0.0
+ * @version 2.2.9
  */
 public class ExplosionLimiterModule extends AbstractModule implements Listener {
 

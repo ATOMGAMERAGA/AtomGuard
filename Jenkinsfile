@@ -19,6 +19,19 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '30'))
     }
 
+    // ═════════════════════════════════════════════
+    //  TRIGGERS — GitHub push (webhook) + SCM poll fallback
+    // ═════════════════════════════════════════════
+    // githubPush(): Fires immediately when GitHub webhook hits
+    //   <JENKINS_URL>/github-webhook/ (configure in GitHub repo settings →
+    //   Webhooks → add JSON payload URL pointing at the Jenkins endpoint).
+    // pollSCM:      Fallback if the webhook is missed/dropped — polls the
+    //   tracked branch every ~5 min so commits and tag pushes still build.
+    triggers {
+        githubPush()
+        pollSCM('H/5 * * * *')
+    }
+
     stages {
 
         // ═════════════════════════════════════════════

@@ -470,8 +470,9 @@ modules:
     enabled: true
     # Maximum frames per chunk
     max-frames-per-chunk: 100
-    # Maximum armor stands per chunk
-    max-armor-stands-per-chunk: 50
+    # NOTE: Armor stand limiti v2.2.9'da tamamen kaldırıldı.
+    # Armor stand'in vanilla crash exploit'i yoktur — harita-sanatı / detaylı
+    # build'lerde yanlış engelleme yapıyordu.
 
   # NEW-01: Chunk Crash Protection
   chunk-crash:
@@ -519,7 +520,8 @@ modules:
     max-explosions-per-second: 10
     # Maximum block damage per explosion
     max-block-damage: 1000
-    # Note: End Crystal explosions are exempt from this limit.
+    # MUAF: End Crystal — hasar/knockback ASLA değiştirilmez, rate limit yok.
+    # MUAF: Wind Charge / Breeze Wind Charge — her oyuncu serbestçe kullanır.
 
   # Movement Security
   movement-security:

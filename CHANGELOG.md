@@ -3,6 +3,18 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.2.9] - 2026-05-05
+
+### 🐛 Bug Fixes
+
+- **`FrameCrashModule` — Armor stand chunk limit fully removed**: Armor stands were previously rate-limited per chunk via `max-armor-stands-per-chunk` (default 50). In built-up areas (map-art, detail builds) this cancelled `EntitySpawnEvent` for legitimate placements: the client rendered a ghost armor stand stuck at one rotation while the server silently dropped it, producing the user-visible symptoms "won't land on the ground" and "always faces the same direction". Armor stands are not a vanilla crash vector, so the entire `armorStandCounts` map, the dedicated `EntitySpawnEvent` / `EntityRemoveEvent` / `EntityDeathEvent` paths for `ARMOR_STAND`, and the config key are gone. The module now only protects the genuine crash vector — `ITEM_FRAME` / `GLOW_ITEM_FRAME` map-NBT.
+- **`ExplosionLimiterModule` — Explicit Wind Charge & End Crystal exemption documentation**: The Javadoc and `config.yml` comments now explicitly state that `END_CRYSTAL` damage and knockback are **never** modified, and `WIND_CHARGE` / `BREEZE_WIND_CHARGE` explosions are always free for every player at every permission level. The module only caps the per-second explosion count and trims `blockList` size — it does not touch entity damage or knockback velocity. (Behavior was already correct as of v2.2.5; v2.2.9 makes the contract explicit so future contributors don't reintroduce the regression.)
+- **`Jenkinsfile` — GitHub push not triggering Jenkins build**: The pipeline had no `triggers {}` block, so Jenkins never auto-ran on `git push origin main` or on tag push, and stable releases had to be kicked off manually from the Jenkins UI. Added `triggers { githubPush(); pollSCM('H/5 * * * *') }`: `githubPush()` fires immediately when a GitHub webhook hits Jenkins (`<jenkins>/github-webhook/`), and `pollSCM` polls every ~5 minutes as a fallback so missed/queued webhook deliveries still result in a build. Tag pushes (e.g. `v2.2.9`) flow through the same trigger and reach the `GitHub: Stable Release` + `Modrinth: Core/Velocity Plugin` stages with `RELEASE_TYPE = stable`.
+
+### 🔧 Improvements
+
+- **`config.yml` — `frame-crash.max-armor-stands-per-chunk` key removed**: Leftover values in user configs are silently ignored; the module no longer reads any armor-stand-related config.
+
 ## [2.2.7] - 2026-04-27
 
 ### 🐛 Bug Fixes
