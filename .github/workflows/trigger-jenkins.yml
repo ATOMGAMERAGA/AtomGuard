@@ -1,14 +1,28 @@
 name: Trigger Jenkins
 
-# Why this workflow exists
-# ------------------------
-# This workflow notifies Jenkins of new commits via the unauthenticated
-# `/git/notifyCommit` endpoint. This bypasses the need for manual secret
-# management (which often causes triggers to fail silently when secrets
-# expire or are deleted) and avoids CSRF/auth issues.
+# Neden bu workflow var
+# ---------------------
+# Jenkins'in `/git/notifyCommit` endpoint'i SADECE klasik (non-multibranch)
+# Pipeline'lar için çalışır ve job'ın SCM polling'i AKTİF olmasını gerektirir.
+# Multibranch Pipeline kullanıyorsanız bu endpoint sessizce başarısız olur.
 #
-# When Jenkins receives this ping, it instantly polls the repository
-# defined in the Jenkinsfile and starts the build if a new commit is found.
+# Bu workflow Jenkins'i tetiklemek için BİRDEN FAZLA yöntem dener ve hangisinin
+# çalıştığını net biçimde raporlar. Tüm yöntemler başarısız olursa job FAIL eder
+# (sessiz başarısızlık yok — sorun anında görünür).
+#
+# Yöntemler (sırasıyla):
+#   1. JENKINS_BUILD_URL secret (varsa) → doğrudan remote build URL (en güvenilir)
+#   2. /github-webhook/ → GitHub native webhook (Multibranch Pipeline için doğru yol)
+#   3. /git/notifyCommit → eski yöntem (legacy fallback)
+#
+# Gerekli/opsiyonel repo secret'ları:
+#   JENKINS_BUILD_URL    (önerilen) — örn: https://jenkins.atomland.xyz/job/AtomGuard/build?token=ABCDEF
+#                        Jenkins job ayarlarından "Trigger builds remotely" → bir token
+#                        oluşturup token'ı eklediğiniz URL'i buraya koyun.
+#   JENKINS_USER         (opsiyonel) — basic auth gerekiyorsa kullanıcı adı
+#   JENKINS_API_TOKEN    (opsiyonel) — basic auth gerekiyorsa API token
+#
+# Hiçbir secret yoksa /github-webhook/ ve /git/notifyCommit denenir.
 
 on:
   push:
@@ -17,9 +31,9 @@ on:
   workflow_dispatch:
     inputs:
       reason:
-        description: 'Why are you manually triggering Jenkins?'
+        description: 'Manuel tetikleme sebebi'
         required: false
-        default: 'Manual rerun'
+        default: 'Manuel'
 
 concurrency:
   group: jenkins-trigger-${{ github.ref }}
@@ -29,26 +43,200 @@ jobs:
   trigger:
     runs-on: ubuntu-latest
     steps:
-      - name: Notify Jenkins Git Plugin
+      - name: Show context
         run: |
-          echo "Notifying Jenkins to poll for new commits..."
-          
-          # The URL of the repository must match exactly what is configured in Jenkins.
-          REPO_URL="https://github.com/${{ github.repository }}.git"
-          JENKINS_URL="https://jenkins.atomland.xyz/git/notifyCommit?url=${REPO_URL}"
-          
-          echo "Target: ${JENKINS_URL}"
-          
-          HTTP_CODE=$(curl -sS -o /tmp/jenkins-resp -w "%{http_code}" "$JENKINS_URL")
-          
-          echo "HTTP status: ${HTTP_CODE}"
-          echo "----- Jenkins response -----"
-          cat /tmp/jenkins-resp
-          echo "----------------------------"
-          
-          if [ "${HTTP_CODE}" = "200" ]; then
-            echo "✅ Successfully notified Jenkins."
+          echo "═══════════════════════════════════════"
+          echo "  Jenkins Tetikleme — Tanı Bilgileri"
+          echo "═══════════════════════════════════════"
+          echo "Repository : ${{ github.repository }}"
+          echo "Ref        : ${{ github.ref }}"
+          echo "Event      : ${{ github.event_name }}"
+          echo "Commit     : ${{ github.sha }}"
+          echo "Actor      : ${{ github.actor }}"
+          echo "═══════════════════════════════════════"
+
+      - name: Test Jenkins reachability
+        id: reachability
+        run: |
+          JENKINS_BASE="https://jenkins.atomland.xyz"
+          echo "Jenkins ana sayfasına ping..."
+          HTTP_CODE=$(curl -sS -o /tmp/jenkins-main -w "%{http_code}" --max-time 15 "$JENKINS_BASE/" || echo "000")
+          echo "HTTP: $HTTP_CODE"
+          if [ "$HTTP_CODE" = "000" ]; then
+            echo "::error::Jenkins'e erişilemiyor — DNS / network sorunu olabilir"
+            echo "reachable=false" >> "$GITHUB_OUTPUT"
           else
-            echo "⚠️ Jenkins returned HTTP ${HTTP_CODE}. Check the response above."
-            # We don't fail the job if Jenkins is unreachable, to not break GitHub status checks
+            echo "Jenkins erişilebilir (HTTP $HTTP_CODE)"
+            echo "reachable=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Method 1 — Direct Remote Build URL (önerilen)
+        id: method1
+        if: steps.reachability.outputs.reachable == 'true'
+        env:
+          JENKINS_BUILD_URL: ${{ secrets.JENKINS_BUILD_URL }}
+          JENKINS_USER: ${{ secrets.JENKINS_USER }}
+          JENKINS_API_TOKEN: ${{ secrets.JENKINS_API_TOKEN }}
+        run: |
+          if [ -z "$JENKINS_BUILD_URL" ]; then
+            echo "ℹ️  JENKINS_BUILD_URL secret tanımlı değil — bu yöntem atlanıyor."
+            echo "    En güvenilir tetikleme için bu secret'ı tanımlayın:"
+            echo "    Settings → Secrets → Actions → New repository secret"
+            echo "    Name: JENKINS_BUILD_URL"
+            echo "    Value: https://jenkins.atomland.xyz/job/<JOB_ADI>/build?token=<TOKEN>"
+            echo "result=skipped" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          AUTH=""
+          if [ -n "$JENKINS_USER" ] && [ -n "$JENKINS_API_TOKEN" ]; then
+            AUTH="-u $JENKINS_USER:$JENKINS_API_TOKEN"
+            echo "🔐 Basic auth kullanılıyor: $JENKINS_USER"
+          fi
+
+          echo "🚀 Doğrudan remote build URL deneniyor..."
+          HTTP_CODE=$(curl -sS -o /tmp/m1-resp -w "%{http_code}" \
+              --max-time 20 $AUTH -X POST "$JENKINS_BUILD_URL" || echo "000")
+
+          echo "HTTP: $HTTP_CODE"
+          echo "Response:"
+          head -c 500 /tmp/m1-resp || true
+          echo ""
+
+          # 200/201/200 OK, 200 = build kuyruğa alındı, 201 = Created, 302 = redirect
+          if echo "$HTTP_CODE" | grep -qE '^(200|201|202|302)$'; then
+            echo "✅ Method 1 başarılı"
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Method 1 başarısız (HTTP $HTTP_CODE)"
+            echo "result=failed" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Method 2 — GitHub Webhook Endpoint (Multibranch Pipeline için doğru yol)
+        id: method2
+        if: steps.reachability.outputs.reachable == 'true' && steps.method1.outputs.result != 'success'
+        run: |
+          JENKINS_BASE="https://jenkins.atomland.xyz"
+          WEBHOOK_URL="$JENKINS_BASE/github-webhook/"
+
+          # GitHub webhook payload'unu taklit et
+          PAYLOAD=$(cat <<EOF
+          {
+            "ref": "${{ github.ref }}",
+            "before": "0000000000000000000000000000000000000000",
+            "after": "${{ github.sha }}",
+            "repository": {
+              "full_name": "${{ github.repository }}",
+              "name": "${{ github.event.repository.name }}",
+              "owner": {"name": "${{ github.repository_owner }}"},
+              "url": "https://github.com/${{ github.repository }}",
+              "html_url": "https://github.com/${{ github.repository }}",
+              "clone_url": "https://github.com/${{ github.repository }}.git",
+              "ssh_url": "git@github.com:${{ github.repository }}.git"
+            },
+            "pusher": {"name": "${{ github.actor }}"},
+            "head_commit": {"id": "${{ github.sha }}"}
+          }
+          EOF
+          )
+
+          echo "🚀 /github-webhook/ deneniyor (Multibranch Pipeline için)..."
+          HTTP_CODE=$(curl -sS -o /tmp/m2-resp -w "%{http_code}" \
+              --max-time 20 -X POST "$WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -H "X-GitHub-Event: push" \
+              -H "X-GitHub-Delivery: $(uuidgen 2>/dev/null || echo "gh-actions-$(date +%s)")" \
+              -d "$PAYLOAD" || echo "000")
+
+          echo "HTTP: $HTTP_CODE"
+          echo "Response (ilk 500 char):"
+          head -c 500 /tmp/m2-resp || true
+          echo ""
+
+          if echo "$HTTP_CODE" | grep -qE '^(200|201|202)$'; then
+            echo "✅ Method 2 başarılı"
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Method 2 başarısız (HTTP $HTTP_CODE)"
+            echo "result=failed" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Method 3 — Git Notify Commit (legacy fallback)
+        id: method3
+        if: steps.reachability.outputs.reachable == 'true' && steps.method1.outputs.result != 'success' && steps.method2.outputs.result != 'success'
+        run: |
+          JENKINS_BASE="https://jenkins.atomland.xyz"
+          REPO_URL="https://github.com/${{ github.repository }}.git"
+          NOTIFY_URL="$JENKINS_BASE/git/notifyCommit?url=$REPO_URL"
+
+          echo "🚀 /git/notifyCommit deneniyor (legacy)..."
+          HTTP_CODE=$(curl -sS -o /tmp/m3-resp -w "%{http_code}" \
+              --max-time 20 "$NOTIFY_URL" || echo "000")
+
+          echo "HTTP: $HTTP_CODE"
+          echo "Response:"
+          head -c 500 /tmp/m3-resp || true
+          echo ""
+
+          if echo "$HTTP_CODE" | grep -qE '^(200|201|202)$'; then
+            echo "✅ Method 3 başarılı"
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Method 3 başarısız (HTTP $HTTP_CODE)"
+            echo "result=failed" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "═══════════════════════════════════════"
+          echo "  Tetikleme Sonucu"
+          echo "═══════════════════════════════════════"
+          echo "Reachability : ${{ steps.reachability.outputs.reachable }}"
+          echo "Method 1 (Build URL)      : ${{ steps.method1.outputs.result || 'not-run' }}"
+          echo "Method 2 (github-webhook) : ${{ steps.method2.outputs.result || 'not-run' }}"
+          echo "Method 3 (notifyCommit)   : ${{ steps.method3.outputs.result || 'not-run' }}"
+          echo "═══════════════════════════════════════"
+
+          ANY_SUCCESS="false"
+          for r in "${{ steps.method1.outputs.result }}" "${{ steps.method2.outputs.result }}" "${{ steps.method3.outputs.result }}"; do
+            if [ "$r" = "success" ]; then ANY_SUCCESS="true"; fi
+          done
+
+          if [ "${{ steps.reachability.outputs.reachable }}" != "true" ]; then
+            echo "::error::Jenkins'e erişilemiyor — sunucu kapalı veya DNS sorunu olabilir"
+            exit 1
+          fi
+
+          if [ "$ANY_SUCCESS" = "true" ]; then
+            echo "✅ En az bir yöntem başarılı — Jenkins build'i tetiklendi"
+            echo "İpucu: Birden fazla method başarılı ise Method 1 (Build URL) en güvenilir."
+            echo "Eğer Method 1 'skipped' ise JENKINS_BUILD_URL secret'ını ekleyin."
+          else
+            echo "::error::HIÇBİR yöntem Jenkins'i tetiklemedi"
+            echo ""
+            echo "═══════════════════════════════════════"
+            echo "  Olası nedenler ve çözümler"
+            echo "═══════════════════════════════════════"
+            echo ""
+            echo "1) Jenkins job remote build için yapılandırılmamış:"
+            echo "   → Jenkins → AtomGuard job → Configure"
+            echo "   → 'Trigger builds remotely (e.g., from scripts)' işaretle"
+            echo "   → Authentication Token: rastgele bir token üret (örn: 'atomguard-2024')"
+            echo "   → URL: https://jenkins.atomland.xyz/job/AtomGuard/build?token=<token>"
+            echo "   → Bu URL'i repo'ya secret olarak ekle:"
+            echo "     Settings → Secrets → Actions → New: JENKINS_BUILD_URL"
+            echo ""
+            echo "2) GitHub plugin /github-webhook/ devre dışı (Multibranch Pipeline):"
+            echo "   → Jenkins → Manage Plugins → 'GitHub Plugin' yüklü olmalı"
+            echo "   → Job → 'GitHub hook trigger for GITScm polling' işaretli olmalı"
+            echo ""
+            echo "3) Jenkins kimlik doğrulama gerektiriyor:"
+            echo "   → Anonymous user'a 'Job → Build' yetkisi verin VEYA"
+            echo "   → JENKINS_USER + JENKINS_API_TOKEN secret'larını ekleyin"
+            echo ""
+            echo "4) CSRF protection açık (Crumb gerekiyor):"
+            echo "   → Manage Jenkins → Security → CSRF Protection ayarları"
+            echo "   → API token kullanırken crumb gerekmez — JENKINS_USER+TOKEN kullanın"
+            exit 1
           fi
