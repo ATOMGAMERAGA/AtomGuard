@@ -38,11 +38,68 @@ pipeline {
     stages {
 
         // ═════════════════════════════════════════════
-        //  1. CHECKOUT
+        //  1. CHECKOUT (defansif — workspace stale durumunu zorla düzeltir)
         // ═════════════════════════════════════════════
         stage('Checkout') {
             steps {
+                // Standart Jenkins SCM checkout
                 checkout scm
+
+                // ── Defansif tanı + zorla güncelleme ──
+                // Bazı Jenkins kurulumlarında workspace stale kalabiliyor
+                // (özellikle Multibranch Pipeline alt-job'ları). Bu blok:
+                //   1. Mevcut HEAD'i loglar (kullanıcı neyi build ettiğini görür)
+                //   2. origin'den FORCE fetch yapar (tüm tag'ler + branch'ler)
+                //   3. main branch build'inde origin/main'e HARD RESET eder
+                //   4. Tag build'inde, o tag'in commit'ine checkout eder
+                //   5. Bitiş state'ini loglar
+                sh '''
+                    set -e
+                    echo "════════════════════════════════════════════"
+                    echo "  Workspace Tanı (checkout scm sonrası)"
+                    echo "════════════════════════════════════════════"
+                    echo "BRANCH_NAME : ${BRANCH_NAME:-<unset>}"
+                    echo "GIT_BRANCH  : ${GIT_BRANCH:-<unset>}"
+                    echo "TAG_NAME    : ${TAG_NAME:-<unset>}"
+                    echo "--- HEAD (checkout sonrası) ---"
+                    git log -1 --pretty="%h %ci %s" || echo "git log başarısız"
+
+                    echo ""
+                    echo "════════════════════════════════════════════"
+                    echo "  Force fetch (stale workspace düzeltme)"
+                    echo "════════════════════════════════════════════"
+                    git fetch origin --tags --force --prune 2>&1 || echo "⚠️  Fetch başarısız — credential / URL sorunu olabilir"
+
+                    # Branch build mi tag build mi tespit et
+                    REF="${BRANCH_NAME:-}"
+                    [ -z "$REF" ] && REF=$(echo "${GIT_BRANCH:-}" | sed 's|^origin/||')
+
+                    if [ "$REF" = "main" ] || [ "$REF" = "master" ]; then
+                        echo ""
+                        echo "════════════════════════════════════════════"
+                        echo "  Main branch build → origin/$REF'e zorla reset"
+                        echo "════════════════════════════════════════════"
+                        git reset --hard "origin/$REF"
+                    elif echo "$REF" | grep -qE "^v[0-9]+\\.[0-9]+\\.[0-9]+"; then
+                        echo ""
+                        echo "════════════════════════════════════════════"
+                        echo "  Tag build: $REF → tag commit'ine checkout"
+                        echo "════════════════════════════════════════════"
+                        git checkout -f "refs/tags/$REF" 2>&1 || echo "⚠️  Tag checkout başarısız"
+                    else
+                        echo "ℹ️  Branch: $REF (özel davranış uygulanmadı — checkout scm sonucu korundu)"
+                    fi
+
+                    echo ""
+                    echo "════════════════════════════════════════════"
+                    echo "  Final Workspace State"
+                    echo "════════════════════════════════════════════"
+                    echo "--- pom.xml versiyon ---"
+                    grep -m1 '<version>' pom.xml || echo "pom.xml bulunamadı"
+                    echo "--- HEAD ---"
+                    git log -1 --pretty=fuller
+                    echo "════════════════════════════════════════════"
+                '''
             }
         }
 
@@ -64,9 +121,13 @@ pipeline {
         //   - Diğerleri → SKIP (güvenli default — kullanıcı açıkça istemeli)
         stage('Auto Version Bump') {
             when {
-                anyOf {
-                    branch 'main'
-                    branch 'master'
+                // Hem klasik Pipeline (env.GIT_BRANCH=origin/main) hem de Multibranch
+                // Pipeline (env.BRANCH_NAME=main) durumlarını yakala.
+                // Önceki "when { branch 'main' }" sadece Multibranch için çalışıyordu.
+                expression {
+                    def branch = env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''
+                    return branch == 'main' || branch == 'master' ||
+                           branch == 'origin/main' || branch == 'origin/master'
                 }
             }
             steps {
