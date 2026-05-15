@@ -11,6 +11,9 @@ pipeline {
         MODRINTH_TOKEN = credentials('modrinth-token')
         REPO           = 'ATOMGAMERAGA/AtomGuard'
         MODRINTH_ID    = credentials('modrinth-project-id')
+        // Auto-version bump için git author bilgisi
+        GIT_AUTHOR_NAME  = 'AtomGuard CI'
+        GIT_AUTHOR_EMAIL = 'ci@atomland.xyz'
     }
 
     options {
@@ -40,6 +43,101 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        // ═════════════════════════════════════════════
+        //  1b. AUTO VERSION BUMP — Conventional Commits + [release:X]
+        // ═════════════════════════════════════════════
+        // Yalnızca main/master branch'inde ve commit zaten tag'lenmemişse
+        // çalışır. Commit mesajından bump türünü tespit eder, bump-version.sh
+        // çağırır, push eder ve pipeline'ı bitirir (tag push'u yeni bir build
+        // tetikler — Stable Release stage o yeni build'de çalışır).
+        //
+        // Bump kuralları:
+        //   - Mesajda "[skip release]" veya "[skip ci]" → SKIP
+        //   - Mesaj "🔖 Release v" ile başlıyorsa → SKIP (recursion guard)
+        //   - "[release:major]", "feat!:", "BREAKING CHANGE:" → major
+        //   - "[release:minor]", "feat:" → minor
+        //   - "[release:patch]", "fix:", "perf:", "refactor:" → patch
+        //   - "chore:", "docs:", "test:", "ci:", "style:" → SKIP
+        //   - Diğerleri → SKIP (güvenli default — kullanıcı açıkça istemeli)
+        stage('Auto Version Bump') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                script {
+                    // Tag'li commit ise bump yapma (zaten release commit'i)
+                    def isTagged = sh(
+                        script: "git describe --exact-match --tags HEAD 2>/dev/null || true",
+                        returnStdout: true
+                    ).trim()
+                    if (isTagged.startsWith('v')) {
+                        echo "ℹ️  Commit zaten tag'li (${isTagged}) — bump atlandı."
+                        return
+                    }
+
+                    def commitMsg = sh(
+                        script: "git log -1 --pretty=%B",
+                        returnStdout: true
+                    ).trim()
+
+                    // Recursion guard: bot'un kendi release commit'i
+                    if (commitMsg.startsWith('🔖 Release v')) {
+                        echo "ℹ️  Bot release commit'i tespit edildi — bump atlandı (recursion guard)."
+                        return
+                    }
+
+                    // Explicit skip
+                    if (commitMsg.contains('[skip release]') || commitMsg.contains('[skip ci]')) {
+                        echo "ℹ️  Commit'te [skip release] / [skip ci] var — bump atlandı."
+                        return
+                    }
+
+                    // Bump türü tespiti
+                    def bumpType = null
+
+                    // 1. Explicit [release:X] tag'i (en yüksek öncelik)
+                    def explicitMatch = (commitMsg =~ /\[release:(major|minor|patch)\]/)
+                    if (explicitMatch.find()) {
+                        bumpType = explicitMatch.group(1)
+                    }
+                    // 2. Conventional Commits
+                    else if (commitMsg =~ /^[a-z]+(\([^)]+\))?!:/ || commitMsg.contains('BREAKING CHANGE:')) {
+                        bumpType = 'major'
+                    }
+                    else if (commitMsg =~ /^feat(\([^)]+\))?:/) {
+                        bumpType = 'minor'
+                    }
+                    else if (commitMsg =~ /^(fix|perf|refactor)(\([^)]+\))?:/) {
+                        bumpType = 'patch'
+                    }
+
+                    if (bumpType == null) {
+                        echo "ℹ️  Commit mesajı conventional commit deseni içermiyor — bump atlandı."
+                        echo "   Mesaj: ${commitMsg.split('\n')[0]}"
+                        echo "   Versiyon yayınlamak için: feat:, fix:, perf:, refactor: veya [release:patch|minor|major]"
+                        return
+                    }
+
+                    echo "🔖 Bump türü tespit edildi: ${bumpType}"
+
+                    // GitHub token ile remote URL'i ayarla (push için)
+                    sh """
+                        git remote set-url origin "https://x-access-token:\${GITHUB_TOKEN}@github.com/${env.REPO}.git"
+                        chmod +x bump-version.sh
+                        ./bump-version.sh ${bumpType} --tag --push --ci
+                    """
+
+                    echo "✅ Versiyon yükseltildi ve push edildi. Yeni tag webhook'la yeni build'i tetikleyecek."
+                    // Bu build burada durur — yeni tag push'u taze bir build başlatır
+                    // ve o build'de RELEASE_TYPE='stable' olarak Stable Release stage'i çalışır.
+                    currentBuild.description = "Auto-bumped (${bumpType}) — yeni build tag push ile başlayacak"
+                }
             }
         }
 

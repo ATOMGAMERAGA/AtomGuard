@@ -102,6 +102,10 @@ public class WebPanel {
             server.createContext("/api/health", new ProtectedHandler(new ApiHandler(plugin, this)));
             server.createContext("/api/dashboard", new ProtectedHandler(new ApiHandler(plugin, this)));
             server.createContext("/api/metrics", new ProtectedHandler(new ApiHandler(plugin, this)));
+            // v2.3.0+: Bearer-token korumalı bağımsız metrics endpoint
+            // (Prometheus/Grafana entegrasyonu için JWT olmadan erişilebilir).
+            // Token boşsa endpoint 401 döner.
+            server.createContext("/metrics", new MetricsHandler(plugin));
             server.createContext("/api/geomap", new ProtectedHandler(new GeoMapHandler(plugin, this)));
             server.createContext("/api/players", new ProtectedHandler(new PlayerHandler(plugin)));
             server.createContext("/api/logs", new ProtectedHandler(new LogHandler(plugin)));

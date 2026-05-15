@@ -135,6 +135,26 @@ public abstract class AbstractModule implements IModule {
     }
 
     /**
+     * Oyuncunun AtomGuard kontrollerinden muaf olup olmadığını döndürür.
+     *
+     * <p>Tüm modüllerin bypass kontrolü için tek giriş noktası. Şu an
+     * yalnızca {@code atomguard.bypass} permission'ını ve persistent
+     * whitelist'i kontrol eder — gelecekte ek mekanizmalar (trust score
+     * üst sınırı, IP whitelist, vs.) buraya eklenebilir.
+     *
+     * <p>v2.2.10+: Bu metod {@code TokenBucketModule}'ün eksik bypass
+     * kontrolünü merkezîleştirmek için eklendi.
+     *
+     * @param player Kontrol edilecek oyuncu
+     * @return true ise modül bu oyuncuya uygulanmaz
+     */
+    protected boolean isExempt(@NotNull Player player) {
+        if (player.hasPermission("atomguard.bypass")) return true;
+        var whitelistManager = plugin.getWhitelistManager();
+        return whitelistManager != null && whitelistManager.isWhitelisted(player.getUniqueId());
+    }
+
+    /**
      * Exploit engellendiğinde çağrılır, istatistikleri artırır, log yazar ve event fire eder.
      */
     protected void blockExploit(@NotNull Player player, @NotNull String details) {

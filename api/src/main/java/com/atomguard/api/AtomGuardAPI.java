@@ -18,7 +18,9 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class AtomGuardAPI {
 
-    private static AtomGuardAPI instance;
+    // v2.2.10+: volatile — onLoad/onEnable race'inde double initialization
+    // güvenliği. getInstance() artık yarım-init görmez.
+    private static volatile AtomGuardAPI instance;
 
     private final IModuleManager moduleManager;
     private final IStorageProvider storageProvider;

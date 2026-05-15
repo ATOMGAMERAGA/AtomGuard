@@ -43,6 +43,7 @@ public class AntiBotModule extends AbstractModule implements Listener {
     private BlacklistManager blacklistManager;
     private WhitelistManager whitelistManager;
     private VerificationManager verificationManager;
+    private int evaluationTaskId = -1;
 
     public AntiBotModule(@NotNull AtomGuard plugin) {
         super(plugin, "anti-bot", "Çok katmanlı gelişmiş bot algılama sistemi");
@@ -58,26 +59,33 @@ public class AntiBotModule extends AbstractModule implements Listener {
         this.verificationManager = new VerificationManager(this);
         this.threatScoreCalculator = new ThreatScoreCalculator(this);
         this.actionExecutor = new ActionExecutor(this);
-        
+
         // PacketEvents global handlers - Merkezi Listener üzerinden
         registerReceiveHandler(null, this::handleIncomingPacket);
         registerSendHandler(null, this::handleOutgoingPacket);
-        
-        // Attack evaluation task
-        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+
+        // Attack evaluation task — task ID v2.2.10+'da tutulup onDisable'da iptal ediliyor
+        this.evaluationTaskId = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
             if (isEnabled()) {
                 attackTracker.evaluateAttackStatus();
             }
-        }, 100L, 100L); // Every 5 seconds
+        }, 100L, 100L).getTaskId(); // Every 5 seconds
     }
 
     @Override
     public void onDisable() {
         super.onDisable();
-        
+
+        // v2.2.10+: Disable'da task'ı iptal et — plugin shutdown sonrası
+        // async task'ın çalışmasını önle (NPE / dangling reference riski)
+        if (evaluationTaskId != -1) {
+            Bukkit.getScheduler().cancelTask(evaluationTaskId);
+            evaluationTaskId = -1;
+        }
+
         if (blacklistManager != null) blacklistManager.saveSync();
         if (whitelistManager != null) whitelistManager.saveSync();
-        
+
         playerProfiles.clear();
         ipProfiles.clear();
     }

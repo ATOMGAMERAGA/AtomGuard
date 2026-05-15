@@ -77,6 +77,11 @@ web-panel:
     secret: ""
     # Token validity duration (minutes)
     token-expiry-minutes: 120
+  # v2.3.0+: Bearer-token korumalı bağımsız /metrics endpoint'i (Prometheus/Grafana)
+  # JSON: GET /metrics?token=<token>
+  # Prometheus exposition: GET /metrics?token=<token>&format=prom
+  # Boş bırakırsanız endpoint 401 döner (varsayılan davranış — açıkça aktive edin)
+  metrics-token: ""
   # Attack map
   geo-map:
     enabled: true
@@ -89,6 +94,9 @@ discord-webhook:
   enabled: false
   # Discord webhook URL
   webhook-url: ""
+  # v2.3.0+: Sunucu adı (embed footer'da görünür) — birden fazla sunucu
+  # aynı kanala yazıyorsa hangisinden geldiğini ayırt etmek için.
+  server-name: "Minecraft"
   # Notification types (each can be toggled individually)
   notifications:
     attack-mode: true
@@ -309,12 +317,15 @@ modules:
       inventory:
         kapasite: 100
         dolum-saniye: 50
+      # v2.2.10+: kapasite 300→500, dolum 120→200. ANIMATION paketi
+      # bu kovadan çıkarıldı (DIGER'a taşındı). Önceki değerler armor
+      # stand placement false-positive'lerine yol açıyordu.
       interaction:
-        kapasite: 300
-        dolum-saniye: 120
+        kapasite: 500
+        dolum-saniye: 200
       other:
-        kapasite: 150
-        dolum-saniye: 60
+        kapasite: 250
+        dolum-saniye: 100
 
   # CustomPayload fix
   custom-payload:
@@ -523,6 +534,24 @@ modules:
     # MUAF: End Crystal — hasar/knockback ASLA değiştirilmez, rate limit yok.
     # MUAF: Wind Charge / Breeze Wind Charge — her oyuncu serbestçe kullanır.
 
+  # WindCharge vanilla davranış koruyucu (v2.2.10+)
+  # WindCharge/BreezeWindCharge knockback'in HER KOŞULDA çalışmasını garanti eder.
+  # Başka bir plugin veya yanlış konfigürasyon iptal ederse, bu modül geri açar
+  # ve gerekirse manuel velocity uygular. Sadece sıfır-velocity entity'leri
+  # için fallback çalışır — vanilla zaten itmişse dokunmaz (çift etki yok).
+  wind-charge-integrity:
+    enabled: true
+    # Knockback etki yarıçapı (vanilla yakın)
+    radius: 1.6
+    # Manuel fallback velocity büyüklüğü
+    velocity-magnitude: 1.2
+    # Y eksenindeki minimum knockback (oyuncuyu havalandırmak için)
+    min-upward-velocity: 0.4
+    # Manuel fallback aktif mi? false yaparsanız sadece event-iptal-geri-alma çalışır
+    fallback-enabled: true
+    # Her wind charge event'ini DEBUG'a yaz — diagnostik için
+    detailed-log: false
+
   # Movement Security
   movement-security:
     enabled: true
@@ -594,6 +623,29 @@ modules:
   # Advanced Duplication (Portal/Shulker)
   advanced-duplication:
     enabled: true
+
+  # Item Sanitizer — v2.2.10+ açıkça yapılandırılır (önceden hardcoded default'lar)
+  # ArmorStand / ItemFrame / Painting placement'tan otomatik muaf (false-positive önleme)
+  item-sanitizer:
+    enabled: true
+    # Maksimum büyü seviyesi toleransı (1.21 vanilla cap'i üzerindeki ek tolerans)
+    buyu-toleransi: 5
+    # Item başına maksimum attribute modifier sayısı
+    max-attribute-modifier: 12
+    # Maksimum kafa texture verisi (bayt)
+    max-kafa-texture-bayt: 10240
+    # Maksimum besin değeri
+    max-besin-degeri: 20
+    # Maksimum yemek efekt sayısı
+    max-yemek-efekt: 4
+
+  # Redstone Limiter — v2.2.10+ açıkça yapılandırılır
+  redstone-limiter:
+    enabled: true
+    # Saniyede maksimum redstone güncellemesi (chunk başına)
+    max-guncelleme-saniye: 1000
+    # Limit aşıldığında bekleme süresi (saniye)
+    bekleme-suresi-saniye: 3
 
   # v2.3 — Connection Rate Limiter
   connection-throttle:
@@ -956,17 +1008,31 @@ packet-forensics:
 # False positive durumunda bu değerleri artırın
 # ═══════════════════════════════════════
 heuristic:
+  # Eşiğe ulaşan oyuncu için aksiyon. "KICK" veya "LOG" (sadece logla)
   action: "KICK"
+  # Şüphe puanı bu seviyeye ulaştığında aksiyon alınır
   kick-threshold: 300.0
+  # Maksimum rotation hızı (derece/ms). Yüksek DPI fareler için 12.0 normal.
   max-rotation-speed: 12.0
+  # Kick'ten önce kaç ardışık spike gözlenmeli (PvP'de hızlı rotation normal)
   max-rotation-spikes: 8
+  # Ardışık spike'lar arasında minimum süre (ms). Daha düşük = paket bombardımanı
+  # false-positive'i artar. 150ms önerilir.
   min-spike-interval-ms: 150
+  # Click pattern analizinden önce minimum sample sayısı
   min-click-samples: 15
+  # Düşük varyans eşiği (macro tespiti için)
   min-click-variance: 5.0
+  # Click interval ortalama maks. değer. Bunun altında "fast clicking"
   max-avg-click-interval: 100.0
   # Mining sırasında ANIMATION paketleri her tick gönderilir (~50ms).
   # DIG_START sonrası bu süre boyunca click sample'ları atlanır — false positive önler.
   mining-cooldown-ms: 750
+  # v2.3.0+: Genel şüphe seviye etiketleri (komutlarda ve API'de kullanılır)
+  escik-supheli: 100.0    # "Şüpheli" işaretleme eşiği
+  escik-yuksek: 200.0     # "Yüksek risk" işaretleme eşiği
+  decay-saniye: 60        # Şüphe puanı zamanla düşer (60s'de 1 puan)
+  rotation-tolerance-derece: 5.0
 
 # ═══════════════════════════════════════
 # External Service URLs

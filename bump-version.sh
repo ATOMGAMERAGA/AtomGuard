@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # AtomGuard — Sürüm Yükseltme Aracı
-# Kullanım: ./bump-version.sh <major|minor|patch|X.Y.Z> [--tag] [--push]
+# Kullanım: ./bump-version.sh <major|minor|patch|X.Y.Z> [--tag] [--push] [--ci]
 #
 # Örnekler:
 #   ./bump-version.sh patch           → 1.2.2 → 1.2.3
@@ -10,6 +10,8 @@
 #   ./bump-version.sh 2.0.0           → direkt sürüm belirle
 #   ./bump-version.sh patch --tag     → versiyon yükselt + git tag oluştur
 #   ./bump-version.sh patch --tag --push → yukarıdaki + push et
+#   ./bump-version.sh patch --tag --push --ci → CI uyumlu (interaktif soru yok,
+#                                              git author env'den okunur)
 
 set -euo pipefail
 
@@ -25,16 +27,18 @@ NC='\033[0m'
 BUMP_TYPE="${1:-}"
 DO_TAG=false
 DO_PUSH=false
+CI_MODE=false
 
 for arg in "$@"; do
     case "$arg" in
         --tag)  DO_TAG=true ;;
         --push) DO_PUSH=true ;;
+        --ci)   CI_MODE=true ;;
     esac
 done
 
 if [ -z "$BUMP_TYPE" ]; then
-    echo -e "${RED}Kullanım: $0 <major|minor|patch|X.Y.Z> [--tag] [--push]${NC}"
+    echo -e "${RED}Kullanım: $0 <major|minor|patch|X.Y.Z> [--tag] [--push] [--ci]${NC}"
     echo ""
     echo "  major    → X+1.0.0"
     echo "  minor    → X.Y+1.0"
@@ -43,7 +47,17 @@ if [ -z "$BUMP_TYPE" ]; then
     echo ""
     echo "  --tag    → Git tag oluştur (vX.Y.Z)"
     echo "  --push   → Commit ve tag'ı push et"
+    echo "  --ci     → CI uyumlu mod (sessiz, env-tabanlı author)"
     exit 1
+fi
+
+# ─── CI mode: git author env'den oku ───
+if [ "$CI_MODE" = true ]; then
+    : "${GIT_AUTHOR_NAME:=AtomGuard CI}"
+    : "${GIT_AUTHOR_EMAIL:=ci@atomland.xyz}"
+    export GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL
+    export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+    export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
 fi
 
 # ─── Mevcut sürümü al ───

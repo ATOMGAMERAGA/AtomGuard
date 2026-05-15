@@ -135,13 +135,18 @@ public class DiscordWebhookManager {
     }
 
     /**
-     * Bot kick/ban bildirimi.
+     * Bot kick/ban bildirimi. v2.3.0+: structured fields.
      */
     public void notifyBotAction(String playerName, String ip, String reason) {
         if (!enabled || !notifyBotKick) return;
         sendEmbed("Bot Tespit Edildi",
-                String.format("Oyuncu: **%s**\nIP: `%s`\nSebep: %s", playerName, ip, reason),
-                0xFFFF00); // Yellow
+                "Bot olarak değerlendirilen bağlantı engellendi.",
+                0xFFFF00,
+                java.util.List.of(
+                        "Oyuncu|" + playerName + "|true",
+                        "IP|" + ip + "|true",
+                        "Sebep|" + reason + "|false"
+                ));
     }
 
     /**
@@ -225,6 +230,15 @@ public class DiscordWebhookManager {
     }
 
     private synchronized void sendEmbed(String title, String description, int color) {
+        sendEmbed(title, description, color, null);
+    }
+
+    /**
+     * v2.3.0+: Structured embed gönderimi.
+     * fields: opsiyonel "name|value|inline" formatında ek alanlar
+     * (örn. "Oyuncu|player1|true", "IP|1.2.3.4|true"). null veya boş → klasik embed.
+     */
+    private synchronized void sendEmbed(String title, String description, int color, java.util.List<String> fields) {
         if (!enabled || webhookUrl == null || webhookUrl.isEmpty()) return;
 
         // Rate limit check — synchronized ile atomik: removeIf + size + add
@@ -236,10 +250,31 @@ public class DiscordWebhookManager {
         // Escape JSON special chars
         String safeTitle = escapeJson(title);
         String safeDesc = escapeJson(description);
+        String timestamp = java.time.Instant.now().toString();
+        String serverName = escapeJson(plugin.getConfig().getString("discord-webhook.server-name", "Minecraft"));
+
+        // Fields JSON oluştur
+        StringBuilder fieldsJson = new StringBuilder();
+        if (fields != null && !fields.isEmpty()) {
+            fieldsJson.append(",\"fields\":[");
+            boolean first = true;
+            for (String f : fields) {
+                String[] parts = f.split("\\|", 3);
+                if (parts.length < 2) continue;
+                if (!first) fieldsJson.append(",");
+                boolean inline = parts.length >= 3 && Boolean.parseBoolean(parts[2]);
+                fieldsJson.append(String.format(
+                        "{\"name\":\"%s\",\"value\":\"%s\",\"inline\":%s}",
+                        escapeJson(parts[0]), escapeJson(parts[1]), inline));
+                first = false;
+            }
+            fieldsJson.append("]");
+        }
 
         String json = String.format(
-            "{\"embeds\":[{\"title\":\"%s\",\"description\":\"%s\",\"color\":%d,\"footer\":{\"text\":\"AtomGuard\"}}]}",
-            safeTitle, safeDesc, color
+            "{\"embeds\":[{\"title\":\"%s\",\"description\":\"%s\",\"color\":%d,"
+                    + "\"timestamp\":\"%s\",\"footer\":{\"text\":\"AtomGuard • %s\"}%s}]}",
+            safeTitle, safeDesc, color, timestamp, serverName, fieldsJson.toString()
         );
 
         HttpClientUtil.postAsync(webhookUrl, json,
