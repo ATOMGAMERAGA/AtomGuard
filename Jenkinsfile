@@ -189,14 +189,39 @@ pipeline {
                     env.IS_TAG = tagCheck.startsWith('v') ? 'true' : 'false'
                     env.GIT_TAG = tagCheck
 
+                    // ── En son tag kontrolü (v2.3.0+) ──
+                    // Multibranch Pipeline ilk SCM scan'da eski tag'leri (v2.2.6,
+                    // v2.2.7, vs.) yanlışlıkla build edebiliyor. Bu, ESKİ versiyonların
+                    // yanlışlıkla "latest" olarak Modrinth'e yayınlanmasına yol açar.
+                    // Bu guard: tag build'i sadece TÜM tag'ler arasında EN YÜKSEK
+                    // versiyon olduğunda yayın stage'lerini çalıştırır.
+                    if (env.IS_TAG == 'true') {
+                        def latestTag = sh(
+                            script: "git tag --list 'v*' --sort=-v:refname | head -1",
+                            returnStdout: true
+                        ).trim()
+                        if (latestTag && latestTag != env.GIT_TAG) {
+                            echo "⚠️  Bu en son tag DEĞİL (current: ${env.GIT_TAG}, latest: ${latestTag})"
+                            echo "    Yayın stage'leri ATLANIYOR — eski tag'in yanlışlıkla 'latest' olarak"
+                            echo "    Modrinth'e yayınlanmasını önler. Sadece build doğrulaması yapılır."
+                            env.RELEASE_TYPE = 'none'
+                            env.SKIPPED_OLD_TAG = 'true'
+                        }
+                    }
+
                     // ── Branch adı ──
                     env.BRANCH_NAME_CLEAN = sh(
                         script: "echo '${env.BRANCH_NAME ?: env.GIT_BRANCH}' | sed 's|origin/||' | sed 's|/|-|g'",
                         returnStdout: true
                     ).trim()
 
-                    // ── Release türü ──
-                    if (env.IS_TAG == 'true') {
+                    // ── Release türü (eski-tag guard'ı zaten yukarıda RELEASE_TYPE='none' ayarladıysa skip et) ──
+                    if (env.RELEASE_TYPE == 'none' && env.SKIPPED_OLD_TAG == 'true') {
+                        // Guard zaten karar verdi — versiyon string'lerini bilgi amaçlı doldur
+                        env.RELEASE_VERSION = env.BASE_VERSION
+                        env.TAG_NAME        = env.GIT_TAG
+                        env.RELEASE_TITLE   = "AtomGuard v${env.BASE_VERSION} (eski tag — yayın atlandı)"
+                    } else if (env.IS_TAG == 'true') {
                         env.RELEASE_TYPE    = 'stable'
                         env.RELEASE_VERSION = env.BASE_VERSION
                         env.TAG_NAME        = "v${env.BASE_VERSION}"
