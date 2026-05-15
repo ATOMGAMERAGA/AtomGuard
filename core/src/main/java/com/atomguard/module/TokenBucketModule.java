@@ -62,12 +62,15 @@ public class TokenBucketModule extends AbstractModule {
             PacketType.Play.Client.CLOSE_WINDOW
     );
 
-    /** Etkileşim paketleri — blok kırma, yerleştirme, entity etkileşimi */
+    /** Etkileşim paketleri — blok kırma, yerleştirme, entity etkileşimi.
+     *  NOT (v2.2.10+): ANIMATION buradan ÇIKARILDI — el sallama paketi her
+     *  tick gönderiliyor ve yerleştirme paketlerinin kovasını sömürüyordu;
+     *  armor stand placement'ın aynı yöne bakmasının ve bazı oyunculara
+     *  yerleşmemesinin temel sebebiydi. ANIMATION artık DIGER bucket'ta. */
     private static final Set<PacketType.Play.Client> INTERACTION_PACKETS = Set.of(
             PacketType.Play.Client.PLAYER_DIGGING,
             PacketType.Play.Client.PLAYER_BLOCK_PLACEMENT,
             PacketType.Play.Client.USE_ITEM,
-            PacketType.Play.Client.ANIMATION,
             PacketType.Play.Client.INTERACT_ENTITY
     );
 
@@ -159,6 +162,11 @@ public class TokenBucketModule extends AbstractModule {
 
         if (!(event.getPlayer() instanceof Player player)) return;
 
+        // Bypass permission — staff/OP'ler rate limit'lenmez (v2.2.10+)
+        // Diğer tüm modüller bu kontrolü yapıyordu; eksikliği armor stand
+        // ve hızlı yerleştirme false-positive'lerine yol açıyordu.
+        if (isExempt(player)) return;
+
         // Auth grace period kontrolü — auth bekleyen oyunculara rate limit uygulanmaz
         OfflinePacketModule offlineModule = plugin.getModuleManager().getModule(OfflinePacketModule.class);
         if (offlineModule != null && offlineModule.isInGracePeriod(player.getUniqueId())) {
@@ -195,6 +203,11 @@ public class TokenBucketModule extends AbstractModule {
             // Token bitti — paketi sessizce düşür
             event.setCancelled(true);
             incrementBlockedCount();
+
+            // v2.2.10+: Debug log eklendi — sessiz drop'lar artık tanılanabilir.
+            // Token bucket false-positive'ini araştırırken bu satır kritik.
+            debug("Paket düşürüldü: " + player.getName() + " → " + clientPacket
+                    + " (kova: " + bucketType.name() + ", kalan: " + remaining + ")");
 
             // Flood kick eşiği kontrolü
             if (remaining < floodKickThreshold) {

@@ -6,6 +6,7 @@ import com.atomguard.command.impl.HoneypotCommand;
 import com.atomguard.command.impl.IntelCommand;
 import com.atomguard.command.impl.ReplayCommand;
 import com.atomguard.command.impl.TrustCommand;
+import com.atomguard.command.impl.WhitelistCommand;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -35,6 +36,7 @@ public class AtomGuardCommand implements CommandExecutor, TabCompleter {
         register(new TrustCommand(plugin));
         register(new ReplayCommand(plugin));
         register(new IntelCommand(plugin));
+        register(new WhitelistCommand(plugin));
     }
 
     private void register(SubCommand cmd) {
@@ -144,8 +146,17 @@ public class AtomGuardCommand implements CommandExecutor, TabCompleter {
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
         if (args.length == 1) {
-            List<String> completions = new ArrayList<>(List.of("reload", "status", "toggle", "stats", "info", "health", "honeypot", "trust", "replay", "intel"));
+            List<String> completions = new ArrayList<>(List.of("reload", "status", "toggle", "stats", "info", "health", "honeypot", "trust", "replay", "intel", "whitelist"));
             return completions.stream().filter(s -> s.startsWith(args[0].toLowerCase())).collect(Collectors.toList());
+        }
+        // Subcommand'lara tab completion delege et
+        if (args.length >= 2) {
+            SubCommand sub = subCommands.get(args[0].toLowerCase());
+            if (sub != null) {
+                List<String> result = sub.tabComplete(sender, args);
+                String filter = args[args.length - 1].toLowerCase();
+                return result.stream().filter(s -> s.toLowerCase().startsWith(filter)).collect(Collectors.toList());
+            }
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("honeypot")) {
             return List.of("status", "stats").stream()

@@ -72,6 +72,7 @@ public class AtomGuard extends JavaPlugin {
     private com.atomguard.metrics.CoreMetrics coreMetrics;
     private AuthListener authListener;
     private boolean hasAuthPlugin;
+    private WhitelistManager whitelistManager;
 
     @Override
     public void onLoad() {
@@ -104,6 +105,8 @@ public class AtomGuard extends JavaPlugin {
             this.forensicsManager = new ForensicsManager(this);
             this.intelligenceEngine = new TrafficIntelligenceEngine(this);
             this.coreMetrics = new com.atomguard.metrics.CoreMetrics(this);
+            this.whitelistManager = new WhitelistManager(this);
+            whitelistManager.load();
 
             // Initialize Managers
             logManager.start();
@@ -359,6 +362,7 @@ public class AtomGuard extends JavaPlugin {
         moduleManager.registerModule(new DuplicationFixModule(this));
         moduleManager.registerModule(new FallingBlockLimiterModule(this));
         moduleManager.registerModule(new ExplosionLimiterModule(this));
+        moduleManager.registerModule(new WindChargeIntegrityModule(this));
         moduleManager.registerModule(new FrameCrashModule(this));
         moduleManager.registerModule(new BundleDuplicationModule(this));
         moduleManager.registerModule(new ViewDistanceMaskModule(this));
@@ -395,4 +399,5 @@ public class AtomGuard extends JavaPlugin {
     public ExecutorManager getExecutorManager() { return executorManager; }
     public com.atomguard.metrics.CoreMetrics getCoreMetrics() { return coreMetrics; }
     public AuthListener getAuthListener() { return authListener; }
+    public WhitelistManager getWhitelistManager() { return whitelistManager; }
 }

@@ -29,8 +29,10 @@ public class ConnectionAnalyzer {
 
     public ConnectionAnalyzer(int windowSeconds, int suspiciousThreshold) {
         this.windowSeconds = windowSeconds;
-        // Minimum 10 — çok düşük eşik false positive oluşturur
-        this.suspiciousThreshold = Math.max(10, suspiciousThreshold);
+        // CLAUDE.md FP-12: Minimum 8 enforced (yapay olarak 10 değil — küçük
+        // sunucularda 8 daha gerçekçi, çok düşük eşikler false-positive üretir).
+        // v2.2.10+: 10 → 8 (doküman uyum hatası düzeltildi).
+        this.suspiciousThreshold = Math.max(8, suspiciousThreshold);
     }
 
     public void recordConnection(String ip) {

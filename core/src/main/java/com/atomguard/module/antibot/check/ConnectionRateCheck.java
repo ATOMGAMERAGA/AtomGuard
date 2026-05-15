@@ -31,16 +31,24 @@ public class ConnectionRateCheck extends AbstractCheck {
         // Periodic (in-game) değerlendirmede tekrar ekleme — false positive önleme.
         boolean isPreLogin = profile.getFirstJoinTime() == 0;
 
-        // Global rate
-        if (isPreLogin) globalTimestamps.addLast(now);
-        cleanOldEntries(globalTimestamps, now, windowMs);
-        int globalRate = globalTimestamps.size();
+        // v2.2.10+: addLast() + size() ayrı çağrılardı — başka thread eski
+        // entry'leri purge ederken size() yanlış değer döndürebilirdi. Şimdi
+        // her iki erişim synchronized blok içinde, atomik snapshot alıyor.
+        int globalRate;
+        synchronized (globalTimestamps) {
+            if (isPreLogin) globalTimestamps.addLast(now);
+            cleanOldEntries(globalTimestamps, now, windowMs);
+            globalRate = globalTimestamps.size();
+        }
 
         // Per-IP rate
         Deque<Long> ipDeque = perIpTimestamps.computeIfAbsent(ip, k -> new ConcurrentLinkedDeque<>());
-        if (isPreLogin) ipDeque.addLast(now);
-        cleanOldEntries(ipDeque, now, windowMs);
-        int ipRate = ipDeque.size();
+        int ipRate;
+        synchronized (ipDeque) {
+            if (isPreLogin) ipDeque.addLast(now);
+            cleanOldEntries(ipDeque, now, windowMs);
+            ipRate = ipDeque.size();
+        }
 
         int globalThreshold = module.getConfigInt("checks.connection-rate.global-threshold", 30);
         int ipThreshold = module.getConfigInt("checks.connection-rate.per-ip-threshold", 5);

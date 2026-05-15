@@ -2,6 +2,7 @@ package com.atomguard.module;
 
 import com.atomguard.AtomGuard;
 import com.atomguard.util.ItemSanitizer;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -16,6 +17,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Set;
 
 import java.util.Map;
 
@@ -36,6 +39,19 @@ import java.util.Map;
  * @version 2.0.0
  */
 public class ItemSanitizerModule extends AbstractModule implements Listener {
+
+    /**
+     * Sanitize'dan EXPLICIT muaf item türleri.
+     * v2.2.10+: ArmorStand / ItemFrame / Painting placement bug'larına
+     * karşı false-positive koruması. Bu item'lar default'ta hiçbir
+     * tehlikeli NBT taşımıyor — gereksiz işleme ihtiyaç yok.
+     */
+    private static final Set<Material> EXEMPT_INTERACT_ITEMS = Set.of(
+            Material.ARMOR_STAND,
+            Material.ITEM_FRAME,
+            Material.GLOW_ITEM_FRAME,
+            Material.PAINTING
+    );
 
     // Config cache
     private int enchantTolerance;
@@ -89,7 +105,7 @@ public class ItemSanitizerModule extends AbstractModule implements Listener {
     public void onInventoryClick(@NotNull InventoryClickEvent event) {
         if (!isEnabled()) return;
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (player.hasPermission("atomguard.bypass")) return;
+        if (isExempt(player)) return;
 
         // Tıklanan item ve cursor item'ı kontrol et
         sanitizeAndLog(event.getCurrentItem(), player);
@@ -101,16 +117,23 @@ public class ItemSanitizerModule extends AbstractModule implements Listener {
         if (!isEnabled()) return;
 
         Player player = event.getPlayer();
-        if (player.hasPermission("atomguard.bypass")) return;
+        if (isExempt(player)) return;
 
-        sanitizeAndLog(event.getItem(), player);
+        // Armor stand / item frame / painting placement'ı sanitize'tan muaf tut
+        // (v2.2.10+ — false-positive placement bug fix)
+        ItemStack item = event.getItem();
+        if (item != null && EXEMPT_INTERACT_ITEMS.contains(item.getType())) {
+            return;
+        }
+
+        sanitizeAndLog(item, player);
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onEntityPickupItem(@NotNull EntityPickupItemEvent event) {
         if (!isEnabled()) return;
         if (!(event.getEntity() instanceof Player player)) return;
-        if (player.hasPermission("atomguard.bypass")) return;
+        if (isExempt(player)) return;
 
         ItemStack item = event.getItem().getItemStack();
         ItemSanitizer.SanitizeResult result = runSanitize(item);
@@ -125,7 +148,7 @@ public class ItemSanitizerModule extends AbstractModule implements Listener {
         if (!isEnabled()) return;
 
         Player player = event.getPlayer();
-        if (player.hasPermission("atomguard.bypass")) return;
+        if (isExempt(player)) return;
 
         ItemStack item = event.getItemInHand();
         ItemSanitizer.SanitizeResult result = runSanitize(item);
@@ -142,7 +165,7 @@ public class ItemSanitizerModule extends AbstractModule implements Listener {
         if (!isEnabled()) return;
 
         Player player = event.getPlayer();
-        if (player.hasPermission("atomguard.bypass")) return;
+        if (isExempt(player)) return;
 
         ItemStack item = event.getItemDrop().getItemStack();
         ItemSanitizer.SanitizeResult result = runSanitize(item);

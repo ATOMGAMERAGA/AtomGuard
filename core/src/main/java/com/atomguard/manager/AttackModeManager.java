@@ -22,7 +22,9 @@ public class AttackModeManager {
     private volatile boolean attackMode = false;
     private volatile long attackModeStartTime = 0;
     private volatile int peakRate = 0;
-    private volatile long blockedDuringAttack = 0;
+    // v2.2.10+: volatile long ++ non-atomic — async packet handler'larda
+    // race oluyordu. AtomicLong'a geçirildi.
+    private final AtomicLong blockedDuringAttack = new AtomicLong(0);
 
     private final int threshold;
     private final int durationSeconds;
@@ -114,7 +116,7 @@ public class AttackModeManager {
         this.attackMode = true;
         this.attackModeStartTime = System.currentTimeMillis();
         this.peakRate = triggerRate;
-        this.blockedDuringAttack = 0;
+        this.blockedDuringAttack.set(0);
 
         plugin.getLogger().warning("!!! ATTACK MODE ACTIVATED !!! Connection rate: " + triggerRate + "/sec");
         plugin.getLogManager().warning("System entered ATTACK MODE due to high connection rate.");
@@ -149,7 +151,7 @@ public class AttackModeManager {
             this.attackMode = true;
             this.attackModeStartTime = System.currentTimeMillis();
             this.peakRate = threshold;
-            this.blockedDuringAttack = 0;
+            this.blockedDuringAttack.set(0);
             executeAttackActions();
             // Trigger API Event
             plugin.getServer().getPluginManager().callEvent(new com.atomguard.api.event.AttackModeToggleEvent(true, threshold));
@@ -199,7 +201,7 @@ public class AttackModeManager {
         // Record attack in statistics
         if (plugin.getStatisticsManager() != null) {
             plugin.getStatisticsManager().recordAttack(
-                    attackModeStartTime, endTime, peakRate, blockedDuringAttack);
+                    attackModeStartTime, endTime, peakRate, blockedDuringAttack.get());
         }
 
         // Forensics
@@ -213,7 +215,7 @@ public class AttackModeManager {
         plugin.getServer().getPluginManager().callEvent(new com.atomguard.api.event.AttackModeToggleEvent(false, peakRate));
 
         plugin.getLogger().info("Attack mode deactivated. Peak rate: " + peakRate
-                + "/sec, Blocked: " + blockedDuringAttack);
+                + "/sec, Blocked: " + blockedDuringAttack.get());
         plugin.getLogManager().info("Attack mode deactivated. Duration: "
                 + ((endTime - attackModeStartTime) / 1000) + "s");
 
@@ -264,14 +266,14 @@ public class AttackModeManager {
         // Whitelist-only mode: block ALL non-verified
         if (actionWhitelistOnly) {
             if (!verifiedIps.contains(ip)) {
-                blockedDuringAttack++;
+                blockedDuringAttack.incrementAndGet();
                 return true;
             }
         }
 
         // Block unverified IPs
         if (actionBlockUnverified && !verifiedIps.contains(ip)) {
-            blockedDuringAttack++;
+            blockedDuringAttack.incrementAndGet();
             return true;
         }
 
@@ -310,7 +312,7 @@ public class AttackModeManager {
     }
 
     public long getBlockedDuringAttack() {
-        return blockedDuringAttack;
+        return blockedDuringAttack.get();
     }
 
     public long getAttackModeStartTime() {

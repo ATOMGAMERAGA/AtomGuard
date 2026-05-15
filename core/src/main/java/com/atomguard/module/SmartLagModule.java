@@ -176,14 +176,19 @@ public class SmartLagModule extends AbstractModule implements Listener {
     }
 
     private void unfreezeAll() {
-        for (World world : Bukkit.getWorlds()) {
-            for (Chunk chunk : world.getLoadedChunks()) {
-                long key = Chunk.getChunkKey(chunk.getX(), chunk.getZ());
-                if (frozenChunks.contains(key)) {
-                    for (Entity e : chunk.getEntities()) {
-                        if (e instanceof Mob mob) {
-                            mob.setAware(true);
-                        }
+        // v2.2.10+: Yüklü TÜM chunk'ları taramak yerine sadece dondurulmuş
+        // chunk'ları kullan. 10k+ chunk'lı sunucularda eski mantık main thread
+        // stall'una yol açıyordu — lag önleyici feature lag üretiyordu.
+        if (frozenChunks.isEmpty()) return;
+        for (long key : frozenChunks) {
+            int chunkX = (int) (key >> 32);
+            int chunkZ = (int) key;
+            for (World world : Bukkit.getWorlds()) {
+                if (!world.isChunkLoaded(chunkX, chunkZ)) continue;
+                Chunk chunk = world.getChunkAt(chunkX, chunkZ);
+                for (Entity e : chunk.getEntities()) {
+                    if (e instanceof Mob mob) {
+                        mob.setAware(true);
                     }
                 }
             }

@@ -3,6 +3,40 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [2.3.0] - 2026-05-15
+
+### 🐛 Critical Bug Fixes — Eski "fix'lendi ama çalışmıyor" sorunları için kalıcı çözüm
+
+- **`TokenBucketModule` — `atomguard.bypass` permission'ını dinlemiyordu**: Tüm diğer modüller `isExempt(player)` ile OP/staff'ı muaf tutarken, token bucket modülü bu kontrolü atlıyordu. ETKILESIM bucket'ında `PLAYER_BLOCK_PLACEMENT` + `USE_ITEM` + `ANIMATION` + `INTERACT_ENTITY` paketleri vardı (kapasite 300, refill 120/s); ANIMATION her el sallamada gönderildiği için kovayı hızla tüketiyor ve yerleştirme paketleri sessizce düşürülüyordu. Bu davranış **armor stand placement'ın bazı oyuncularda yerleşmemesinin ve yerleşenlerde hep aynı yöne bakmasının** asıl sebebiydi (sunucu, drop edilen ilk USE_ITEM paketinden sonraki bir paketten spawn ediyor → yaw farklı oluyor). Düzeltme: `isExempt(player)` kontrolü eklendi, `ANIMATION` paketi `DIGER` bucket'ına taşındı, ETKILESIM bucket default'ları 500/200'e yükseltildi, ve drop edilen paketler artık DEBUG log'a yazılıyor.
+- **`ItemSanitizerModule` — ARMOR_STAND / ITEM_FRAME / PAINTING için explicit muafiyet**: `onPlayerInteract` handler'ı bypass'sız oyunculara her etkileşimde sanitize çalıştırıyordu; bu materialler false-positive riskli olduğu için (özellikle yeni 1.21 data component'leriyle) artık explicit muaf. Tüm `hasPermission("atomguard.bypass")` çağrıları yeni `isExempt(player)` helper'ı ile değiştirildi.
+- **`WindChargeIntegrityModule` (YENİ) — Vanilla wind charge knockback garantisi**: v2.2.5/v2.2.6/v2.2.9 yamalarına rağmen wind charge oyuncuları zıplatmıyordu (redstone aktive ediyor ama bounce yok). Bu yeni modül, son güvenlik ağı olarak:
+  - Wind charge kaynaklı `EntityDamageByEntityEvent` / `EntityExplodeEvent` iptal edilmişse HIGHEST priority'de geri alır (başka plugin LOWEST'te iptal etmiş olsa bile)
+  - `ProjectileHitEvent`'te 1 tick sonra etki yarıçapındaki canlı varlıklara manuel velocity uygular (vanilla zaten ittiyse skip — çift etki yok)
+  - Tüm event'leri DEBUG'a loglar (`detailed-log: true`) — başka bir handler iptal ediyorsa kanıt için
+  - Config: `moduller.wind-charge-integrity.aktif: true`, `radius`, `velocity-magnitude`, `min-upward-velocity`, `fallback-enabled`
+
+### 🆕 Yeni Özellikler
+
+- **`/atomguard whitelist <add|remove|list>` komutu + `WhitelistManager`**: Bukkit'in `atomguard.bypass` permission'ından ayrı, kalıcı, isim-bazlı muafiyet listesi. JSON persistence (`plugins/AtomGuard/whitelist.json`). Tüm modüller `AbstractModule.isExempt(player)` üzerinden hem permission hem de whitelist'i kontrol eder.
+- **Bağımsız `/metrics` HTTP endpoint'i**: Web Panel'in JWT-protected `/api/metrics`'inden farklı olarak, Bearer-token korumalı, JWT gerektirmeyen Prometheus/Grafana entegrasyon noktası. JSON (default) ve Prometheus exposition (`?format=prom`) formatı destekler. Config: `web-panel.metrics-token` (boş ise endpoint 401 döner).
+- **Discord webhook structured embeds**: `notifyBotAction` ve diğer notify metotları artık embed `fields` array'i kullanıyor (oyuncu, IP, sebep ayrı alanlarda). Tüm embed'lere `timestamp` (ISO 8601) ve `footer.text` (`AtomGuard • <server-name>`) eklendi. Config: `discord-webhook.server-name`.
+- **`AbstractModule.isExempt(Player)` helper'ı**: Tüm modüllerin bypass kontrolü için merkezî giriş noktası. Permission + whitelist'i birlikte kontrol eder. Gelecekte ek mekanizmalar (trust score üst sınırı, IP whitelist, vs.) burada eklenecek.
+
+### 🔧 İyileştirmeler & Race / Memory Fix'leri
+
+- **`AttackModeManager.blockedDuringAttack` race condition (Critical)**: `volatile long ++` non-atomic; async packet handler'larda lost-update race oluyordu. `AtomicLong incrementAndGet()` ile değiştirildi.
+- **`AtomGuardAPI.instance` volatile**: onLoad/onEnable race'inde yarım-init görme riskine karşı `volatile` eklendi.
+- **`SmartLagModule.unfreezeAll()` artık tüm chunk'ları taramıyor**: Eski kod yüklü TÜM chunk'ları döndüğü için 10k+ chunk'lı sunucularda main thread stall yapıyordu (lag önleyici feature lag üretiyor). Şimdi sadece `frozenChunks` set'ini iter ediyor.
+- **`AntiBotModule` async task disable'da iptal ediliyor**: 5 saniyelik attack-evaluation task'ı `runTaskTimerAsynchronously` ile yaratılıp ID tutulmuyordu. Şimdi `evaluationTaskId` field'da tutuluyor ve `onDisable()`'da iptal ediliyor.
+- **`ConnectionRateCheck` thread-safe deque erişimi**: `addLast()` + `size()` ayrı çağrılardı; başka thread eski entry'leri purge ederken size yanlış gelebilirdi. `synchronized(deque)` blok ile atomik snapshot.
+- **Velocity `ConnectionAnalyzer` CLAUDE.md uyum hatası**: Kod `Math.max(10, suspiciousThreshold)` kullanıyordu ama doküman "Minimum enforced at 8" diyordu. → 8'e düşürüldü (küçük sunucularda 8 daha gerçekçi).
+- **Config.yml — eksik bölümler eklendi**: `moduller.item-sanitizer.*` (5 anahtar), `moduller.redstone-limiter.*` (2 anahtar), `moduller.wind-charge-integrity.*` (5 anahtar), `heuristic.escik-supheli` / `escik-yuksek` / `decay-saniye` / `rotation-tolerance-derece`, `web-panel.metrics-token`, `discord-webhook.server-name`.
+
+### 🚀 CI/CD
+
+- **Jenkinsfile — Auto Version Bump stage eklendi**: Pipeline artık `main`/`master` branch'inde, commit zaten tag'lenmemişse, conventional commit mesajından bump türünü tespit ediyor ve otomatik olarak `bump-version.sh <type> --tag --push --ci` çağırıyor. Recursion guard (`🔖 Release v` ile başlayan commit'leri skip), explicit skip (`[skip release]` / `[skip ci]`), explicit override (`[release:patch|minor|major]`) destekleniyor. Push edilen yeni tag webhook ile taze build başlatıyor ve Stable Release stage'i otomatik çalışıyor.
+- **`bump-version.sh` — `--ci` flag eklendi**: CI'da interaktif olmayan modda çalışması için `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` env'den okunuyor.
+
 ## [2.2.9] - 2026-05-05
 
 ### 🐛 Bug Fixes
