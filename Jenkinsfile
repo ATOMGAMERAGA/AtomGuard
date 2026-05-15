@@ -121,9 +121,13 @@ pipeline {
         //   - Diğerleri → SKIP (güvenli default — kullanıcı açıkça istemeli)
         stage('Auto Version Bump') {
             when {
-                anyOf {
-                    branch 'main'
-                    branch 'master'
+                // Hem klasik Pipeline (env.GIT_BRANCH=origin/main) hem de Multibranch
+                // Pipeline (env.BRANCH_NAME=main) durumlarını yakala.
+                // Önceki "when { branch 'main' }" sadece Multibranch için çalışıyordu.
+                expression {
+                    def branch = env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''
+                    return branch == 'main' || branch == 'master' ||
+                           branch == 'origin/main' || branch == 'origin/master'
                 }
             }
             steps {
