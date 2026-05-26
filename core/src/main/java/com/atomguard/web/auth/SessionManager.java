@@ -12,6 +12,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SessionManager {
 
+    /** Above this size, cleanupBlacklist() drops tokens whose JWT has expired. */
+    private static final int CLEANUP_THRESHOLD = 10_000;
+
     private final JWTAuthProvider jwtProvider;
     private final Set<String> blacklistedTokens = ConcurrentHashMap.newKeySet();
 
@@ -84,12 +87,16 @@ public class SessionManager {
     /**
      * Suresi dolmus token'lari kara listeden temizler.
      * Periyodik olarak cagrilmali.
+     *
+     * Lazy / threshold-based: only runs the per-token JWT validation pass
+     * when the blacklist exceeds {@link #CLEANUP_THRESHOLD} entries.
+     * Below that, this method is a no-op so the periodic timer doesn't
+     * burn CPU re-validating thousands of tokens on every tick.
      */
     public void cleanupBlacklist() {
-        // Süresi dolmuş token'ları kaldır — JWT zaten expire mekanizmasına sahip,
-        // blacklist'te sadece aktif (henüz süresi dolmamış) tokenlar tutulmalı.
-        // Geçersiz (expire olmuş) token'lar validateToken()'dan null döneceğinden
-        // blacklist'te tutmak gerekmez.
+        if (blacklistedTokens.size() <= CLEANUP_THRESHOLD) {
+            return;
+        }
         blacklistedTokens.removeIf(token -> jwtProvider.validateToken(token) == null);
     }
 

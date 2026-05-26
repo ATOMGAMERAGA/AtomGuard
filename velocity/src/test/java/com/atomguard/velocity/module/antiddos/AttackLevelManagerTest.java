@@ -165,10 +165,13 @@ class AttackLevelManagerTest {
         }
 
         @Test
-        void lockdownLevel_blocksEveryone() throws InterruptedException {
+        void lockdownLevel_onlyAllowsVerified() throws InterruptedException {
+            // At LOCKDOWN this layer lets verified players through so that
+            // VerifiedPlayerShield can apply its slot-level filtering. Only
+            // unverified connections are rejected outright here.
             escalateTo(AttackLevel.LOCKDOWN, 50);
 
-            assertThat(manager.shouldAllowConnection("1.2.3.4", true)).isFalse();
+            assertThat(manager.shouldAllowConnection("1.2.3.4", true)).isTrue();
             assertThat(manager.shouldAllowConnection("1.2.3.4", false)).isFalse();
         }
     }

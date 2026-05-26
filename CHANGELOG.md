@@ -3,6 +3,21 @@
 Tüm önemli değişiklikler bu dosyada belgelenir.
 Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
+## [3.0.1] - 2026-05-26
+
+### 🔧 İyileştirmeler
+
+- **`SessionManager.cleanupBlacklist()` — eşik tabanlı tembel temizlik**: Periyodik temizleyici, blacklist boyutu `CLEANUP_THRESHOLD` (10 000) altındayken artık no-op. Önceden her tick'te tüm token'lar JWT validasyonundan geçiriliyordu (gereksiz CPU); JWT'nin kendi expire mekanizması zaten geçersiz token'ları reddettiğinden, yalnızca blacklist gerçekten büyürse tam tarama çalışır.
+- **`AttackLevelManager` — CPS eşikleri enum çarpanlarından türetiliyor**: `calculateTargetLevel()` artık her seviyenin CPS sınırını `AttackLevel.getCpsMultiplier()` üzerinden okuyor; magic number (8/5/3/2) kaldırıldı. Bir yerde tune edildiğinde eşikler senkron kalıyor.
+
+### 🐛 Hata Düzeltmeleri
+
+- **`AttackLevelManager` — LOCKDOWN katmanında verified oyuncular geçebiliyor**: Önceki davranış LOCKDOWN'da herkesi (verified dahil) reddediyordu; bu, slot-seviyeli filtrelemeyi yapan `VerifiedPlayerShield`'ı by-pass ediyor ve meşru oyuncuların saldırı sırasında tamamen dışarıda kalmasına yol açıyordu. Artık verified bağlantılar bu katmandan geçirilip Shield'a teslim ediliyor; yalnız verified-olmayan bağlantılar burada düşürülüyor. Eşlik eden test (`lockdownLevel_onlyAllowsVerified`) güncellendi.
+
+### ⚖️ Tuning
+
+- **`AttackLevel` CPS çarpanları yumuşatıldı**: ELEVATED 2.0×→1.5×, HIGH 3.0×→2.0×, CRITICAL 5.0×→3.0×, LOCKDOWN 8.0×→5.0×. Saldırı seviyeleri daha erken devreye giriyor; eskisi büyük saldırılarda çok geç tepki veriyordu.
+
 ## [2.3.0] - 2026-05-15
 
 ### 🐛 Critical Bug Fixes — Eski "fix'lendi ama çalışmıyor" sorunları için kalıcı çözüm
