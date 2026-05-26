@@ -3,6 +3,7 @@ package com.atomguard.manager;
 import com.atomguard.AtomGuard;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
@@ -12,7 +13,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -56,21 +61,74 @@ public class WhitelistManager {
             }
             String json = Files.readString(filePath, StandardCharsets.UTF_8);
             if (json.isBlank()) return;
-            Map<String, String> raw = gson.fromJson(json,
-                    new TypeToken<Map<String, String>>(){}.getType());
-            if (raw != null) {
-                whitelist.clear();
-                for (Map.Entry<String, String> e : raw.entrySet()) {
-                    try {
-                        whitelist.put(UUID.fromString(e.getKey()), e.getValue());
-                    } catch (IllegalArgumentException ignored) {
-                        // Bozuk UUID — yoksay
-                    }
-                }
-                plugin.getLogger().info("Whitelist yüklendi: " + whitelist.size() + " oyuncu.");
+
+            Map<String, String> raw = parseWhitelist(json);
+            if (raw == null) {
+                backupCorruptedFile();
+                return;
             }
+
+            whitelist.clear();
+            for (Map.Entry<String, String> e : raw.entrySet()) {
+                try {
+                    whitelist.put(UUID.fromString(e.getKey()), e.getValue());
+                } catch (IllegalArgumentException ignored) {
+                    // Bozuk UUID — yoksay
+                }
+            }
+            plugin.getLogger().info("Whitelist yüklendi: " + whitelist.size() + " oyuncu.");
         } catch (IOException e) {
             plugin.getLogger().warning("Whitelist yüklenemedi: " + e.getMessage());
+        }
+    }
+
+    /**
+     * whitelist.json içeriğini birden fazla desteklenen formattan parse etmeyi
+     * dener. Hiçbiri uymazsa {@code null} döner; caller dosyayı yedekler ve
+     * boş whitelist ile devam eder. Bu sayede bozuk JSON tüm eklenti
+     * yüklemesini durdurmaz.
+     */
+    @Nullable
+    private Map<String, String> parseWhitelist(@NotNull String json) {
+        // Format 1: {"uuid": "name", ...}  (mevcut format)
+        try {
+            Map<String, String> map = gson.fromJson(json,
+                    new TypeToken<Map<String, String>>(){}.getType());
+            if (map != null) return map;
+        } catch (JsonSyntaxException ignored) {
+            // diğer formatları dene
+        }
+
+        // Format 2: ["uuid", "uuid", ...]  (eski/elle düzenlenmiş format)
+        try {
+            List<String> list = gson.fromJson(json,
+                    new TypeToken<List<String>>(){}.getType());
+            if (list != null) {
+                Map<String, String> map = new HashMap<>();
+                for (String uuid : list) {
+                    if (uuid != null) map.put(uuid, uuid);
+                }
+                return map;
+            }
+        } catch (JsonSyntaxException ignored) {
+            // düş
+        }
+
+        plugin.getLogger().warning(
+                "whitelist.json tanınmayan veya bozuk formatta; boş whitelist ile başlanıyor.");
+        return null;
+    }
+
+    /** Bozuk whitelist.json dosyasını yedekle (yan-yana .bak-<timestamp>). */
+    private void backupCorruptedFile() {
+        try {
+            String stamp = LocalDateTime.now()
+                    .format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+            Path backup = filePath.resolveSibling(FILE_NAME + ".corrupt-" + stamp + ".bak");
+            Files.move(filePath, backup, StandardCopyOption.REPLACE_EXISTING);
+            plugin.getLogger().warning("Bozuk whitelist.json yedeklendi: " + backup.getFileName());
+        } catch (IOException e) {
+            plugin.getLogger().warning("Bozuk whitelist.json yedeklenemedi: " + e.getMessage());
         }
     }
 
