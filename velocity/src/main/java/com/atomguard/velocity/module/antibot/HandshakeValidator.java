@@ -26,7 +26,7 @@ public class HandshakeValidator {
         // 1.13.x — önceden eksikti
         404, 401, 393,
         // 1.12.x
-        340, 338, 335, 315, 210,
+        340, 338, 335,
         // 1.11.x - 1.8.x (yaygın cracked server sürümleri)
         315, 210, 110, 107, 47
     );
