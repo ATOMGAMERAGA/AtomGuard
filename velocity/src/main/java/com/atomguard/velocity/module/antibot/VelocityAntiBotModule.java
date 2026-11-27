@@ -83,6 +83,7 @@ public class VelocityAntiBotModule extends VelocityModule {
      * Nickname kontrolü artık AntiBotCheck pipeline adımında yapılıyor.
      */
     public ThreatScore analyzePreLogin(String ip, String username, String hostname, int port, int protocol) {
+        if (engine == null) return new ThreatScore();
         // Doğrulanmış oyuncu bypass
         if (engine.isVerified(ip)) {
             return new ThreatScore();
@@ -108,23 +109,25 @@ public class VelocityAntiBotModule extends VelocityModule {
     }
 
     public void recordBrand(String ip, String brand) {
-        if (!engine.isVerified(ip)) {
+        if (engine != null && !engine.isVerified(ip)) {
             // updateBrandScore kullan — tam analyze() çağırma.
             // Aksi hâlde resetForNewAnalysis() önceki analyzePreLogin() skorlarını siler.
             engine.updateBrandScore(ip, brand);
         }
     }
 
-    public void recordJoin(String ip) { engine.recordJoin(ip); }
-    public void recordQuit(String ip) { engine.recordQuit(ip); }
+    // Modül kapalıyken (veya onEnable başarısız olduğunda) engine null kalır; çağıranlar modülün
+    // varlığını kontrol ediyor ama etkin olup olmadığını kontrol etmiyor, bu yüzden burada koruyoruz
+    public void recordJoin(String ip) { if (engine != null) engine.recordJoin(ip); }
+    public void recordQuit(String ip) { if (engine != null) engine.recordQuit(ip); }
 
-    public boolean isHighRisk(String ip) { return engine.isHighRisk(ip); }
-    public boolean isMediumRisk(String ip) { return engine.isMediumRisk(ip); }
-    public ThreatScore getScore(String ip) { return engine.getScore(ip); }
+    public boolean isHighRisk(String ip) { return engine != null && engine.isHighRisk(ip); }
+    public boolean isMediumRisk(String ip) { return engine != null && engine.isMediumRisk(ip); }
+    public ThreatScore getScore(String ip) { return engine != null ? engine.getScore(ip) : new ThreatScore(); }
 
     /** IP'yi doğrulanmış oyuncu olarak işaretle (engine'e yönlendir) */
-    public void markVerified(String ip) { 
-        if (!engine.isVerified(ip)) {
+    public void markVerified(String ip) {
+        if (engine != null && !engine.isVerified(ip)) {
             markVerifiedLocal(ip);
 
             // 2. Redis Sync
@@ -140,6 +143,7 @@ public class VelocityAntiBotModule extends VelocityModule {
     }
 
     public void markVerifiedLocal(String ip) {
+        if (engine == null) return;
         engine.markVerified(ip);
         if (plugin.getAuditLogger() != null) {
             plugin.getAuditLogger().log(com.atomguard.velocity.audit.AuditLogger.EventType.PLAYER_VERIFIED, ip, null, "antibot", "Verified", com.atomguard.velocity.audit.AuditLogger.Severity.INFO);
@@ -154,16 +158,16 @@ public class VelocityAntiBotModule extends VelocityModule {
     }
 
     /** IP doğrulanmış mı? (engine'e yönlendir) */
-    public boolean isVerified(String ip) { return engine.isVerified(ip); }
+    public boolean isVerified(String ip) { return engine != null && engine.isVerified(ip); }
 
     /** Doğrulama statüsünü iptal et (engine'e yönlendir) */
-    public void revokeVerification(String ip) { engine.revokeVerification(ip); }
+    public void revokeVerification(String ip) { if (engine != null) engine.revokeVerification(ip); }
 
     public boolean isCaptchaEnabled() { return captchaEnabled; }
     public CaptchaVerification getCaptcha() { return captcha; }
 
     private void periodicCleanup() {
-        engine.cleanup();
-        captcha.cleanupExpired();
+        if (engine != null) engine.cleanup();
+        if (captcha != null) captcha.cleanupExpired();
     }
 }
